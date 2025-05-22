@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import BattleGrid from '@/components/battle-grid/battle-grid';
 import ControlsSidebar from '@/components/controls/controls-sidebar';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Swords, Settings } from 'lucide-react'; // Changed PanelLeftOpen to Swords
+import { Swords, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const GRID_ROWS = 20;
@@ -76,7 +77,7 @@ export default function BattleBoardPage() {
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar variant="sidebar" collapsible="icon" className="border-r">
-        <SidebarHeader className="p-2 flex items-center justify-between">
+        <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
             <Swords className="h-6 w-6 text-sidebar-primary" /> {/* Changed icon here */}
             <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
@@ -98,7 +99,7 @@ export default function BattleBoardPage() {
             measurement={measurement} setMeasurement={setMeasurement}
           />
         </SidebarContent>
-        <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden">
+        <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
           <Button variant="ghost" className="w-full justify-start">
             <Settings className="mr-2 h-4 w-4" /> Settings
           </Button>
