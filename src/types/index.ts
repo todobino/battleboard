@@ -1,3 +1,4 @@
+
 import type { LucideProps } from 'lucide-react';
 import type React from 'react';
 
@@ -26,7 +27,7 @@ export interface Participant {
   id: string;
   name: string;
   initiative: number;
-  type: 'player' | 'enemy' | 'ally'; // Added 'ally'
+  type: 'player' | 'enemy' | 'ally';
   tokenId?: string; // Optional: links to a token on the grid
 }
 
@@ -36,7 +37,6 @@ export type ActiveTool =
   | 'place_token'
   | 'measure_distance'
   | 'measure_radius'
-  | 'swords'
   | 'map_tool'
   | 'character_tool';
 

@@ -4,7 +4,7 @@
 import type { ActiveTool, Token } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { Ruler, Maximize, Swords, Paintbrush, MousePointerSquareDashed, Map, PersonStanding, LandPlot } from 'lucide-react';
+import { Ruler, Maximize, Paintbrush, MousePointerSquareDashed, Map, PersonStanding } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -74,7 +74,6 @@ export default function FloatingToolbar({
     { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
     { label: 'Measure Distance', icon: Ruler, tool: 'measure_distance' },
     { label: 'Measure Radius', icon: Maximize, tool: 'measure_radius' },
-    { label: 'Combat Actions', icon: Swords, tool: 'swords' },
     { label: 'Character Focus', icon: PersonStanding, tool: 'character_tool' },
   ];
 
@@ -148,7 +147,7 @@ export default function FloatingToolbar({
                 <Button
                   variant={activeTool === 'paint_cell' || activeTool === 'place_token' ? 'default' : 'outline'}
                   size="icon"
-                  onClick={() => handleToolClick('paint_cell')} // Added this line
+                  onClick={() => handleToolClick('paint_cell')}
                   className={cn(
                     'rounded-md shadow-lg h-12 w-12 p-2.5',
                      (activeTool === 'paint_cell' || activeTool === 'place_token') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
@@ -177,4 +176,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
