@@ -174,7 +174,7 @@ export default function GridSettingsPanel({
         {/* Right Column: Custom Image Uploader */}
         <div className="lg:w-2/5 space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="background-image-upload-popover-main" className="text-popover-foreground">Custom Background Image</Label>
+                <Label htmlFor="background-image-upload-popover-main" className="text-popover-foreground">Upload Background</Label>
                 <Label
                 htmlFor="background-image-upload-popover-main"
                 className={cn(
