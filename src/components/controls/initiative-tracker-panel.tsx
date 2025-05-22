@@ -3,13 +3,13 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { Participant } from '@/types';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, RotateCcw } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 
 
 interface InitiativeTrackerPanelProps {
-  participants: Participant[];
+  participantsProp?: Participant[]; // Renamed to avoid conflict with internal state
   currentParticipantIndex: number;
   roundCounter: number;
   isAutoAdvanceOn: boolean;
@@ -46,7 +46,7 @@ interface InitiativeTrackerPanelProps {
 }
 
 export default function InitiativeTrackerPanel({
-  participants = [],
+  participantsProp,
   currentParticipantIndex,
   roundCounter,
   isAutoAdvanceOn,
@@ -55,6 +55,7 @@ export default function InitiativeTrackerPanel({
   onRemoveParticipant,
   onResetInitiative,
 }: InitiativeTrackerPanelProps) {
+  const participants = participantsProp || []; // Ensure participants is always an array
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantInitiative, setNewParticipantInitiative] = useState('');
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy'>('player');
@@ -143,27 +144,7 @@ export default function InitiativeTrackerPanel({
               </ul>
             </ScrollArea>
           )}
-          <div className="mt-4 flex gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" title="Reset Turn Order & End Combat" className="ml-auto">
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Reset Turn Order?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will clear all participants, reset the round counter, and end combat. Are you sure?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onResetInitiative}>Reset</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          {/* Reset button was here, now removed */}
         </CardContent>
       </Card>
 
