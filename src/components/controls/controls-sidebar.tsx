@@ -5,8 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Token, Measurement } from '@/types';
 import { Accordion } from '@/components/ui/accordion';
 import GridSettingsPanel from './grid-settings-panel';
-// Removed InitiativeTrackerPanel import
-import ColorToolPanel from './color-tool-panel';
+// Removed ColorToolPanel import
 import MeasurementToolPanel from './measurement-tool-panel';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -16,10 +15,7 @@ interface ControlsSidebarProps {
   
   activeTool: ActiveTool;
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
-  selectedColor: string;
-  setSelectedColor: Dispatch<SetStateAction<string>>;
-  selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
-  setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  // Removed selectedColor, setSelectedColor, selectedTokenTemplate, setSelectedTokenTemplate props
   
   measurement: Measurement;
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
@@ -28,26 +24,18 @@ interface ControlsSidebarProps {
 export default function ControlsSidebar({
   backgroundImageUrl, setBackgroundImageUrl,
   activeTool, setActiveTool,
-  selectedColor, setSelectedColor,
-  selectedTokenTemplate, setSelectedTokenTemplate,
+  // Removed selectedColor, setSelectedColor, selectedTokenTemplate, setSelectedTokenTemplate from destructuring
   measurement, setMeasurement,
 }: ControlsSidebarProps) {
   return (
     <ScrollArea className="h-full p-4">
-      <Accordion type="multiple" defaultValue={['grid-settings', 'color-tool', 'measurement-tool']} className="w-full">
+      <Accordion type="multiple" defaultValue={['grid-settings', 'measurement-tool']} className="w-full">
         <GridSettingsPanel
           backgroundImageUrl={backgroundImageUrl}
           setBackgroundImageUrl={setBackgroundImageUrl}
           setActiveTool={setActiveTool}
         />
-        {/* Removed InitiativeTrackerPanel instance */}
-        <ColorToolPanel
-          activeTool={activeTool}
-          setActiveTool={setActiveTool}
-          selectedColor={selectedColor}
-          setSelectedColor={setSelectedColor}
-          setSelectedTokenTemplate={setSelectedTokenTemplate}
-        />
+        {/* Removed ColorToolPanel instance */}
         <MeasurementToolPanel
           activeTool={activeTool}
           setActiveTool={setActiveTool}

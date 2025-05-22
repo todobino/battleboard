@@ -81,7 +81,8 @@ export default function BattleBoardPage() {
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
           <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-               {/* Title and icon moved to FloatingToolbar */}
+              <LandPlot className="h-6 w-6 text-sidebar-primary" />
+              <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
             </div>
             <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             
@@ -100,8 +101,7 @@ export default function BattleBoardPage() {
             <ControlsSidebar
               backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
               activeTool={activeTool} setActiveTool={setActiveTool}
-              selectedColor={selectedColor} setSelectedColor={setSelectedColor}
-              selectedTokenTemplate={selectedTokenTemplate} setSelectedTokenTemplate={setSelectedTokenTemplate}
+              // Removed selectedColor, setSelectedColor, selectedTokenTemplate, setSelectedTokenTemplate props
               measurement={measurement} setMeasurement={setMeasurement}
             />
           </SidebarContent>
@@ -114,8 +114,7 @@ export default function BattleBoardPage() {
       </SidebarProvider>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        <SidebarInset className="flex-1 flex flex-col relative">
+      <SidebarInset className="flex-1 flex flex-col relative">
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
@@ -130,6 +129,7 @@ export default function BattleBoardPage() {
             onTokenMove={handleTokenMove}
             measurement={measurement}
             setMeasurement={setMeasurement}
+            // zoomLevel={zoomLevel} -- Removed, handled by SVG's viewBox directly
           />
           <FloatingToolbar
             activeTool={activeTool}
@@ -141,8 +141,7 @@ export default function BattleBoardPage() {
             selectedTokenTemplate={selectedTokenTemplate}
             setSelectedTokenTemplate={setSelectedTokenTemplate}
           />
-        </SidebarInset>
-      </div>
+      </SidebarInset>
 
       {/* Right Sidebar for Initiative Tracker */}
       <SidebarProvider defaultOpen={true}>
