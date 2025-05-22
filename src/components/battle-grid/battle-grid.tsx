@@ -25,7 +25,7 @@ interface BattleGridProps {
 
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const CELL_BORDER_WIDTH = 1; // 1px border for each cell
+const CELL_BORDER_WIDTH = 1; // Original planned border width in pixels
 
 export default function BattleGrid({
   gridCells,
@@ -47,9 +47,10 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Padding to ensure cell borders on the edges are fully visible
-    const padding = CELL_BORDER_WIDTH / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + CELL_BORDER_WIDTH} ${initialContentHeight + CELL_BORDER_WIDTH}`;
+    // Using a 2px border for testing, so padding needs to accommodate this
+    const diagnosticBorderWidth = 2; 
+    const padding = diagnosticBorderWidth / 2;
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + diagnosticBorderWidth} ${initialContentHeight + diagnosticBorderWidth}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -62,21 +63,23 @@ export default function BattleGrid({
   useEffect(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = CELL_BORDER_WIDTH / 2;
+    // Using a 2px border for testing, so padding needs to accommodate this
+    const diagnosticBorderWidth = 2;
+    const padding = diagnosticBorderWidth / 2;
     
     const currentVbString = viewBox;
     const currentVbParts = currentVbString.split(' ').map(Number);
     
     const expectedMinX = 0 - padding;
     const expectedMinY = 0 - padding;
-    const expectedVw = initialContentWidth + CELL_BORDER_WIDTH;
-    const expectedVh = initialContentHeight + CELL_BORDER_WIDTH;
+    const expectedVw = initialContentWidth + diagnosticBorderWidth;
+    const expectedVh = initialContentHeight + diagnosticBorderWidth;
 
     if (currentVbParts[0] !== expectedMinX || currentVbParts[1] !== expectedMinY || currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh) {
         setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Runs once on mount to set initial viewBox based on constants
+  }, []); // Runs once on mount to set initial viewBox based on constants for the diagnostic border
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -160,7 +163,7 @@ export default function BattleGrid({
     const pos = getMousePosition(event);
     if (isPanning && panStart) {
       const currentVbWidth = parseFloat(viewBox.split(' ')[2]);
-      const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + CELL_BORDER_WIDTH;
+      const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? 2 : 0); // Adjust content width based on visible border
       const currentZoomFactor = contentWidth / currentVbWidth; 
 
       const dx = (panStart.x - event.clientX) * currentZoomFactor ; 
@@ -227,6 +230,10 @@ export default function BattleGrid({
   const gridContentWidth = GRID_SIZE * cellSize;
   const gridContentHeight = GRID_SIZE * cellSize;
 
+  // Diagnostic border settings
+  const diagnosticStrokeColor = "yellow";
+  const diagnosticStrokeWidth = 2;
+
   return (
     <div className="w-full h-full overflow-hidden bg-muted flex items-center justify-center relative">
       <svg
@@ -255,8 +262,8 @@ export default function BattleGrid({
               width={cellSize}
               height={cellSize}
               fill={cell.color || 'transparent'}
-              stroke={showGridLines ? 'var(--border)' : 'transparent'}
-              strokeWidth={CELL_BORDER_WIDTH}
+              stroke={showGridLines ? diagnosticStrokeColor : 'transparent'}
+              strokeWidth={showGridLines ? diagnosticStrokeWidth : 0}
               shapeRendering="crispEdges"
               className={cn(
                 'transition-colors duration-100',
