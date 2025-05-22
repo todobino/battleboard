@@ -6,7 +6,7 @@ import BattleGrid from '@/components/battle-grid/battle-grid';
 import ControlsSidebar from '@/components/controls/controls-sidebar';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { PanelLeftOpen, Settings } from 'lucide-react';
+import { Swords, Settings } from 'lucide-react'; // Changed PanelLeftOpen to Swords
 import { useToast } from '@/hooks/use-toast';
 
 const GRID_ROWS = 20;
@@ -78,7 +78,7 @@ export default function BattleBoardPage() {
       <Sidebar variant="sidebar" collapsible="icon" className="border-r">
         <SidebarHeader className="p-2 flex items-center justify-between">
            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <PanelLeftOpen className="h-6 w-6 text-sidebar-primary" />
+            <Swords className="h-6 w-6 text-sidebar-primary" /> {/* Changed icon here */}
             <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
           </div>
           <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
