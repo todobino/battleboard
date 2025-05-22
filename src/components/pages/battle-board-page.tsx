@@ -10,7 +10,6 @@ import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent
 import { Button } from '@/components/ui/button';
 import { LandPlot, ListOrdered, Swords, Map as MapIcon, PersonStanding, Paintbrush, MousePointerSquareDashed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-// Accordion import removed as it's no longer directly used here for the right sidebar's main content.
 
 
 const GRID_ROWS = 20;
@@ -118,6 +117,8 @@ export default function BattleBoardPage() {
         if (newActiveIndex !== -1) setCurrentParticipantIndex(newActiveIndex);
       } else if (newList.length > 0 && currentParticipantIndex === -1 && isCombatActive) {
         setCurrentParticipantIndex(0);
+      } else if (newList.length > 0 && currentParticipantIndex === -1 && !isCombatActive) {
+        setCurrentParticipantIndex(0); // Also set active index if combat not started but adding first
       }
       return newList;
     });
@@ -136,20 +137,14 @@ export default function BattleBoardPage() {
       } else {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         if (id === oldActiveParticipantId) {
-          // If active was removed, advance to the next in line (or loop around)
-          // The % operator handles wrap-around correctly.
-          // If currentParticipantIndex was already 0, this will keep it 0.
           setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
         } else {
-          // If a non-active participant was removed, update currentParticipantIndex if necessary
           const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
           if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
           } else {
-            // This case implies the currentParticipantIndex might now be out of bounds
-            // The useEffect for currentParticipantIndex will sanitize this.
             if (currentParticipantIndex >= filteredList.length) {
-              setCurrentParticipantIndex(0); // Fallback to start of list
+              setCurrentParticipantIndex(0); 
             }
           }
         }
@@ -223,7 +218,8 @@ export default function BattleBoardPage() {
             <ListOrdered className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
           </SidebarHeader>
-          <SidebarContent className="p-4">
+          <SidebarContent className="p-4 space-y-4">
+            <Button className="w-full">Load from QuestFlow</Button>
             <InitiativeTrackerPanel
               participants={participants}
               currentParticipantIndex={currentParticipantIndex}
