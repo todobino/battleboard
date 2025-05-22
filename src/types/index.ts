@@ -17,7 +17,7 @@ export interface Token {
   y: number; // grid row index
   color: string; // Token's primary color (e.g., for its circle or icon fill)
   label?: string; // Optional label for the token
-  icon?: React.FC<LucideProps> | ((props: { className?: string }) => JSX.Element); // Lucide icon or custom SVG component
+  icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
   type: 'player' | 'enemy' | 'item' | 'terrain';
   size?: number; // in grid units, default 1
 }
@@ -36,12 +36,15 @@ export type ActiveTool =
   | 'paint_cell' 
   | 'place_token' 
   | 'measure_distance' 
-  | 'measure_radius';
+  | 'measure_radius'
+  | 'swords'
+  | 'map_tool'
+  | 'character_tool';
 
 export interface TokenTemplate {
   name: string;
   color: string;
-  icon?: React.FC<LucideProps> | ((props: { className?: string }) => JSX.Element);
+  icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element);
   type: 'player' | 'enemy' | 'item' | 'terrain';
 }
 

@@ -4,7 +4,7 @@
 import type { ActiveTool, Token } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { Ruler, Maximize, Paintbrush, MousePointerSquareDashed, LandPlot } from 'lucide-react';
+import { Ruler, Maximize, Paintbrush, MousePointerSquareDashed, Swords, Map, PersonStanding } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -62,9 +62,12 @@ export default function FloatingToolbar({
   
   const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick'>[] = [
     { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
-    // Paintbrush is now a PopoverTrigger
     { label: 'Measure Distance', icon: Ruler, tool: 'measure_distance' },
     { label: 'Measure Radius', icon: Maximize, tool: 'measure_radius' },
+    { label: 'Swords Action', icon: Swords, tool: 'swords' },
+    { label: 'Map View', icon: Map, tool: 'map_tool' },
+    { label: 'Character Focus', icon: PersonStanding, tool: 'character_tool' },
+    // Paintbrush is now a PopoverTrigger
   ];
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -76,11 +79,15 @@ export default function FloatingToolbar({
   return (
     <TooltipProvider>
       <div className="absolute bottom-4 right-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-xl border border-border z-50">
-        <div className="flex items-center gap-2 px-2 mr-2">
-          <Icon className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-foreground">{title}</span>
-        </div>
-        <Separator orientation="vertical" className="h-8 bg-border" />
+        {Icon && title && (
+          <>
+            <div className="flex items-center gap-2 px-2 mr-2">
+              <Icon className="h-6 w-6 text-primary" />
+              <span className="font-semibold text-foreground">{title}</span>
+            </div>
+            <Separator orientation="vertical" className="h-8 bg-border" />
+          </>
+        )}
         
         {mainTools.map((toolProps) => (
           <ToolButton
