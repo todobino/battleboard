@@ -302,8 +302,8 @@ export default function BattleGrid({
         </g>
         
         <defs>
-          <marker id="arrowhead" markerWidth="6" markerHeight="4.2" refX="6" refY="2.1" orient="auto">
-            <polygon points="0 0, 6 2.1, 0 4.2" fill="hsl(var(--accent))" />
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--accent))" />
           </marker>
         </defs>
 
@@ -330,13 +330,13 @@ export default function BattleGrid({
         
         {isMeasuring && measurement.endPoint && measurement.result && (
           <text
-            x={measurement.endPoint.x * cellSize + cellSize / 2 + 15} 
-            y={measurement.endPoint.y * cellSize + cellSize / 2 + 15} 
+            x={measurement.endPoint.x * cellSize + cellSize / 2 + 20} 
+            y={measurement.endPoint.y * cellSize + cellSize / 2 + 20} 
             fill="hsl(var(--accent))"
-            fontSize="14" 
+            fontSize="20" 
             paintOrder="stroke"
             stroke="hsl(var(--background))" 
-            strokeWidth="3px"
+            strokeWidth="4px"
             strokeLinecap="butt"
             strokeLinejoin="miter"
             className="pointer-events-none select-none font-bold"
