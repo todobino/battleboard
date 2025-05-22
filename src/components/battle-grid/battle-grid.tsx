@@ -153,6 +153,7 @@ export default function BattleGrid({
         break;
       case 'eraser_tool':
         setIsErasing(true);
+        setHoveredCellWhilePainting({ x: gridX, y: gridY }); // Set initial hover
         setGridCells(prev => {
             const newCells = prev.map(row => row.map(cell => ({ ...cell })));
             if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -225,6 +226,7 @@ export default function BattleGrid({
         const gridY = Math.floor(pos.y / cellSize);
 
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
+             setHoveredCellWhilePainting({ x: gridX, y: gridY });
              setGridCells(prev => {
                 const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
                 if (newCells[gridY][gridX].color !== undefined) {
@@ -240,8 +242,9 @@ export default function BattleGrid({
                 }
                 return prev;
             });
+        } else {
+           setHoveredCellWhilePainting(null); // Cursor outside grid
         }
-        setHoveredCellWhilePainting(null); // Clear paint hover if erasing
     } else if (isPainting && activeTool === 'paint_cell') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
@@ -289,10 +292,11 @@ export default function BattleGrid({
     }
     if (isErasing) {
         setIsErasing(false);
+        setHoveredCellWhilePainting(null); 
     }
     if (isPainting) {
         setIsPainting(false);
-        setHoveredCellWhilePainting(null); // Clear hover highlight on paint end
+        setHoveredCellWhilePainting(null); 
     }
   };
   
@@ -301,18 +305,16 @@ export default function BattleGrid({
       setIsPanning(false);
       setPanStart(null);
     }
-    // Do not finalize token drop if mouse leaves SVG, let mouseup handle it if it occurs inside.
-    // If mouseup occurs outside, token position is not updated.
     if (isMeasuring) {
       setIsMeasuring(false);
-      // Measurement is not finalized if mouse leaves SVG, only if mouseup occurs inside.
     }
     if (isErasing) {
       setIsErasing(false);
+      setHoveredCellWhilePainting(null); 
     }
     if (isPainting) {
       setIsPainting(false);
-      setHoveredCellWhilePainting(null); // Clear hover highlight if mouse leaves SVG while painting
+      setHoveredCellWhilePainting(null); 
     }
   };
 
@@ -370,9 +372,10 @@ export default function BattleGrid({
         <g shapeRendering="crispEdges">
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => {
-              const isHoveredDuringPaint = hoveredCellWhilePainting &&
-                                         hoveredCellWhilePainting.x === x &&
-                                         hoveredCellWhilePainting.y === y;
+              const isHighlighted = hoveredCellWhilePainting &&
+                                  ((isPainting && activeTool === 'paint_cell') || (isErasing && activeTool === 'eraser_tool')) &&
+                                  hoveredCellWhilePainting.x === x &&
+                                  hoveredCellWhilePainting.y === y;
               return (
               <rect
                 key={cell.id}
@@ -382,13 +385,13 @@ export default function BattleGrid({
                 height={cellSize}
                 fill={cell.color || 'transparent'}
                 stroke={
-                  isHoveredDuringPaint && isPainting
-                    ? 'hsl(var(--ring))' // Highlight color (e.g., a bright yellow or theme accent)
+                  isHighlighted
+                    ? 'hsl(var(--ring))' 
                     : showGridLines ? 'black' : 'transparent'
                 }
                 strokeWidth={
-                  isHoveredDuringPaint && isPainting
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Thicker border for highlight
+                  isHighlighted
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
                 className={cn(
