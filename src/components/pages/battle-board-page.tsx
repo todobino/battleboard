@@ -8,7 +8,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot } from 'lucide-react';
+import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -202,7 +202,6 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={1} 
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -230,10 +229,9 @@ export default function BattleBoardPage() {
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" className="border-l" side="right">
-          {/* SidebarHeader removed */}
           <SidebarContent className="p-4 space-y-4">
             <InitiativeTrackerPanel
-              participants={participants}
+              participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}
               roundCounter={roundCounter}
               isAutoAdvanceOn={isAutoAdvanceOn}
@@ -251,15 +249,15 @@ export default function BattleBoardPage() {
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
               <Button onClick={handleStartCombat} className="w-full">
-                Start Combat
+                <Play className="mr-2 h-4 w-4" /> Start Combat
               </Button>
             ) : (
               <div className="flex gap-2">
                 <Button onClick={handleAdvanceTurn} className="flex-1">
-                  Next Turn
+                  <SkipForward className="mr-2 h-4 w-4" /> Next Turn
                 </Button>
                 <Button onClick={handleEndCombat} variant="destructive" className="flex-1">
-                  End Combat
+                  <Square className="mr-2 h-4 w-4" /> End Combat
                 </Button>
               </div>
             )}
