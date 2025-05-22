@@ -97,98 +97,105 @@ export default function GridSettingsPanel({
       <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
         <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
       </div>
-      <div className="flex items-center justify-between">
-        <Label htmlFor="toggle-grid-lines-popover" className="text-popover-foreground">Show Grid Lines</Label>
-        <Switch
-          id="toggle-grid-lines-popover"
-          checked={showGridLines}
-          onCheckedChange={setShowGridLines}
-          aria-label="Toggle grid lines"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="background-image-upload-popover" className="text-popover-foreground">Custom Background Image</Label>
-        <Label 
-          htmlFor="background-image-upload-popover"
-          className={cn(
-            "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer",
-            "bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors"
-          )}
-        >
-          <ImageUp className="h-8 w-8 mb-2" />
-          <span className="text-sm">Click or drag to upload</span>
-        </Label>
-        <Input
-          id="background-image-upload-popover"
-          type="file"
-          accept="image/*"
-          onChange={handleBackgroundImageUpload}
-          className="hidden" 
-        />
-        {backgroundImageUrl && !defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
-          <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full">
-            <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Background
-          </Button>
-        )}
-      </div>
-
-      {backgroundImageUrl && (
-        <div className="space-y-2">
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Left Column */}
+        <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="background-zoom-slider" className="text-popover-foreground flex items-center">
-              <ZoomIn className="mr-2 h-4 w-4" /> Background Zoom
+            <Label htmlFor="toggle-grid-lines-popover" className="text-popover-foreground">Show Grid Lines</Label>
+            <Switch
+              id="toggle-grid-lines-popover"
+              checked={showGridLines}
+              onCheckedChange={setShowGridLines}
+              aria-label="Toggle grid lines"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="background-image-upload-popover" className="text-popover-foreground">Custom Background Image</Label>
+            <Label 
+              htmlFor="background-image-upload-popover"
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer",
+                "bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors"
+              )}
+            >
+              <ImageUp className="h-8 w-8 mb-2" />
+              <span className="text-sm">Click or drag to upload</span>
             </Label>
-            <span className="text-sm text-muted-foreground">{(backgroundZoomLevel * 100).toFixed(0)}%</span>
+            <Input
+              id="background-image-upload-popover"
+              type="file"
+              accept="image/*"
+              onChange={handleBackgroundImageUpload}
+              className="hidden" 
+            />
+            {backgroundImageUrl && !defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
+              <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full">
+                <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Background
+              </Button>
+            )}
           </div>
-          <Slider
-            id="background-zoom-slider"
-            min={0.2}
-            max={3}
-            step={0.05}
-            value={[backgroundZoomLevel]}
-            onValueChange={(value) => setBackgroundZoomLevel(value[0])}
-            disabled={!backgroundImageUrl}
-          />
-        </div>
-      )}
 
-      <div className="space-y-2">
-        <div className="flex items-center text-base font-medium text-popover-foreground mb-1">
-            <ScrollText className="mr-2 h-4 w-4" /> Default Battlemaps
+          {backgroundImageUrl && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="background-zoom-slider" className="text-popover-foreground flex items-center">
+                  <ZoomIn className="mr-2 h-4 w-4" /> Background Zoom
+                </Label>
+                <span className="text-sm text-muted-foreground">{(backgroundZoomLevel * 100).toFixed(0)}%</span>
+              </div>
+              <Slider
+                id="background-zoom-slider"
+                min={0.2}
+                max={3}
+                step={0.05}
+                value={[backgroundZoomLevel]}
+                onValueChange={(value) => setBackgroundZoomLevel(value[0])}
+                disabled={!backgroundImageUrl}
+              />
+            </div>
+          )}
         </div>
-        <ScrollArea className="h-40 w-full rounded-md border border-border p-2">
-          <div className="grid grid-cols-2 gap-2">
-            {defaultBattlemaps.map((map) => (
-              <button
-                key={map.name}
-                onClick={() => handleSelectDefaultMap(map.url)}
-                className={cn(
-                  "relative aspect-square w-full rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all",
-                  backgroundImageUrl === map.url ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
-                )}
-                title={`Select ${map.name}`}
-              >
-                <NextImage
-                  src={map.url}
-                  alt={map.name}
-                  layout="fill"
-                  objectFit="cover"
-                  data-ai-hint={map.hint}
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
-                  <span className="text-xs text-white truncate">{map.name}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-        {backgroundImageUrl && defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
-           <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full mt-2">
-            <Trash2 className="mr-2 h-4 w-4" /> Clear Default Background
-          </Button>
-        )}
+
+        {/* Right Column */}
+        <div className="flex-1 space-y-2">
+            <div className="flex items-center text-base font-medium text-popover-foreground mb-1">
+                <ScrollText className="mr-2 h-4 w-4" /> Default Battlemaps
+            </div>
+            <ScrollArea className="h-40 w-full rounded-md border border-border p-2">
+              <div className="grid grid-cols-2 gap-2">
+                {defaultBattlemaps.map((map) => (
+                  <button
+                    key={map.name}
+                    onClick={() => handleSelectDefaultMap(map.url)}
+                    className={cn(
+                      "relative aspect-square w-full rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all",
+                      backgroundImageUrl === map.url ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
+                    )}
+                    title={`Select ${map.name}`}
+                  >
+                    <NextImage
+                      src={map.url}
+                      alt={map.name}
+                      layout="fill"
+                      objectFit="cover"
+                      data-ai-hint={map.hint}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
+                      <span className="text-xs text-white truncate">{map.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+            {backgroundImageUrl && defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
+               <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full mt-2">
+                <Trash2 className="mr-2 h-4 w-4" /> Clear Default Background
+              </Button>
+            )}
+        </div>
       </div>
+
 
       {uncroppedImageSrc && (
         <ImageCropDialog
@@ -202,4 +209,3 @@ export default function GridSettingsPanel({
     </div>
   );
 }
-
