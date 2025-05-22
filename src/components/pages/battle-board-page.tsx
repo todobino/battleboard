@@ -81,7 +81,7 @@ export default function BattleBoardPage() {
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
           <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              {/* Icon and title moved to FloatingToolbar */}
+               {/* Title and icon moved to FloatingToolbar */}
             </div>
             <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             
@@ -136,6 +136,10 @@ export default function BattleBoardPage() {
             setActiveTool={setActiveTool}
             title="Battle Board"
             Icon={LandPlot}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            selectedTokenTemplate={selectedTokenTemplate}
+            setSelectedTokenTemplate={setSelectedTokenTemplate}
           />
         </SidebarInset>
       </div>
@@ -170,4 +174,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
