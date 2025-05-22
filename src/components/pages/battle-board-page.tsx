@@ -52,6 +52,7 @@ export default function BattleBoardPage() {
         result: undefined
       });
     } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') {
+      // Clear measurement if switching away from a measurement tool
       setMeasurement({
         type: null,
         startPoint: undefined,
@@ -60,22 +61,19 @@ export default function BattleBoardPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool]);
+  }, [activeTool]); // Only depend on activeTool
 
   useEffect(() => {
     if (participants.length === 0) {
       if (currentParticipantIndex !== -1) setCurrentParticipantIndex(-1);
     } else {
+      // Ensure currentParticipantIndex is valid
       if (currentParticipantIndex < 0 || currentParticipantIndex >= participants.length) {
         setCurrentParticipantIndex(0);
       }
     }
   }, [participants, currentParticipantIndex]);
 
-
-  const handleCellClick = useCallback((x: number, y: number) => {
-    // Cell click logic is primarily handled within BattleGrid
-  }, []);
 
   const handleTokenMove = useCallback((tokenId: string, newX: number, newY: number) => {
     setTokens(prevTokens =>
@@ -209,11 +207,11 @@ export default function BattleBoardPage() {
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
       timer = setTimeout(() => {
         handleAdvanceTurn();
-      }, 5000);
+      }, 5000); // Auto-advance every 5 seconds
     }
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]);
+  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]); // Dependencies for auto-advance
 
 
   return (
@@ -226,12 +224,10 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={1} // zoomLevel is not actively used for SVG scaling in BattleGrid currently
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
             selectedTokenTemplate={selectedTokenTemplate}
-            onCellClick={handleCellClick}
             onTokenMove={handleTokenMove}
             measurement={measurement}
             setMeasurement={setMeasurement}

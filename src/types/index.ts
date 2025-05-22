@@ -41,7 +41,6 @@ export type ActiveTool =
   | 'measure_radius'
   | 'map_tool'
   | 'token_placer_tool'
-  | 'character_tool' // Retained from previous, might be unused or repurposed
   | 'eraser_tool';
 
 
@@ -58,3 +57,4 @@ export interface Measurement {
   type: 'distance' | 'radius' | null;
   result?: string;
 }
+
