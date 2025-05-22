@@ -248,7 +248,7 @@ export default function BattleGrid({
 
         {/* Grid Lines */}
         {showGridLines && (
-          <g stroke="var(--border)" strokeWidth="1"> {/* Use CSS var for border, increased strokeWidth */}
+          <g stroke="var(--border)" strokeWidth="1.5"> {/* Use CSS var for border, slightly increased strokeWidth */}
             {Array.from({ length: GRID_SIZE + 1 }).map((_, i) => (
               <React.Fragment key={`line-${i}`}>
                 <line x1={i * cellSize} y1="0" x2={i * cellSize} y2={gridHeight} />
