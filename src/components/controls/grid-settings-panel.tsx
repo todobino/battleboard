@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
+import { Grid, ImageUp, Trash2, ZoomIn, ScrollText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { Slider } from '@/components/ui/slider';
+import NextImage from 'next/image';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface GridSettingsPanelProps {
   showGridLines: boolean;
@@ -23,6 +25,20 @@ interface GridSettingsPanelProps {
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
 }
+
+const defaultBattlemaps = [
+  { name: 'Forest Clearing', url: 'https://placehold.co/1200x900.png', hint: 'forest clearing' },
+  { name: 'Dungeon Corridor', url: 'https://placehold.co/1200x900.png', hint: 'dungeon corridor' },
+  { name: 'Cobblestone Street', url: 'https://placehold.co/1200x900.png', hint: 'cobblestone street' },
+  { name: 'Tavern Interior', url: 'https://placehold.co/1200x900.png', hint: 'tavern interior' },
+  { name: 'Cave System', url: 'https://placehold.co/1200x900.png', hint: 'cave system' },
+  { name: 'Desert Oasis', url: 'https://placehold.co/1200x900.png', hint: 'desert oasis' },
+  { name: 'Swamp Marsh', url: 'https://placehold.co/1200x900.png', hint: 'swamp marsh' },
+  { name: 'Castle Courtyard', url: 'https://placehold.co/1200x900.png', hint: 'castle courtyard' },
+  { name: 'Ship Deck', url: 'https://placehold.co/1200x900.png', hint: 'ship deck' },
+  { name: 'Mountain Pass', url: 'https://placehold.co/1200x900.png', hint: 'mountain pass' },
+];
+
 
 export default function GridSettingsPanel({
   showGridLines, setShowGridLines,
@@ -70,6 +86,12 @@ export default function GridSettingsPanel({
     setUncroppedImageSrc(null);
   };
 
+  const handleSelectDefaultMap = (url: string) => {
+    setBackgroundImageUrl(url);
+    setBackgroundZoomLevel(1);
+    toast({ title: "Default Battlemap Selected" });
+  };
+
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
@@ -86,7 +108,7 @@ export default function GridSettingsPanel({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="background-image-upload-popover" className="text-popover-foreground">Background Image</Label>
+        <Label htmlFor="background-image-upload-popover" className="text-popover-foreground">Custom Background Image</Label>
         <Label 
           htmlFor="background-image-upload-popover"
           className={cn(
@@ -104,9 +126,9 @@ export default function GridSettingsPanel({
           onChange={handleBackgroundImageUpload}
           className="hidden" 
         />
-        {backgroundImageUrl && (
+        {backgroundImageUrl && !defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
           <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full">
-            <Trash2 className="mr-2 h-4 w-4" /> Remove Background
+            <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Background
           </Button>
         )}
       </div>
@@ -131,6 +153,43 @@ export default function GridSettingsPanel({
         </div>
       )}
 
+      <div className="space-y-2">
+        <div className="flex items-center text-base font-medium text-popover-foreground mb-1">
+            <ScrollText className="mr-2 h-4 w-4" /> Default Battlemaps
+        </div>
+        <ScrollArea className="h-40 w-full rounded-md border border-border p-2">
+          <div className="grid grid-cols-2 gap-2">
+            {defaultBattlemaps.map((map) => (
+              <button
+                key={map.name}
+                onClick={() => handleSelectDefaultMap(map.url)}
+                className={cn(
+                  "relative aspect-[4/3] w-full rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all",
+                  backgroundImageUrl === map.url ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
+                )}
+                title={`Select ${map.name}`}
+              >
+                <NextImage
+                  src={map.url}
+                  alt={map.name}
+                  layout="fill"
+                  objectFit="cover"
+                  data-ai-hint={map.hint}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
+                  <span className="text-xs text-white truncate">{map.name}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+        {backgroundImageUrl && defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
+           <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full mt-2">
+            <Trash2 className="mr-2 h-4 w-4" /> Clear Default Background
+          </Button>
+        )}
+      </div>
+
       {uncroppedImageSrc && (
         <ImageCropDialog
           isOpen={isCropDialogOpen}
@@ -143,3 +202,4 @@ export default function GridSettingsPanel({
     </div>
   );
 }
+
