@@ -51,6 +51,8 @@
     --chart-3: 25 25% 25%; /* Very Dark Brown */
     --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
     --chart-5: 20 40% 40%; /* Muted Red-Brown */
+
+    --battle-grid-bg: 0 0% 96%; /* Very Light Gray (#f5f5f5) */
   }
 
   .dark {
@@ -100,6 +102,8 @@
     --chart-3: 25 15% 15%;
     --chart-4: 40 35% 45%;
     --chart-5: 20 30% 30%;
+
+    --battle-grid-bg: 0 0% 96%; /* Very Light Gray (#f5f5f5) - same for dark mode for strong contrast */
   }
 }
 

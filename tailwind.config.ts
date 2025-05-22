@@ -59,7 +59,8 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+        'battle-grid-bg': 'hsl(var(--battle-grid-bg))',
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
