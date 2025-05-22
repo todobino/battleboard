@@ -1,16 +1,17 @@
 
 'use client';
 
-import type { ActiveTool, Token } from '@/types';
+import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { Ruler, Maximize, Paintbrush, MousePointerSquareDashed, Map, PersonStanding } from 'lucide-react';
+import { LandPlot, PencilRuler, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
+import MeasurementToolPanel from '@/components/controls/measurement-tool-panel';
 
 
 interface FloatingToolbarProps {
@@ -26,6 +27,8 @@ interface FloatingToolbarProps {
   setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
   showGridLines: boolean;
   setShowGridLines: Dispatch<SetStateAction<boolean>>;
+  measurement: Measurement;
+  setMeasurement: Dispatch<SetStateAction<Measurement>>;
 }
 
 interface ToolButtonProps {
@@ -52,7 +55,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, curren
         aria-label={label}
         asChild={asChild}
       >
-        {children || <Icon className="h-5 w-5" />}
+        {children || <Icon className="h-5 w-5 text-accent-foreground" />}
       </Button>
     </TooltipTrigger>
     <TooltipContent side="bottom" align="center">
@@ -61,20 +64,20 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, curren
   </Tooltip>
 );
 
-export default function FloatingToolbar({ 
-  activeTool, setActiveTool, 
+export default function FloatingToolbar({
+  activeTool, setActiveTool,
   title, Icon,
   selectedColor, setSelectedColor,
   selectedTokenTemplate, setSelectedTokenTemplate,
   backgroundImageUrl, setBackgroundImageUrl,
-  showGridLines, setShowGridLines
+  showGridLines, setShowGridLines,
+  measurement, setMeasurement,
 }: FloatingToolbarProps) {
-  
+
   const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick' | 'children' | 'asChild'>[] = [
     { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
-    { label: 'Measure Distance', icon: Ruler, tool: 'measure_distance' },
-    { label: 'Measure Radius', icon: Maximize, tool: 'measure_radius' },
-    { label: 'Character Focus', icon: PersonStanding, tool: 'character_tool' },
+    { label: 'Token Placer', icon: Puzzle, tool: 'token_placer_tool' },
+    { label: 'Drafting Tools', icon: DraftingCompass, tool: 'drafting_compass_tool' }, // Example, might be a popover
   ];
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -95,7 +98,7 @@ export default function FloatingToolbar({
             <Separator orientation="vertical" className="h-8 bg-border" />
           </>
         )}
-        
+
         {mainTools.map((toolProps) => (
           <ToolButton
             key={toolProps.tool}
@@ -104,6 +107,39 @@ export default function FloatingToolbar({
             onClick={() => handleToolClick(toolProps.tool)}
           />
         ))}
+
+        {/* Measurement Tools Popover */}
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={(activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => handleToolClick('measure_distance')} // Default to distance or keep active measurement tool
+                  className={cn(
+                    'rounded-md shadow-lg h-12 w-12 p-2.5',
+                     (activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+                  )}
+                  aria-label="Measurement Tools"
+                >
+                  <PencilRuler className="h-5 w-5 text-accent-foreground" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              <p>Measurement Tools</p>
+            </TooltipContent>
+          </Tooltip>
+          <PopoverContent className="w-80" side="top" align="start">
+            <MeasurementToolPanel
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              measurement={measurement}
+              setMeasurement={setMeasurement}
+            />
+          </PopoverContent>
+        </Popover>
 
         {/* Grid Settings Popover */}
         <Popover>
@@ -120,7 +156,7 @@ export default function FloatingToolbar({
                   )}
                   aria-label="Map & Grid Settings"
                 >
-                  <Map className="h-5 w-5" />
+                  <Map className="h-5 w-5 text-accent-foreground" />
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
@@ -154,7 +190,7 @@ export default function FloatingToolbar({
                   )}
                   aria-label="Color & Token Tools"
                 >
-                  <Paintbrush className="h-5 w-5" />
+                  <Paintbrush className="h-5 w-5 text-accent-foreground" />
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>

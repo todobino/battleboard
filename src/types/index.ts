@@ -34,11 +34,12 @@ export interface Participant {
 export type ActiveTool =
   | 'select'
   | 'paint_cell'
-  | 'place_token'
+  | 'place_token' // This is used by ColorToolPanel
   | 'measure_distance'
   | 'measure_radius'
   | 'map_tool'
-  | 'character_tool';
+  | 'token_placer_tool' // Changed from 'character_tool'
+  | 'drafting_compass_tool';
 
 export interface TokenTemplate {
   name: string;
