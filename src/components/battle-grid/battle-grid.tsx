@@ -12,7 +12,6 @@ interface BattleGridProps {
   tokens: Token[];
   setTokens: React.Dispatch<React.SetStateAction<Token[]>>;
   showGridLines: boolean;
-  // zoomLevel prop is not actively used for SVG scaling currently
   backgroundImageUrl: string | null;
   activeTool: ActiveTool;
   selectedColor: string;
@@ -54,7 +53,7 @@ export default function BattleGrid({
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
-  const [isPainting, setIsPainting] = useState(false); // New state for paint tool
+  const [isPainting, setIsPainting] = useState(false);
 
   const { toast } = useToast();
 
@@ -80,10 +79,10 @@ export default function BattleGrid({
                                Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
         
         const currentZoomLevel = (contentWidth + (currentBorderWidth)) / currentVbParts[2];
-        if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) { // Only recenter if zoom is close to 1x
+        if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) { 
              return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
         }
-        return currentVbString; // Keep current viewBox if zoomed or already centered
+        return currentVbString; 
     });
   }, [showGridLines]);
 
@@ -104,7 +103,7 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { // Middle mouse or Ctrl+Click for panning
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -119,7 +118,7 @@ export default function BattleGrid({
         }
         break;
       case 'paint_cell':
-        setIsPainting(true); // Start painting mode
+        setIsPainting(true);
         setGridCells(prev => {
           const newCells = prev.map(row => row.map(cell => ({ ...cell })));
           if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -278,7 +277,7 @@ export default function BattleGrid({
     if (isErasing) {
         setIsErasing(false);
     }
-    if (isPainting) { // Stop painting mode
+    if (isPainting) {
         setIsPainting(false);
     }
   };
@@ -347,7 +346,6 @@ export default function BattleGrid({
                 stroke={showGridLines ? 'black' : 'transparent'}
                 strokeWidth={showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0}
                 className={cn(
-                  'transition-colors duration-100',
                   (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') && 'cursor-crosshair',
                   (activeTool !== 'paint_cell' && activeTool !== 'place_token' && activeTool !== 'measure_distance' && activeTool !== 'measure_radius' && activeTool !== 'eraser_tool') && 'cursor-default'
                 )}
@@ -451,4 +449,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
