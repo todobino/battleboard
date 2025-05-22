@@ -12,8 +12,8 @@ import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
-const GRID_ROWS = 20;
-const GRID_COLS = 20;
+const GRID_ROWS = 30;
+const GRID_COLS = 30;
 
 const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
@@ -38,25 +38,25 @@ export default function BattleBoardPage() {
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [selectedColor, setSelectedColor] = useState<string>('#FF0000');
   const [selectedTokenTemplate, setSelectedTokenTemplate] = useState<Omit<Token, 'id' | 'x' | 'y'> | null>(null);
-  
+
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
 
   const { toast } = useToast();
 
   useEffect(() => {
     if (activeTool === 'measure_distance' || activeTool === 'measure_radius') {
-      setMeasurement({ 
-        type: activeTool === 'measure_distance' ? 'distance' : 'radius', 
-        startPoint: undefined, 
-        endPoint: undefined, 
-        result: undefined 
+      setMeasurement({
+        type: activeTool === 'measure_distance' ? 'distance' : 'radius',
+        startPoint: undefined,
+        endPoint: undefined,
+        result: undefined
       });
-    } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') { 
-      setMeasurement({ 
-        type: null, 
-        startPoint: undefined, 
-        endPoint: undefined, 
-        result: undefined 
+    } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') {
+      setMeasurement({
+        type: null,
+        startPoint: undefined,
+        endPoint: undefined,
+        result: undefined
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,24 +100,29 @@ export default function BattleBoardPage() {
 
   const handleEndCombat = () => {
     setIsCombatActive(false);
-    setRoundCounter(1);
+    setRoundCounter(1); // Reset round counter
+    setCurrentParticipantIndex(-1); // No active participant
     toast({ title: "Combat Ended."});
   };
 
   const handleAdvanceTurn = () => {
-    if (!isCombatActive || participants.length === 0 || currentParticipantIndex === -1) {
+    if (!isCombatActive || participants.length === 0) {
       toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
       return;
     }
+    
     let nextIndex = currentParticipantIndex + 1;
     let currentRound = roundCounter;
+    
     if (nextIndex >= participants.length) {
       nextIndex = 0;
       currentRound = roundCounter + 1;
       setRoundCounter(currentRound);
       toast({ title: `Round ${currentRound} Starting!` });
     }
+    
     setCurrentParticipantIndex(nextIndex);
+    
     if (participants[nextIndex]) {
        toast({ title: "Next Turn", description: `${participants[nextIndex].name}'s turn.`});
     }
@@ -128,23 +133,31 @@ export default function BattleBoardPage() {
       ...participantData,
       id: `participant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     };
-    
+
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
+      // If combat is active, try to maintain the current turn focus if possible,
+      // otherwise, if it's a new combatant, it will be sorted.
+      // If combat is not active, and it's the first participant, set them as active.
       if (isCombatActive) {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-        const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-        setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (newList.length > 0 ? 0 : -1));
-      } else {
-        if (newList.length === 1) {
-          setCurrentParticipantIndex(0);
-        } else if (prev.length === 0 && newList.length > 0){
-          setCurrentParticipantIndex(0);
-        } else {
-          const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-          const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-          setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (newList.length > 0 ? 0 : -1) );
+        let newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
+        if (newActiveIndex === -1 && newList.length > 0 && currentParticipantIndex >=0) {
+          // If the old active participant is gone (shouldn't happen on add) or index was valid but now isn't
+          // This logic might need refinement based on desired behavior when adding during combat
+          newActiveIndex = (currentParticipantIndex < newList.length) ? currentParticipantIndex : 0;
+        } else if (newActiveIndex === -1 && newList.length > 0){
+          newActiveIndex = 0;
         }
+        setCurrentParticipantIndex(newActiveIndex);
+      } else {
+        // If not in combat, or adding the first participant
+        if (newList.length === 1 && currentParticipantIndex === -1) {
+          setCurrentParticipantIndex(0);
+        } else if (prev.length === 0 && newList.length > 0) {
+           setCurrentParticipantIndex(0);
+        }
+        // Otherwise, currentParticipantIndex remains -1 or its current value until combat starts
       }
       return newList;
     });
@@ -155,31 +168,34 @@ export default function BattleBoardPage() {
     setParticipants(prev => {
       const participantToRemove = prev.find(p => p.id === id);
       if (!participantToRemove) return prev;
-  
+
+      const isRemovingCurrentTurn = prev[currentParticipantIndex]?.id === id;
       const filteredList = prev.filter(p => p.id !== id);
-      
+
       if (filteredList.length === 0) {
         setCurrentParticipantIndex(-1);
+      } else if (isRemovingCurrentTurn) {
+        // If removing the current turn holder, advance to the "next" one (which could be the start of the list)
+        // The index remains the same, but the participant at that index is now different.
+        // Or, if it was the last, loop to 0.
+        setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
       } else {
+        // If removing someone else, find the ID of the current turn holder in the new list
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-        if (id === oldActiveParticipantId) {
-          setCurrentParticipantIndex(currentParticipantIndex % filteredList.length); 
+        const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
+        if (newActiveIndex !== -1) {
+          setCurrentParticipantIndex(newActiveIndex);
         } else {
-          const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
-          if (newActiveIndex !== -1) {
-            setCurrentParticipantIndex(newActiveIndex);
-          } else {
-            if (currentParticipantIndex >= filteredList.length) {
-              setCurrentParticipantIndex(0);
-            }
-          }
+          // Should not happen if currentParticipantIndex was valid and participant wasn't the one removed
+          // But as a fallback, if the current index is out of bounds, reset to 0
+          setCurrentParticipantIndex(currentParticipantIndex >= filteredList.length ? 0 : currentParticipantIndex);
         }
       }
       return filteredList;
     });
     toast({ title: "Participant Removed" });
   };
-  
+
   const handleResetInitiativeAndCombat = () => {
     setParticipants([]);
     setCurrentParticipantIndex(-1);
@@ -193,7 +209,7 @@ export default function BattleBoardPage() {
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
       timer = setTimeout(() => {
         handleAdvanceTurn();
-      }, 5000); 
+      }, 5000);
     }
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,6 +226,7 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
+            zoomLevel={1} // zoomLevel is not actively used for SVG scaling in BattleGrid currently
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -239,7 +256,7 @@ export default function BattleBoardPage() {
 
       {/* Right Sidebar for Initiative Tracker */}
       <SidebarProvider defaultOpen={true}>
-        <Sidebar variant="sidebar" collapsible="icon" side="right"> {/* Removed className="border-l" */}
+        <Sidebar variant="sidebar" collapsible="icon" side="right">
           <SidebarContent className="p-4 space-y-4">
             <InitiativeTrackerPanel
               participantsProp={participants}
@@ -278,3 +295,5 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
+    

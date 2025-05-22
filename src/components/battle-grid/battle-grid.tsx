@@ -23,9 +23,9 @@ interface BattleGridProps {
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
 }
 
-const GRID_SIZE = 20; // 20x20 grid
+const GRID_SIZE = 30; // 30x30 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const BORDER_WIDTH_WHEN_VISIBLE = 1; 
+const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
 
 export default function BattleGrid({
@@ -34,10 +34,10 @@ export default function BattleGrid({
   tokens,
   setTokens,
   showGridLines,
-  zoomLevel, 
+  zoomLevel,
   backgroundImageUrl,
   activeTool,
-  onCellClick, 
+  onCellClick,
   onTokenMove,
   selectedColor,
   selectedTokenTemplate,
@@ -48,7 +48,6 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Adjust padding based on whether grid lines are visible and their width
     const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + (padding * 2)} ${initialContentHeight + (padding * 2)}`;
   });
@@ -58,13 +57,13 @@ export default function BattleGrid({
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const { toast } = useToast();
 
-  const cellSize = DEFAULT_CELL_SIZE; 
+  const cellSize = DEFAULT_CELL_SIZE;
 
   useEffect(() => {
     const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const contentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
     const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
-    
+
     const expectedMinX = 0 - padding;
     const expectedMinY = 0 - padding;
     const expectedVw = contentWidth + (padding * 2);
@@ -73,15 +72,13 @@ export default function BattleGrid({
     setViewBox(currentVbString => {
         const currentVbParts = currentVbString.split(' ').map(Number);
         const currentZoom = (GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)) / currentVbParts[2];
-        
-        // Only reset viewBox if it's not significantly zoomed or panned
-        // And if the padding expectation has changed (e.g., showGridLines toggled)
-        const paddingChanged = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 || 
+
+        const paddingChanged = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
                                Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
                                Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                                Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
 
-        if (paddingChanged && currentZoom === 1) { 
+        if (paddingChanged && currentZoom === 1) {
              return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
         }
         return currentVbString;
@@ -98,7 +95,7 @@ export default function BattleGrid({
       y: (event.clientY - CTM.f) / CTM.d,
     };
   };
-  
+
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
@@ -114,7 +111,7 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey))) { 
+        if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey))) {
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
@@ -149,10 +146,10 @@ export default function BattleGrid({
           const distInFeet = distInSquares * FEET_PER_SQUARE;
           const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
 
-          const resultText = measurement.type === 'distance' 
-            ? `Distance: ${roundedDistInFeet} ft` 
+          const resultText = measurement.type === 'distance'
+            ? `Distance: ${roundedDistInFeet} ft`
             : `Radius: ${roundedDistInFeet} ft`;
-            
+
           setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
           toast({ title: "Measurement Complete", description: resultText });
         }
@@ -177,15 +174,15 @@ export default function BattleGrid({
       const currentVbParts = viewBox.split(' ').map(Number);
       const svgWidth = svgRef.current.clientWidth;
       const svgHeight = svgRef.current.clientHeight;
-      
-      if (svgWidth === 0 || svgHeight === 0) return; // Avoid division by zero if SVG not rendered yet
+
+      if (svgWidth === 0 || svgHeight === 0) return;
 
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
 
       const zoomFactorX = currentVbWidth / svgWidth;
       const zoomFactorY = currentVbHeight / svgHeight;
-      
+
       const dx = (panStart.x - event.clientX) * zoomFactorX;
       const dy = (panStart.y - event.clientY) * zoomFactorY;
 
@@ -211,7 +208,7 @@ export default function BattleGrid({
       const pos = getMousePosition(event);
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
-      
+
       if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
         onTokenMove(draggingToken.id, gridX, gridY);
       }
@@ -219,7 +216,7 @@ export default function BattleGrid({
       setDragOffset(null);
     }
   };
-  
+
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
     if(!svgRef.current) return;
@@ -236,17 +233,17 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
       newVh = vh * scaleAmount;
     }
-    
-    const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
-    const minAllowedVw = baseContentWidth / 10; 
-    const maxAllowedVw = baseContentWidth * 5; 
+
+    const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
+    const minAllowedVw = baseContentWidth / 10;
+    const maxAllowedVw = baseContentWidth * 5;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; 
+    newVh = (newVw / vw) * vh;
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
-    
+
     setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
   };
 
@@ -270,8 +267,8 @@ export default function BattleGrid({
         {backgroundImageUrl && (
           <image href={backgroundImageUrl} x="0" y="0" width={gridContentWidth} height={gridContentHeight} />
         )}
-        
-        <g shapeRendering="crispEdges"> 
+
+        <g shapeRendering="crispEdges">
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => (
               <rect
@@ -291,20 +288,20 @@ export default function BattleGrid({
             ))
           )}
         </g>
-        
+
         {measurement.startPoint && measurement.endPoint && (
           <g stroke={selectedColor || "hsl(var(--accent))"} strokeWidth="2" fill="none">
             {measurement.type === 'distance' ? (
-              <line 
-                x1={measurement.startPoint.x * cellSize + cellSize/2} 
+              <line
+                x1={measurement.startPoint.x * cellSize + cellSize/2}
                 y1={measurement.startPoint.y * cellSize + cellSize/2}
-                x2={measurement.endPoint.x * cellSize + cellSize/2} 
+                x2={measurement.endPoint.x * cellSize + cellSize/2}
                 y2={measurement.endPoint.y * cellSize + cellSize/2}
                 markerEnd="url(#arrowhead)"
               />
             ) : (
-              <circle 
-                cx={measurement.startPoint.x * cellSize + cellSize/2} 
+              <circle
+                cx={measurement.startPoint.x * cellSize + cellSize/2}
                 cy={measurement.startPoint.y * cellSize + cellSize/2}
                 r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize}
                 strokeDasharray="4"
@@ -328,16 +325,16 @@ export default function BattleGrid({
         {tokens.map(token => {
           const IconComponent = token.icon;
           return (
-            <g 
-              key={token.id} 
+            <g
+              key={token.id}
               transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
               onMouseDown={(e) => handleTokenMouseDown(e, token)}
               className={cn(activeTool === 'select' && 'cursor-grab', draggingToken?.id === token.id && 'cursor-grabbing')}
             >
               {IconComponent ? (
-                <IconComponent 
-                  className="w-full h-full p-1" 
-                  style={{ color: token.color, width: cellSize * (token.size || 1), height: cellSize * (token.size || 1) }} 
+                <IconComponent
+                  className="w-full h-full p-1"
+                  style={{ color: token.color, width: cellSize * (token.size || 1), height: cellSize * (token.size || 1) }}
                 />
               ) : (
                 <circle
@@ -350,12 +347,12 @@ export default function BattleGrid({
                 />
               )}
               {token.label && (
-                <text 
-                  x={cellSize / 2 * (token.size || 1)} 
-                  y={cellSize / 2 * (token.size || 1)} 
-                  textAnchor="middle" 
-                  dy=".3em" 
-                  fontSize={cellSize / 3} 
+                <text
+                  x={cellSize / 2 * (token.size || 1)}
+                  y={cellSize / 2 * (token.size || 1)}
+                  textAnchor="middle"
+                  dy=".3em"
+                  fontSize={cellSize / 3}
                   fill="hsl(var(--primary-foreground))"
                   className="pointer-events-none select-none"
                 >
@@ -369,3 +366,5 @@ export default function BattleGrid({
     </div>
   );
 }
+
+    
