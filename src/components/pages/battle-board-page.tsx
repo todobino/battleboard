@@ -6,9 +6,9 @@ import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import FloatingToolbar from '@/components/floating-toolbar';
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, ListOrdered } from 'lucide-react';
+import { LandPlot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -230,14 +230,7 @@ export default function BattleBoardPage() {
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" className="border-l" side="right">
-          <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <ListOrdered className="h-6 w-6 text-sidebar-primary" />
-              <h2 className="text-lg font-semibold text-sidebar-primary">Turn Order</h2>
-            </div>
-            <ListOrdered className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
-            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
-          </SidebarHeader>
+          {/* SidebarHeader removed */}
           <SidebarContent className="p-4 space-y-4">
             <InitiativeTrackerPanel
               participants={participants}
