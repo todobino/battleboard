@@ -28,7 +28,7 @@ export interface Participant {
   initiative: number;
   type: 'player' | 'enemy';
   tokenId?: string; // Optional: links to a token on the grid
-  isActive?: boolean; // True if it's this participant's turn
+  // isActive?: boolean; // Removed: True if it's this participant's turn - will be determined dynamically
 }
 
 export type ActiveTool = 
