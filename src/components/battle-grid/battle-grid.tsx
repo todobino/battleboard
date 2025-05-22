@@ -25,12 +25,14 @@ interface BattleGridProps {
 
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const BORDER_WIDTH_WHEN_VISIBLE = 1; // Desired border width in pixels when grid lines are shown
-const FEET_PER_SQUARE = 5; // Each square represents 5 feet
+const BORDER_WIDTH_WHEN_VISIBLE = 1; 
+const FEET_PER_SQUARE = 5;
 
 export default function BattleGrid({
   gridCells,
+  setGridCells,
   tokens,
+  setTokens,
   showGridLines,
   zoomLevel, 
   backgroundImageUrl,
@@ -39,8 +41,6 @@ export default function BattleGrid({
   onTokenMove,
   selectedColor,
   selectedTokenTemplate,
-  setGridCells,
-  setTokens,
   measurement,
   setMeasurement,
 }: BattleGridProps) {
@@ -48,8 +48,6 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Padding accommodates half the border width on each side when visible, 
-    // or 0 if borders are not shown initially (or if BORDER_WIDTH_WHEN_VISIBLE is 0)
     const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + (padding * 2)} ${initialContentHeight + (padding * 2)}`;
   });
@@ -64,27 +62,25 @@ export default function BattleGrid({
   useEffect(() => {
     const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const contentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Padding ensures borders are visible even at the edges of the SVG
     const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
     
     const expectedMinX = 0 - padding;
     const expectedMinY = 0 - padding;
-    // The viewBox width/height needs to be the content size plus padding on both sides
     const expectedVw = contentWidth + (padding * 2);
     const expectedVh = contentHeight + (padding * 2);
 
-    // Only update viewBox if it strictly needs to change based on showGridLines or constants
-    // This prevents resetting zoom/pan when other props change
     setViewBox(currentVbString => {
         const currentVbParts = currentVbString.split(' ').map(Number);
-        if (currentVbParts[0] !== expectedMinX || currentVbParts[1] !== expectedMinY || currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh) {
-            // If critical dimensions change due to grid lines visibility, reset to a centered view
-            // This is a simple reset; more sophisticated would preserve relative zoom/pan
-            return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
+        const currentZoom = (GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)) / currentVbParts[2];
+        
+        if (Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 || Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 || Math.abs(currentVbParts[2] - expectedVw) > 1e-3 || Math.abs(currentVbParts[3] - expectedVh) > 1e-3) {
+           if (currentZoom === 1) { // Only reset if not zoomed/panned significantly
+             return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
+           }
         }
-        return currentVbString; // No change needed
+        return currentVbString;
     });
-  }, [showGridLines]); // Recalculate viewBox if grid line visibility changes
+  }, [showGridLines]);
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -128,7 +124,7 @@ export default function BattleGrid({
         if (selectedTokenTemplate) {
           const newToken: Token = {
             ...selectedTokenTemplate,
-            id: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             x: gridX,
             y: gridY,
           };
@@ -145,7 +141,7 @@ export default function BattleGrid({
           const dy = endPoint.y - measurement.startPoint.y;
           const distInSquares = Math.sqrt(dx*dx + dy*dy);
           const distInFeet = distInSquares * FEET_PER_SQUARE;
-          const roundedDistInFeet = Math.round(distInFeet * 10) / 10; // Keep one decimal place for feet
+          const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
 
           const resultText = measurement.type === 'distance' 
             ? `Distance: ${roundedDistInFeet} ft` 
@@ -171,19 +167,19 @@ export default function BattleGrid({
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
-    if (isPanning && panStart) {
+    if (isPanning && panStart && svgRef.current) {
       const currentVbParts = viewBox.split(' ').map(Number);
+      const svgWidth = svgRef.current.clientWidth;
+      const svgHeight = svgRef.current.clientHeight;
+      
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
-      
-      const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0);
-      const baseContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0);
-      
-      const currentZoomFactorX = baseContentWidth / currentVbWidth;
-      const currentZoomFactorY = baseContentHeight / currentVbHeight;
 
-      const dx = (panStart.x - event.clientX) * currentZoomFactorX; 
-      const dy = (panStart.y - event.clientY) * currentZoomFactorY;
+      const zoomX = currentVbWidth / svgWidth;
+      const zoomY = currentVbHeight / svgHeight;
+      
+      const dx = (panStart.x - event.clientX) * zoomX;
+      const dy = (panStart.y - event.clientY) * zoomY;
 
       const [vx, vy, vw, vh] = currentVbParts;
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
@@ -218,6 +214,8 @@ export default function BattleGrid({
   
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
+    if(!svgRef.current) return;
+
     const scaleAmount = 1.1;
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
     const mousePos = getMousePosition(event);
@@ -232,27 +230,11 @@ export default function BattleGrid({
     }
     
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
-    const baseContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    
-    // Define min/max zoom based on content dimensions in viewBox
-    // Example: Min zoom shows 5x grid area, Max zoom shows 1/5th grid area
-    const minContentDimInVb = baseContentWidth / 5; 
-    const maxContentDimInVb = baseContentWidth * 5; 
+    const minAllowedVw = baseContentWidth / 10; // Max zoom in (e.g. 1/10th of content)
+    const maxAllowedVw = baseContentWidth * 5; // Max zoom out (e.g. 5x content)
 
-    // Padding effect based on whether borders are shown and their width
-    const currentPaddingEffect = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    
-    // Calculate the new content portion of the viewBox
-    let newContentVw = newVw - currentPaddingEffect;
-    let newContentVh = newVh - currentPaddingEffect;
-
-    // Clamp the content portion to min/max zoom levels
-    newContentVw = Math.max(minContentDimInVb, Math.min(maxContentDimInVb, newContentVw));
-    newContentVh = Math.max(minContentDimInVb, Math.min(maxContentDimInVb, newContentVh));
-    
-    // Re-add padding to get the final viewBox dimensions
-    newVw = newContentVw + currentPaddingEffect;
-    newVh = newContentVh + currentPaddingEffect;
+    newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
+    newVh = (newVw / vw) * vh; // Maintain aspect ratio based on clamped newVw
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -263,6 +245,14 @@ export default function BattleGrid({
   const gridContentWidth = GRID_SIZE * cellSize;
   const gridContentHeight = GRID_SIZE * cellSize;
 
+  return (
+    <div className="w-full h-full bg-purple-600 border-8 border-yellow-400 text-white text-3xl flex items-center justify-center font-bold">
+      BATTLE GRID TEST - IS THIS VISIBLE?
+    </div>
+  );
+
+  // Original SVG rendering commented out for diagnostics:
+  /*
   return (
     <div className="w-full h-full overflow-hidden bg-battle-grid-bg flex items-center justify-center relative">
       <svg
@@ -276,13 +266,11 @@ export default function BattleGrid({
         onWheel={handleWheel}
         preserveAspectRatio="xMidYMid meet"
         data-ai-hint="battle grid tactical map"
-        // shapeRendering="crispEdges" // Can be applied to SVG or specific groups/elements
       >
         {backgroundImageUrl && (
           <image href={backgroundImageUrl} x="0" y="0" width={gridContentWidth} height={gridContentHeight} />
         )}
         
-        {/* Group for grid cells/lines */}
         <g shapeRendering="crispEdges"> 
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => (
@@ -380,4 +368,5 @@ export default function BattleGrid({
       </svg>
     </div>
   );
+  */
 }

@@ -7,12 +7,9 @@ import BattleGrid from '@/components/battle-grid/battle-grid';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { LandPlot, ListOrdered, Settings, PanelLeft } from 'lucide-react';
+import { LandPlot, ListOrdered } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 const GRID_ROWS = 20;
 const GRID_COLS = 20;
@@ -74,9 +71,9 @@ export default function BattleBoardPage() {
 
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-800"> {/* Added bg-gray-800 for overall page background debug */}
       {/* Main Content Area */}
-      <div className="flex-1 relative"> {/* Simplified wrapper */}
+      <div className="flex-1 relative bg-blue-700"> {/* Added bg-blue-700 for this container's debug */}
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
