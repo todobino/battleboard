@@ -28,17 +28,20 @@ export interface Participant {
   name: string;
   initiative: number;
   type: 'player' | 'enemy' | 'ally';
+  hp?: number;
+  ac?: number;
   tokenId?: string; // Optional: links to a token on the grid
 }
 
 export type ActiveTool =
   | 'select'
   | 'paint_cell'
-  | 'place_token' // This is used by ColorToolPanel
+  | 'place_token'
   | 'measure_distance'
   | 'measure_radius'
   | 'map_tool'
-  | 'token_placer_tool';
+  | 'token_placer_tool'
+  | 'character_tool';
 
 
 export interface TokenTemplate {
@@ -54,3 +57,4 @@ export interface Measurement {
   type: 'distance' | 'radius' | null;
   result?: string;
 }
+
