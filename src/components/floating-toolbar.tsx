@@ -30,19 +30,19 @@ interface FloatingToolbarProps {
   setShowGridLines: Dispatch<SetStateAction<boolean>>;
   measurement: Measurement;
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
-  backgroundZoomLevel: number; // Added prop
-  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>; // Added prop
+  backgroundZoomLevel: number;
+  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
 }
 
 interface ToolButtonProps {
   label: string;
   icon: React.ElementType;
-  tool?: ActiveTool; 
-  currentActiveTool?: ActiveTool; 
-  onClick?: () => void; 
-  children?: React.ReactNode; 
-  asChild?: boolean; 
-  variantOverride?: "default" | "outline"; 
+  tool?: ActiveTool;
+  currentActiveTool?: ActiveTool;
+  onClick?: () => void;
+  children?: React.ReactNode;
+  asChild?: boolean;
+  variantOverride?: "default" | "outline";
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick, children, asChild, variantOverride }) => (
@@ -76,7 +76,7 @@ export default function FloatingToolbar({
   backgroundImageUrl, setBackgroundImageUrl,
   showGridLines, setShowGridLines,
   measurement, setMeasurement,
-  backgroundZoomLevel, setBackgroundZoomLevel, // Destructure new props
+  backgroundZoomLevel, setBackgroundZoomLevel,
 }: FloatingToolbarProps) {
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -87,7 +87,7 @@ export default function FloatingToolbar({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-xl border border-border z-50">
+      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-md border border-border z-50">
         {Icon && title && (
           <>
             <div className="flex items-center gap-2 px-2 mr-2">
@@ -197,7 +197,7 @@ export default function FloatingToolbar({
               backgroundImageUrl={backgroundImageUrl}
               setBackgroundImageUrl={setBackgroundImageUrl}
               setActiveTool={setActiveTool}
-              backgroundZoomLevel={backgroundZoomLevel} 
+              backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
             />
           </PopoverContent>
