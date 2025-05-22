@@ -25,7 +25,7 @@ interface BattleGridProps {
 
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const BORDER_WIDTH_WHEN_VISIBLE = 2; // Desired border width in pixels when grid lines are shown
+const BORDER_WIDTH_WHEN_VISIBLE = 1; // Desired border width in pixels when grid lines are shown
 const FEET_PER_SQUARE = 5; // Each square represents 5 feet
 
 export default function BattleGrid({
@@ -168,11 +168,9 @@ export default function BattleGrid({
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
       
-      // Base content width (grid itself, without padding for borders)
       const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
       const baseContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
       
-      // Calculate effective zoom factor based on the content area of the viewBox
       const currentZoomFactorX = baseContentWidth / (currentVbWidth - BORDER_WIDTH_WHEN_VISIBLE);
       const currentZoomFactorY = baseContentHeight / (currentVbHeight - BORDER_WIDTH_WHEN_VISIBLE);
 
@@ -231,7 +229,7 @@ export default function BattleGrid({
     const minContentDimInVb = baseContentWidth / 5; 
     const maxContentDimInVb = baseContentWidth * 5; 
 
-    const currentPaddingEffect = BORDER_WIDTH_WHEN_VISIBLE; // Assumes borders are always accounted for with a 2px effect
+    const currentPaddingEffect = BORDER_WIDTH_WHEN_VISIBLE;
     
     let newContentVw = newVw - currentPaddingEffect;
     let newContentVh = newVh - currentPaddingEffect;
@@ -278,7 +276,7 @@ export default function BattleGrid({
               width={cellSize}
               height={cellSize}
               fill={cell.color || 'transparent'}
-              stroke={showGridLines ? 'hsl(var(--border))' : 'transparent'}
+              stroke={showGridLines ? 'black' : 'transparent'}
               strokeWidth={showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0}
               shapeRendering="crispEdges"
               className={cn(
