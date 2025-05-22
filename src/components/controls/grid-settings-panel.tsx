@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2, MousePointerSquareDashed } from 'lucide-react';
+import { Grid, ImageUp, Trash2 } from 'lucide-react'; // Removed MousePointerSquareDashed
 import { useToast } from '@/hooks/use-toast';
 
 interface GridSettingsPanelProps {
@@ -75,13 +75,7 @@ export default function GridSettingsPanel({
           </Button>
         )}
       </div>
-       <Button 
-          variant="outline" 
-          onClick={() => setActiveTool('select')} 
-          className="w-full whitespace-normal text-xs h-auto py-2"
-        >
-          <MousePointerSquareDashed className="mr-2 h-4 w-4"/> Select/Pan Tool (Ctrl+Click or Middle Mouse to Pan, Wheel to Zoom)
-      </Button>
+      {/* Removed Select/Pan Tool button from here */}
     </div>
   );
 }
