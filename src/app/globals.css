@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    /* Dark Brown Theme - "Light Mode" */
-    --background: 25 20% 15%; /* Darker Brown Background */
-    --foreground: 35 30% 80%; /* Softer Light Cream/Brown */
+    /* Dark Brown Theme */
+    --background: 25 10% 10%; /* Dark Brown Background */
+    --foreground: 35 25% 85%; /* Light Cream/Brown */
 
     --muted: 25 15% 20%; /* Dark Muted Brown */
     --muted-foreground: 30 25% 60%; /* Muted Light Brown */
@@ -17,7 +17,7 @@
     --card: 25 18% 12%; /* Darker Card Brown */
     --card-foreground: 35 30% 80%; /* Softer Light Cream/Brown */
 
-    --border: 25 40% 40%; /* Darker, Richer Brown Border */
+    --border: 25 40% 25%; /* Darker, Richer Brown Border */
     --input: 25 15% 30%; /* Dark Muted Brown for Input Border */
 
     --primary: 25 35% 35%; /* Medium Dark Brown */
@@ -52,25 +52,25 @@
     --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
     --chart-5: 20 40% 40%; /* Muted Red-Brown */
 
-    --battle-grid-bg: 0 0% 96%; /* Very Light Gray (#f5f5f5) */
+    --battle-grid-bg: 30 35% 70%; /* Light Brown */
   }
 
   .dark {
     /* Even Darker Brown Theme - "Dark Mode" */
-    --background: 25 10% 5%; /* Very, Very Dark Brown */
-    --foreground: 35 25% 75%; /* Light Brown/Cream */
+    --background: 25 8% 8%; /* Very, Very Dark Brown (almost black-brown) */
+    --foreground: 35 20% 78%; /* Lighter Brown/Cream for better contrast */
 
-    --muted: 25 8% 10%; /* Extremely Dark Muted Brown */
-    --muted-foreground: 30 20% 55%; /* Muted Light Brown */
+    --muted: 25 7% 12%; /* Extremely Dark Muted Brown */
+    --muted-foreground: 30 18% 58%; /* Muted Light Brown */
 
-    --popover: 25 8% 8%; /* Almost Black-Brown for popovers */
-    --popover-foreground: 35 25% 75%; /* Light Brown/Cream */
+    --popover: 25 6% 5%; /* Almost Black-Brown for popovers */
+    --popover-foreground: 35 20% 78%; /* Lighter Brown/Cream */
 
-    --card: 25 8% 8%; /* Almost Black-Brown for cards */
-    --card-foreground: 35 25% 75%; /* Light Brown/Cream */
+    --card: 25 6% 5%; /* Almost Black-Brown for cards */
+    --card-foreground: 35 20% 78%; /* Lighter Brown/Cream */
 
-    --border: 25 35% 30%; /* Darker, Richer Brown Border for Dark Mode */
-    --input: 25 8% 22%; /* Slightly Lighter Dark Muted Brown for Input Border */
+    --border: 25 30% 20%; /* Darker, Richer Brown Border for Dark Mode */
+    --input: 25 7% 20%; /* Slightly Lighter Dark Muted Brown for Input Border */
 
     --primary: 25 30% 30%; /* Dark Brown */
     --primary-foreground: 35 25% 80%; /* Cream */
@@ -103,7 +103,7 @@
     --chart-4: 40 35% 45%;
     --chart-5: 20 30% 30%;
 
-    --battle-grid-bg: 0 0% 96%; /* Very Light Gray (#f5f5f5) - same for dark mode for strong contrast */
+    --battle-grid-bg: 30 35% 70%; /* Light Brown - consistent for grid area */
   }
 }
 
