@@ -15,8 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 interface GridSettingsPanelProps {
   showGridLines: boolean;
   setShowGridLines: Dispatch<SetStateAction<boolean>>;
-  zoomLevel: number;
-  setZoomLevel: Dispatch<SetStateAction<number>>; // This will be removed as zoom is handled by SVG viewBox
   backgroundImageUrl: string | null;
   setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
@@ -24,7 +22,6 @@ interface GridSettingsPanelProps {
 
 export default function GridSettingsPanel({
   showGridLines, setShowGridLines,
-  // zoomLevel, setZoomLevel, // Zoom is handled by SVG directly now
   backgroundImageUrl, setBackgroundImageUrl,
   setActiveTool
 }: GridSettingsPanelProps) {
@@ -50,10 +47,6 @@ export default function GridSettingsPanel({
     }
   };
 
-  // Zoom controls here would manipulate the SVG's viewBox.
-  // For simplicity in this scaffold, direct manipulation via BattleGrid's wheel event is implemented.
-  // Buttons here could call functions on BattleGrid ref if needed.
-
   return (
     <AccordionItem value="grid-settings">
       <AccordionTrigger>
@@ -70,26 +63,6 @@ export default function GridSettingsPanel({
           />
         </div>
         
-        {/* Zoom buttons are illustrative; actual zoom is via mouse wheel on grid for now */}
-        {/* <div className="space-y-2">
-          <Label>Zoom</Label>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))} aria-label="Zoom out">
-              <ZoomOut />
-            </Button>
-            <Slider 
-              value={[zoomLevel]} 
-              onValueChange={(value) => setZoomLevel(value[0])} 
-              min={0.5} max={2} step={0.1} 
-              className="flex-1"
-              aria-label="Zoom level"
-            />
-            <Button variant="outline" size="icon" onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))} aria-label="Zoom in">
-              <ZoomIn />
-            </Button>
-          </div>
-        </div> */}
-
         <div className="space-y-2">
           <Label htmlFor="background-image-upload">Background Image</Label>
           <Input

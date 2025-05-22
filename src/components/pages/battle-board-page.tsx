@@ -46,8 +46,9 @@ export default function BattleBoardPage() {
   const { toast } = useToast();
 
   const handleCellClick = useCallback((x: number, y: number) => {
-    console.log(`Cell clicked: ${x}, ${y}, Active Tool: ${activeTool}`);
-  }, [activeTool]);
+    // console.log(`Cell clicked: ${x}, ${y}, Active Tool: ${activeTool}`);
+    // Cell click logic is now primarily handled within BattleGrid based on activeTool
+  }, []);
 
   const handleTokenMove = useCallback((tokenId: string, newX: number, newY: number) => {
     setTokens(prevTokens =>
@@ -79,12 +80,13 @@ export default function BattleBoardPage() {
       {/* Left Sidebar for General Controls */}
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
-          {/* SidebarHeader removed as per request */}
+          {/* SidebarHeader removed as per previous request */}
           <SidebarContent>
             <ControlsSidebar
               backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
               activeTool={activeTool} setActiveTool={setActiveTool}
-              measurement={measurement} setMeasurement={setMeasurement}
+              showGridLines={showGridLines} setShowGridLines={setShowGridLines}
+              // measurement and setMeasurement props removed
             />
           </SidebarContent>
           <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
@@ -154,4 +156,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
