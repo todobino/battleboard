@@ -4,7 +4,7 @@
 import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, PencilRuler, Paintbrush, MousePointerSquareDashed, Map, Puzzle } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -122,7 +122,7 @@ export default function FloatingToolbar({
                   )}
                   aria-label="Measurement Tools"
                 >
-                  <PencilRuler className="h-5 w-5 text-accent-foreground" />
+                  <DraftingCompass className="h-5 w-5 text-accent-foreground" />
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
@@ -211,3 +211,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
