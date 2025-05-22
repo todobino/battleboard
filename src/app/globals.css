@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    @apply h-full;
+  }
   :root {
     /* Dark Brown Theme */
     --background: 25 10% 10%; /* Dark Brown Background */
@@ -52,7 +55,7 @@
     --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
     --chart-5: 20 40% 40%; /* Muted Red-Brown */
 
-    --battle-grid-bg: 30 35% 70%; /* Light Brown */
+    --battle-grid-bg: hsl(30 35% 70%); /* Light Brown */
   }
 
   .dark {
@@ -103,7 +106,7 @@
     --chart-4: 40 35% 45%;
     --chart-5: 20 30% 30%;
 
-    --battle-grid-bg: 30 35% 70%; /* Light Brown - consistent for grid area */
+    --battle-grid-bg: hsl(30 35% 70%); /* Light Brown - consistent for grid area */
   }
 }
 
@@ -111,7 +114,7 @@
   * {
     @apply border-border;
   }
-  body {
+  body { /* This body selector gets merged with the one above if h-full is there */
     @apply bg-background text-foreground;
   }
 }
