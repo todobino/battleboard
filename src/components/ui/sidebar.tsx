@@ -22,7 +22,7 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "300px" // Changed from "16rem"
+const SIDEBAR_WIDTH = "300px"; // This constant remains for setting the CSS variable
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -73,8 +73,8 @@ const SidebarProvider = React.forwardRef<
       style,
       children,
       // Destructure sidebar-specific props to pass them into context if needed
-      side = "left", 
-      variant = "sidebar", 
+      side = "left",
+      variant = "sidebar",
       collapsible = "offcanvas",
       ...props
     },
@@ -129,8 +129,8 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
-        side, 
-        variant, 
+        side,
+        variant,
         collapsible
       }),
       [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, side, variant, collapsible]
@@ -142,13 +142,13 @@ const SidebarProvider = React.forwardRef<
           <div
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH,
+                "--sidebar-width": SIDEBAR_WIDTH, // Still set the CSS variable
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh has-[[data-variant=inset]]:bg-sidebar", // Removed w-full
+              "group/sidebar-wrapper flex min-h-svh has-[[data-variant=inset]]:bg-sidebar",
               className
             )}
             ref={ref}
@@ -189,7 +189,7 @@ const Sidebar = React.forwardRef<
     const openMobile = context.openMobile;
     const setOpenMobile = context.setOpenMobile;
     const state = context.state;
-    
+
     // Prioritize props passed directly to Sidebar, then context, then defaults
     const side = sideProp ?? context.side ?? "left";
     const variant = variantProp ?? context.variant ?? "sidebar";
@@ -200,7 +200,7 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            "flex h-full w-[300px] flex-col bg-sidebar text-sidebar-foreground", // Directly set width for non-collapsible
             className
           )}
           ref={ref}
@@ -218,7 +218,7 @@ const Sidebar = React.forwardRef<
             <SheetContent
               data-sidebar="sidebar"
               data-mobile="true"
-              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" // Uses SIDEBAR_WIDTH_MOBILE via CSS var
               style={
                 {
                   "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -233,10 +233,26 @@ const Sidebar = React.forwardRef<
       )
     }
 
+    // Desktop view
+    const desktopSpacerWidthClass =
+      collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset")
+      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+      : collapsible === "icon" && state === "collapsed"
+        ? "w-[var(--sidebar-width-icon)]"
+        : "w-[300px]"; // Expanded desktop spacer width directly 300px
+
+    const desktopContentWidthClass =
+      collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset")
+      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
+      : collapsible === "icon" && state === "collapsed"
+        ? "w-[var(--sidebar-width-icon)]"
+        : "w-[300px]"; // Expanded desktop content width directly 300px
+
+
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className={cn("group peer hidden md:block text-sidebar-foreground", className)}
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
@@ -245,32 +261,19 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
-            state === "expanded" ? "w-[--sidebar-width]" : "w-0", // Simplified logic for spacer width
-            collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset") 
-              ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]" 
-              : collapsible === "icon" && state === "collapsed" 
-                ? "w-[--sidebar-width-icon]" 
-                : "w-[--sidebar-width]",
-            collapsible === "offcanvas" && state === "collapsed" ? "w-0" : "",
-            "group-data-[side=right]:rotate-180" // This seems incorrect for spacer, might be for icon within fixed part
+            state === "collapsed" && collapsible === "offcanvas" ? "w-0" : desktopSpacerWidthClass,
           )}
         />
         <div
           className={cn(
             "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-linear md:flex",
             side === "left"
-              ? "left-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-left-[--sidebar-width]"
-              : "right-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-right-[--sidebar-width]",
+              ? "left-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-left-[300px]"
+              : "right-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-right-[300px]",
             (variant === "floating" || variant === "inset")
-              ? "p-2" 
+              ? "p-2"
               : (side === "left" ? "border-r" : "border-l"),
-
-            (collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset"))
-              ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : (collapsible === "icon" && state === "collapsed")
-                ? "w-[--sidebar-width-icon]"
-                : "w-[--sidebar-width]",
-            className
+            desktopContentWidthClass
           )}
           {...props}
         >
