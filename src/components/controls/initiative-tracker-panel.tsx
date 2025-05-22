@@ -21,6 +21,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +58,7 @@ export default function InitiativeTrackerPanel({
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantInitiative, setNewParticipantInitiative] = useState('');
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy'>('player');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleAddFormSubmit = (e: React.FormEvent) => {
@@ -73,6 +83,7 @@ export default function InitiativeTrackerPanel({
 
     setNewParticipantName('');
     setNewParticipantInitiative('');
+    setDialogOpen(false); // Close dialog on successful submission
   };
 
   return (
@@ -156,32 +167,48 @@ export default function InitiativeTrackerPanel({
         </CardContent>
       </Card>
 
-      <form onSubmit={handleAddFormSubmit} className="space-y-3">
-        <p className="text-sm font-medium">Add Participant</p>
-        <div>
-          <Label htmlFor="participant-name">Name</Label>
-          <Input id="participant-name" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" />
-        </div>
-        <div>
-          <Label htmlFor="participant-initiative">Initiative</Label>
-          <Input id="participant-initiative" type="number" value={newParticipantInitiative} onChange={(e) => setNewParticipantInitiative(e.target.value)} placeholder="e.g., 15" />
-        </div>
-        <div>
-          <Label htmlFor="participant-type">Type</Label>
-          <select
-            id="participant-type"
-            value={newParticipantType}
-            onChange={(e) => setNewParticipantType(e.target.value as 'player' | 'enemy')}
-            className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-          >
-            <option value="player">Player</option>
-            <option value="enemy">Enemy</option>
-          </select>
-        </div>
-        <Button type="submit" className="w-full">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add to Turn Order
-        </Button>
-      </form>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogTrigger asChild>
+          <Button className="w-full">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Combatant
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Combatant</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new combatant to add to the turn order.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddFormSubmit} className="space-y-3 pt-4">
+            <div>
+              <Label htmlFor="participant-name-dialog">Name</Label>
+              <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" />
+            </div>
+            <div>
+              <Label htmlFor="participant-initiative-dialog">Initiative</Label>
+              <Input id="participant-initiative-dialog" type="number" value={newParticipantInitiative} onChange={(e) => setNewParticipantInitiative(e.target.value)} placeholder="e.g., 15" />
+            </div>
+            <div>
+              <Label htmlFor="participant-type-dialog">Type</Label>
+              <select
+                id="participant-type-dialog"
+                value={newParticipantType}
+                onChange={(e) => setNewParticipantType(e.target.value as 'player' | 'enemy')}
+                className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="player">Player</option>
+                <option value="enemy">Enemy</option>
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="submit">
+                Add to Turn Order
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       
       {/* Auto-advance UI is commented out as per original panel state
       <div className="flex items-center justify-between mt-4">
@@ -197,3 +224,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
