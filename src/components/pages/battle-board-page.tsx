@@ -44,6 +44,31 @@ export default function BattleBoardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (activeTool === 'measure_distance' || activeTool === 'measure_radius') {
+      // When a measurement tool is selected, reset any previous measurement
+      // and set the correct type for the new tool.
+      setMeasurement({ 
+        type: activeTool === 'measure_distance' ? 'distance' : 'radius', 
+        startPoint: undefined, 
+        endPoint: undefined, 
+        result: undefined 
+      });
+    } else if (measurement.type !== null) { 
+      // If the active tool is NOT a measurement tool, 
+      // AND a measurement was previously active (e.g. distance or radius type was set),
+      // then clear the measurement.
+      setMeasurement({ 
+        type: null, 
+        startPoint: undefined, 
+        endPoint: undefined, 
+        result: undefined 
+      });
+    }
+    // This effect should only run when activeTool changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool]);
+
+  useEffect(() => {
     if (participants.length === 0) {
       if (currentParticipantIndex !== -1) setCurrentParticipantIndex(-1);
     } else {
@@ -82,7 +107,6 @@ export default function BattleBoardPage() {
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    // Keep currentParticipantIndex as is, or reset if desired:
     // setCurrentParticipantIndex(participants.length > 0 ? 0 : -1);
     toast({ title: "Combat Ended."});
   };
@@ -120,13 +144,11 @@ export default function BattleBoardPage() {
         const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
         setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : 0);
       } else {
-         // If not in combat, and adding the first participant, make them current
         if (newList.length === 1) {
           setCurrentParticipantIndex(0);
-        } else if (prev.length === 0 && newList.length > 0){ // If was empty, set new one
+        } else if (prev.length === 0 && newList.length > 0){
           setCurrentParticipantIndex(0);
         } else {
-          // keep current index or -1 if no current one
           const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
           const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
           setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (newList.length > 0 ? 0 : -1) );
@@ -148,23 +170,16 @@ export default function BattleBoardPage() {
         setCurrentParticipantIndex(-1);
       } else {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-        // If the removed participant was the active one
         if (id === oldActiveParticipantId) {
-          // If combat is active, the next turn should be the one at the current index (or 0 if last was removed)
-          // If combat is not active, it's less critical, but let's keep it consistent
           setCurrentParticipantIndex(currentParticipantIndex % filteredList.length); 
         } else {
-          // If a different participant was removed, try to maintain the current active participant
           const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
           if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
           } else {
-            // Fallback if active participant somehow not found (should not happen if logic is correct)
-            // or if index shifted. If current index is now out of bounds, reset to 0.
             if (currentParticipantIndex >= filteredList.length) {
               setCurrentParticipantIndex(0);
             }
-            // Otherwise, currentParticipantIndex might still be valid if an earlier item was removed
           }
         }
       }
@@ -267,4 +282,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
