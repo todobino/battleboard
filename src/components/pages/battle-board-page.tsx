@@ -8,9 +8,11 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, ListOrdered } from 'lucide-react';
+import { LandPlot, ListOrdered, Settings, PanelLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const GRID_ROWS = 20;
 const GRID_COLS = 20;
@@ -74,7 +76,7 @@ export default function BattleBoardPage() {
   return (
     <div className="flex h-screen">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 relative"> {/* Simplified wrapper */}
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
