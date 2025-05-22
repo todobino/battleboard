@@ -9,107 +9,107 @@
   }
   :root {
     /* Dark Brown Theme */
-    --background: 25 10% 10%; /* Dark Brown Background */
-    --foreground: 35 25% 85%; /* Light Cream/Brown */
+    --background: 30 55% 15%; /* Darker Primary Brown */
+    --foreground: 30 20% 85%; /* Light Cream/Brown */
 
-    --muted: 25 15% 20%; /* Dark Muted Brown */
-    --muted-foreground: 30 25% 60%; /* Muted Light Brown */
+    --muted: 30 40% 25%; /* Muted Brown */
+    --muted-foreground: 30 20% 65%; /* Muted Light Brown */
 
-    --popover: 25 18% 12%; /* Darker Popover Brown */
-    --popover-foreground: 35 30% 80%; /* Softer Light Cream/Brown */
+    --popover: 30 60% 10%; /* Very Dark Popover Brown */
+    --popover-foreground: 30 20% 80%; /* Softer Light Cream/Brown */
 
-    --card: 25 18% 12%; /* Darker Card Brown */
-    --card-foreground: 35 30% 80%; /* Softer Light Cream/Brown */
+    --card: 30 60% 10%; /* Very Dark Card Brown */
+    --card-foreground: 30 20% 80%; /* Softer Light Cream/Brown */
 
-    --border: 30 40% 20%; /* Darker, Richer Brown Border */
-    --input: 25 15% 30%; /* Dark Muted Brown for Input Border */
+    --border: 30 50% 45%; /* Darker, Richer Brown Border */
+    --input: 30 40% 30%; /* Muted Brown for Input Border */
 
-    --primary: 25 35% 35%; /* Medium Dark Brown */
-    --primary-foreground: 35 30% 85%; /* Cream */
+    --primary: 30 65% 40%; /* Main Brown */
+    --primary-foreground: 30 15% 90%; /* Off-White/Cream */
 
-    --secondary: 25 20% 25%; /* Darker Muted Brown */
-    --secondary-foreground: 30 25% 70%; /* Lighter Brown */
+    --secondary: 30 50% 30%; /* Darker Muted Brown */
+    --secondary-foreground: 30 15% 80%; /* Lighter Brown */
 
-    --accent: 30 40% 45%; /* Warmer, Richer Brown Accent */
-    --accent-foreground: 35 30% 88%; /* Cream */
+    --accent: 30 70% 50%; /* Warmer, Richer Brown Accent */
+    --accent-foreground: 30 15% 92%; /* Off-White/Cream */
 
-    --destructive: 0 65% 40%; /* Dark Red for destructive actions */
-    --destructive-foreground: 0 0% 92%; /* Light color for text on destructive */
+    --destructive: 0 60% 50%; /* Red for destructive actions */
+    --destructive-foreground: 0 0% 95%; /* Light color for text on destructive */
 
-    --ring: 30 40% 50%; /* Accent-related Brown for focus rings */
+    --ring: 30 70% 55%; /* Accent-related Brown for focus rings */
     --radius: 0.5rem;
 
     /* Sidebar specific colors - Dark Brown Theme */
-    --sidebar-background: 25 15% 12%; /* Very Dark Brown for Sidebar */
-    --sidebar-foreground: 35 30% 75%; /* Light Cream/Brown for sidebar text */
-    --sidebar-primary: 30 35% 40%; /* Accent Brown for sidebar primary */
-    --sidebar-primary-foreground: 35 30% 85%; /* Cream for text on sidebar primary */
-    --sidebar-accent: 25 20% 30%; /* Muted Brown for sidebar accents */
-    --sidebar-accent-foreground: 35 30% 80%; /* Light Cream/Brown text for sidebar accent */
-    --sidebar-border: 25 30% 30%; /* Slightly Lighter Brown for sidebar borders */
-    --sidebar-ring: 30 35% 45%; /* Accent Brown for sidebar focus rings */
+    --sidebar-background: 30 50% 12%; /* Very Dark Brown for Sidebar */
+    --sidebar-foreground: 30 20% 78%; /* Light Cream/Brown for sidebar text */
+    --sidebar-primary: 30 60% 35%; /* Accent Brown for sidebar primary */
+    --sidebar-primary-foreground: 30 15% 88%; /* Cream for text on sidebar primary */
+    --sidebar-accent: 30 45% 28%; /* Muted Brown for sidebar accents */
+    --sidebar-accent-foreground: 30 20% 82%; /* Light Cream/Brown text for sidebar accent */
+    --sidebar-border: 30 40% 20%; /* Slightly Lighter Brown for sidebar borders */
+    --sidebar-ring: 30 60% 40%; /* Accent Brown for sidebar focus rings */
 
     /* Adjusted Chart Colors for Dark Brown Theme */
-    --chart-1: 30 50% 45%; /* Muted Orange-Brown */
-    --chart-2: 35 35% 35%; /* Darker Muted Yellow-Brown */
-    --chart-3: 25 25% 25%; /* Very Dark Brown */
-    --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
-    --chart-5: 20 40% 40%; /* Muted Red-Brown */
+    --chart-1: 30 60% 45%; /* Muted Orange-Brown */
+    --chart-2: 35 45% 35%; /* Darker Muted Yellow-Brown */
+    --chart-3: 25 35% 25%; /* Very Dark Brown */
+    --chart-4: 40 50% 55%; /* Lighter Muted Yellow */
+    --chart-5: 20 50% 40%; /* Muted Red-Brown */
 
     /* Battle Grid Background Color */
-    --battle-grid-bg: 60 56% 91%; /* Light Beige */
+    --battle-grid-bg: hsl(60, 50%, 85%); /* Light Beige, slightly darker */
   }
 
   .dark {
     /* Even Darker Brown Theme - "Dark Mode" */
-    --background: 25 8% 8%; /* Very, Very Dark Brown (almost black-brown) */
-    --foreground: 35 20% 78%; /* Lighter Brown/Cream for better contrast */
+    --background: 30 50% 8%; /* Very, Very Dark Brown (almost black-brown) */
+    --foreground: 30 18% 78%; /* Lighter Brown/Cream for better contrast */
 
-    --muted: 25 7% 12%; /* Extremely Dark Muted Brown */
+    --muted: 30 35% 12%; /* Extremely Dark Muted Brown */
     --muted-foreground: 30 18% 58%; /* Muted Light Brown */
 
-    --popover: 25 6% 5%; /* Almost Black-Brown for popovers */
-    --popover-foreground: 35 20% 78%; /* Lighter Brown/Cream */
+    --popover: 30 55% 5%; /* Almost Black-Brown for popovers */
+    --popover-foreground: 30 18% 78%; /* Lighter Brown/Cream */
 
-    --card: 25 6% 5%; /* Almost Black-Brown for cards */
-    --card-foreground: 35 20% 78%; /* Lighter Brown/Cream */
+    --card: 30 55% 5%; /* Almost Black-Brown for cards */
+    --card-foreground: 30 18% 78%; /* Lighter Brown/Cream */
 
-    --border: 30 40% 20%; /* Darker, Richer Brown Border for Dark Mode */
-    --input: 25 7% 20%; /* Slightly Lighter Dark Muted Brown for Input Border */
+    --border: 30 45% 20%; /* Darker, Richer Brown Border for Dark Mode */
+    --input: 30 35% 20%; /* Slightly Lighter Dark Muted Brown for Input Border */
 
-    --primary: 25 30% 30%; /* Dark Brown */
-    --primary-foreground: 35 25% 80%; /* Cream */
+    --primary: 30 60% 30%; /* Dark Brown */
+    --primary-foreground: 30 12% 80%; /* Cream */
 
-    --secondary: 25 10% 12%; /* Very Dark Muted Brown */
-    --secondary-foreground: 30 20% 65%; /* Lighter Brown */
+    --secondary: 30 40% 12%; /* Very Dark Muted Brown */
+    --secondary-foreground: 30 18% 65%; /* Lighter Brown */
 
-    --accent: 30 35% 40%; /* Muted Dark Accent Brown */
-    --accent-foreground: 35 25% 85%; /* Cream */
+    --accent: 30 65% 40%; /* Muted Dark Accent Brown */
+    --accent-foreground: 30 12% 85%; /* Cream */
 
-    --destructive: 0 55% 35%; /* Slightly darker Red for destructive in dark mode */
+    --destructive: 0 55% 40%; /* Slightly darker Red for destructive in dark mode */
     --destructive-foreground: 0 0% 90%; /* Light color for text on destructive */
 
-    --ring: 30 35% 45%; /* Accent-related Brown for focus rings */
+    --ring: 30 65% 45%; /* Accent-related Brown for focus rings */
 
     /* Sidebar specific colors for dark mode */
-    --sidebar-background: 25 6% 4%; /* Extremely Dark Brown for Sidebar */
-    --sidebar-foreground: 35 25% 70%; /* Light Brown/Cream for sidebar text */
-    --sidebar-primary: 30 30% 35%; /* Muted Dark Brown for dark sidebar primary */
-    --sidebar-primary-foreground: 35 25% 82%; /* Cream for text on dark sidebar primary */
-    --sidebar-accent: 25 12% 20%; /* Dark Muted Brown for dark sidebar accents */
-    --sidebar-accent-foreground: 35 25% 78%; /* Light Brown/Cream text for dark sidebar accent */
-    --sidebar-border: 25 20% 22%; /* Darker Brown for dark sidebar borders */
-    --sidebar-ring: 30 30% 40%; /* Muted Accent Brown for dark sidebar focus rings */
+    --sidebar-background: 30 45% 4%; /* Extremely Dark Brown for Sidebar */
+    --sidebar-foreground: 30 20% 70%; /* Light Brown/Cream for sidebar text */
+    --sidebar-primary: 30 55% 35%; /* Muted Dark Brown for dark sidebar primary */
+    --sidebar-primary-foreground: 30 15% 82%; /* Cream for text on dark sidebar primary */
+    --sidebar-accent: 30 30% 20%; /* Dark Muted Brown for dark sidebar accents */
+    --sidebar-accent-foreground: 30 20% 78%; /* Light Brown/Cream text for dark sidebar accent */
+    --sidebar-border: 30 30% 22%; /* Darker Brown for dark sidebar borders */
+    --sidebar-ring: 30 55% 40%; /* Muted Accent Brown for dark sidebar focus rings */
 
     /* Adjusted Chart Colors for Very Dark Brown Theme */
-    --chart-1: 30 45% 35%;
-    --chart-2: 35 25% 25%;
-    --chart-3: 25 15% 15%;
-    --chart-4: 40 35% 45%;
-    --chart-5: 20 30% 30%;
+    --chart-1: 30 50% 35%;
+    --chart-2: 35 30% 25%;
+    --chart-3: 25 20% 15%;
+    --chart-4: 40 40% 45%;
+    --chart-5: 20 35% 30%;
 
-    /* Battle Grid Background Color - same as light theme for consistency of grid area */
-    --battle-grid-bg: 60 56% 91%; /* Light Beige */
+    /* Battle Grid Background Color */
+    --battle-grid-bg: hsl(60, 50%, 85%); /* Light Beige, slightly darker */
   }
 }
 
