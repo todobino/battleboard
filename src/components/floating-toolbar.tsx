@@ -4,7 +4,7 @@
 import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass, PersonStanding } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
 import MeasurementToolPanel from '@/components/controls/measurement-tool-panel';
+import TokenPlacerPanel from '@/components/controls/token-placer-panel';
 
 
 interface FloatingToolbarProps {
@@ -34,23 +35,24 @@ interface FloatingToolbarProps {
 interface ToolButtonProps {
   label: string;
   icon: React.ElementType;
-  tool: ActiveTool;
-  currentActiveTool: ActiveTool;
-  onClick: () => void;
+  tool?: ActiveTool; // Optional: not all buttons directly set a tool (e.g., popover triggers might)
+  currentActiveTool?: ActiveTool; // Optional: only relevant for direct tool buttons
+  onClick?: () => void; // Optional: for direct actions or opening popovers
   children?: React.ReactNode; // For PopoverTrigger
   asChild?: boolean; // For PopoverTrigger
+  variantOverride?: "default" | "outline"; // To manually set variant for popover triggers
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick, children, asChild }) => (
+const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick, children, asChild, variantOverride }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <Button
-        variant={currentActiveTool === tool ? 'default' : 'outline'}
+        variant={variantOverride || (tool && currentActiveTool === tool ? 'default' : 'outline')}
         size="icon"
         onClick={onClick}
         className={cn(
           'rounded-md shadow-lg h-12 w-12 p-2.5',
-          currentActiveTool === tool ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+          (variantOverride === 'default' || (tool && currentActiveTool === tool)) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
         )}
         aria-label={label}
         asChild={asChild}
@@ -74,11 +76,6 @@ export default function FloatingToolbar({
   measurement, setMeasurement,
 }: FloatingToolbarProps) {
 
-  const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick' | 'children' | 'asChild'>[] = [
-    { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
-    { label: 'Token Placer', icon: Puzzle, tool: 'token_placer_tool' },
-  ];
-
   const handleToolClick = (tool: ActiveTool) => {
     if (setActiveTool) {
       setActiveTool(tool);
@@ -98,24 +95,61 @@ export default function FloatingToolbar({
           </>
         )}
 
-        {mainTools.map((toolProps) => (
+        <ToolButton
+          label="Select/Pan"
+          icon={MousePointerSquareDashed}
+          tool="select"
+          currentActiveTool={activeTool}
+          onClick={() => handleToolClick('select')}
+        />
+
+        {/* Token Placer Popover */}
+        <Popover>
           <ToolButton
-            key={toolProps.tool}
-            {...toolProps}
+            label="Token Placer"
+            icon={Puzzle}
+            tool="token_placer_tool" // This makes the button highlight if token_placer_tool is active
             currentActiveTool={activeTool}
-            onClick={() => handleToolClick(toolProps.tool)}
-          />
-        ))}
+            onClick={() => handleToolClick('token_placer_tool')} // This sets the active tool for highlighting
+            variantOverride={activeTool === 'token_placer_tool' || activeTool === 'place_token' ? 'default' : 'outline'}
+            asChild
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant={activeTool === 'token_placer_tool' || activeTool === 'place_token' ? 'default' : 'outline'}
+                size="icon"
+                className={cn(
+                  'rounded-md shadow-lg h-12 w-12 p-2.5',
+                  (activeTool === 'token_placer_tool' || activeTool === 'place_token') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+                )}
+                aria-label="Token Placer"
+              >
+                <Puzzle className="h-5 w-5 text-accent-foreground" />
+              </Button>
+            </PopoverTrigger>
+          </ToolButton>
+          <PopoverContent className="w-80" side="top" align="start">
+            <TokenPlacerPanel
+              setActiveTool={setActiveTool}
+              setSelectedTokenTemplate={setSelectedTokenTemplate}
+            />
+          </PopoverContent>
+        </Popover>
+        
 
         {/* Measurement Tools Popover */}
         <Popover>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
+           <ToolButton
+            label="Measurement Tools"
+            icon={DraftingCompass}
+            onClick={() => handleToolClick('measure_distance')} // Default to distance or keep active measurement tool
+            variantOverride={(activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
+            asChild
+          >
+            <PopoverTrigger asChild>
+               <Button
                   variant={(activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
                   size="icon"
-                  onClick={() => handleToolClick('measure_distance')} // Default to distance or keep active measurement tool
                   className={cn(
                     'rounded-md shadow-lg h-12 w-12 p-2.5',
                      (activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
@@ -124,12 +158,8 @@ export default function FloatingToolbar({
                 >
                   <DraftingCompass className="h-5 w-5 text-accent-foreground" />
                 </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">
-              <p>Measurement Tools</p>
-            </TooltipContent>
-          </Tooltip>
+            </PopoverTrigger>
+          </ToolButton>
           <PopoverContent className="w-80" side="top" align="start">
             <MeasurementToolPanel
               activeTool={activeTool}
@@ -142,13 +172,17 @@ export default function FloatingToolbar({
 
         {/* Grid Settings Popover */}
         <Popover>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
+          <ToolButton
+            label="Map & Grid Settings"
+            icon={Map}
+            onClick={() => handleToolClick('map_tool')}
+            variantOverride={activeTool === 'map_tool' ? 'default' : 'outline'}
+            asChild
+          >
+            <PopoverTrigger asChild>
                 <Button
                   variant={activeTool === 'map_tool' ? 'default' : 'outline'}
                   size="icon"
-                  onClick={() => handleToolClick('map_tool')}
                   className={cn(
                     'rounded-md shadow-lg h-12 w-12 p-2.5',
                     activeTool === 'map_tool' ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
@@ -157,12 +191,8 @@ export default function FloatingToolbar({
                 >
                   <Map className="h-5 w-5 text-accent-foreground" />
                 </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">
-              <p>Map & Grid Settings</p>
-            </TooltipContent>
-          </Tooltip>
+            </PopoverTrigger>
+          </ToolButton>
           <PopoverContent className="w-80" side="top" align="end">
             <GridSettingsPanel
               showGridLines={showGridLines}
@@ -174,36 +204,35 @@ export default function FloatingToolbar({
           </PopoverContent>
         </Popover>
 
-        {/* Color & Token Tool Popover */}
+        {/* Color Tool Popover */}
         <Popover>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={activeTool === 'paint_cell' || activeTool === 'place_token' ? 'default' : 'outline'}
-                  size="icon"
-                  onClick={() => handleToolClick('paint_cell')}
-                  className={cn(
-                    'rounded-md shadow-lg h-12 w-12 p-2.5',
-                     (activeTool === 'paint_cell' || activeTool === 'place_token') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Color & Token Tools"
-                >
-                  <Paintbrush className="h-5 w-5 text-accent-foreground" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">
-              <p>Color & Token Tools</p>
-            </TooltipContent>
-          </Tooltip>
+          <ToolButton
+            label="Color & Paint Tools"
+            icon={Paintbrush}
+            onClick={() => handleToolClick('paint_cell')}
+            variantOverride={activeTool === 'paint_cell' ? 'default' : 'outline'}
+            asChild
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant={activeTool === 'paint_cell' ? 'default' : 'outline'}
+                size="icon"
+                className={cn(
+                  'rounded-md shadow-lg h-12 w-12 p-2.5',
+                    activeTool === 'paint_cell' ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+                )}
+                aria-label="Color & Paint Tools"
+              >
+                <Paintbrush className="h-5 w-5 text-accent-foreground" />
+              </Button>
+            </PopoverTrigger>
+          </ToolButton>
           <PopoverContent className="w-80" side="top" align="end">
             <ColorToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
               selectedColor={selectedColor}
               setSelectedColor={setSelectedColor}
-              setSelectedTokenTemplate={setSelectedTokenTemplate}
             />
           </PopoverContent>
         </Popover>
@@ -211,4 +240,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
