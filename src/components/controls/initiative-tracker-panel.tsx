@@ -86,11 +86,11 @@ export default function InitiativeTrackerPanel({
     const acValue = acString === '' ? undefined : parseInt(acString, 10);
     
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
-      toast({ title: "Error", description: "HP must be a non-negative number or empty.", variant: "destructive" });
+      toast({ title: "Error", description: "Health Points must be a non-negative number or empty.", variant: "destructive" });
       return;
     }
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
-      toast({ title: "Error", description: "AC must be a non-negative number or empty.", variant: "destructive" });
+      toast({ title: "Error", description: "Armor Class must be a non-negative number or empty.", variant: "destructive" });
       return;
     }
 
@@ -286,8 +286,8 @@ export default function InitiativeTrackerPanel({
             
             <div className="flex flex-col sm:flex-row gap-3">
               {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog")}
-              {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "HP", "participant-hp-dialog", true)}
-              {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true)}
+              {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health Points", "participant-hp-dialog", true)}
+              {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor Class", "participant-ac-dialog", true)}
             </div>
 
             <div>
@@ -330,5 +330,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
-    
