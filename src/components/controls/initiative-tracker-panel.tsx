@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 
 
 interface InitiativeTrackerPanelProps {
-  participantsProp?: Participant[]; // Renamed to avoid conflict with internal state
+  participantsProp?: Participant[];
   currentParticipantIndex: number;
   roundCounter: number;
   isAutoAdvanceOn: boolean;
@@ -55,10 +55,10 @@ export default function InitiativeTrackerPanel({
   onRemoveParticipant,
   onResetInitiative,
 }: InitiativeTrackerPanelProps) {
-  const participants = participantsProp || []; // Ensure participants is always an array
+  const participants = participantsProp || [];
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantInitiative, setNewParticipantInitiative] = useState('');
-  const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy'>('player');
+  const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -79,12 +79,13 @@ export default function InitiativeTrackerPanel({
       initiative: initiativeValue,
       type: newParticipantType,
     };
-    
+
     onAddParticipant(newParticipantData);
 
     setNewParticipantName('');
     setNewParticipantInitiative('');
-    setDialogOpen(false); // Close dialog on successful submission
+    setNewParticipantType('player'); // Reset type to default
+    setDialogOpen(false);
   };
 
   return (
@@ -115,7 +116,12 @@ export default function InitiativeTrackerPanel({
                       <div className="flex items-center">
                         <span className="font-semibold mr-2">{p.initiative}</span>
                         <span>{p.name}</span>
-                        <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${p.type === 'player' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+                        <span className={cn(
+                          "ml-2 text-xs px-1.5 py-0.5 rounded-full text-white",
+                           p.type === 'player' ? 'bg-blue-500' :
+                           p.type === 'enemy' ? 'bg-red-500' :
+                           'bg-green-500' // Ally
+                        )}>
                           {p.type}
                         </span>
                       </div>
@@ -144,7 +150,6 @@ export default function InitiativeTrackerPanel({
               </ul>
             </ScrollArea>
           )}
-          {/* Reset button was here, now removed */}
         </CardContent>
       </Card>
 
@@ -172,15 +177,32 @@ export default function InitiativeTrackerPanel({
             </div>
             <div>
               <Label htmlFor="participant-type-dialog">Type</Label>
-              <select
-                id="participant-type-dialog"
-                value={newParticipantType}
-                onChange={(e) => setNewParticipantType(e.target.value as 'player' | 'enemy')}
-                className="w-full h-10 px-3 py-2 rounded-md border border-input bg-background text-sm"
-              >
-                <option value="player">Player</option>
-                <option value="enemy">Enemy</option>
-              </select>
+              <div className="flex space-x-2 mt-1">
+                <Button
+                  type="button"
+                  variant={newParticipantType === 'player' ? 'default' : 'outline'}
+                  onClick={() => setNewParticipantType('player')}
+                  className="flex-1"
+                >
+                  Player
+                </Button>
+                <Button
+                  type="button"
+                  variant={newParticipantType === 'enemy' ? 'default' : 'outline'}
+                  onClick={() => setNewParticipantType('enemy')}
+                  className="flex-1"
+                >
+                  Enemy
+                </Button>
+                <Button
+                  type="button"
+                  variant={newParticipantType === 'ally' ? 'default' : 'outline'}
+                  onClick={() => setNewParticipantType('ally')}
+                  className="flex-1"
+                >
+                  Ally
+                </Button>
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit">
@@ -190,7 +212,7 @@ export default function InitiativeTrackerPanel({
           </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Auto-advance UI is commented out as per original panel state
       <div className="flex items-center justify-between mt-4">
         <Label htmlFor="toggle-auto-advance">Auto-Advance Turn</Label>
@@ -205,4 +227,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-

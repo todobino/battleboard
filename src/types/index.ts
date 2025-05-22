@@ -26,16 +26,15 @@ export interface Participant {
   id: string;
   name: string;
   initiative: number;
-  type: 'player' | 'enemy';
+  type: 'player' | 'enemy' | 'ally'; // Added 'ally'
   tokenId?: string; // Optional: links to a token on the grid
-  // isActive?: boolean; // Removed: True if it's this participant's turn - will be determined dynamically
 }
 
-export type ActiveTool = 
-  | 'select' 
-  | 'paint_cell' 
-  | 'place_token' 
-  | 'measure_distance' 
+export type ActiveTool =
+  | 'select'
+  | 'paint_cell'
+  | 'place_token'
+  | 'measure_distance'
   | 'measure_radius'
   | 'swords'
   | 'map_tool'
