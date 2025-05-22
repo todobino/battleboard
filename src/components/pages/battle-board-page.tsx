@@ -2,13 +2,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, TokenTemplate } from '@/types';
+import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import ControlsSidebar from '@/components/controls/controls-sidebar';
+import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
+import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Swords, Settings } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { LandPlot, Settings, ListOrdered } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion } from '@/components/ui/accordion';
 
 const GRID_ROWS = 20;
 const GRID_COLS = 20;
@@ -17,7 +22,7 @@ const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
     Array.from({ length: GRID_COLS }, (_, x) => ({
       id: `${y}-${x}`,
-      color: undefined, // Initially transparent or default background
+      color: undefined,
     }))
   );
 
@@ -25,16 +30,15 @@ export default function BattleBoardPage() {
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
   const [tokens, setTokens] = useState<Token[]>([]);
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
-  const [zoomLevel, setZoomLevel] = useState<number>(1); // Zoom is now primarily handled by SVG viewBox in BattleGrid
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
   const [roundCounter, setRoundCounter] = useState<number>(1);
-  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false); // Auto-advance feature
+  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false);
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
-  const [selectedColor, setSelectedColor] = useState<string>('#FF0000'); // Default to red
+  const [selectedColor, setSelectedColor] = useState<string>('#FF0000');
   const [selectedTokenTemplate, setSelectedTokenTemplate] = useState<Omit<Token, 'id' | 'x' | 'y'> | null>(null);
   
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
@@ -42,10 +46,8 @@ export default function BattleBoardPage() {
   const { toast } = useToast();
 
   const handleCellClick = useCallback((x: number, y: number) => {
-    // This logic has been moved into BattleGrid for direct SVG interaction
-    // Kept here as a reference if higher-level state manipulation is needed
     console.log(`Cell clicked: ${x}, ${y}, Active Tool: ${activeTool}`);
-  }, [activeTool, selectedColor, selectedTokenTemplate, setGridCells, setTokens]);
+  }, [activeTool]);
 
   const handleTokenMove = useCallback((tokenId: string, newX: number, newY: number) => {
     setTokens(prevTokens =>
@@ -56,8 +58,6 @@ export default function BattleBoardPage() {
     toast({ title: "Token Moved", description: `Token updated to position (${newX}, ${newY}).` });
   }, [toast]);
 
-
-  // Auto-advance initiative (example, needs more robust implementation)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAutoAdvanceOn && participants.length > 0 && currentParticipantIndex !== -1) {
@@ -68,56 +68,63 @@ export default function BattleBoardPage() {
           setRoundCounter(prev => prev + 1);
         }
         setCurrentParticipantIndex(nextIndex);
-      }, 5000); // Auto-advance every 5 seconds
+      }, 5000); 
     }
     return () => clearTimeout(timer);
   }, [isAutoAdvanceOn, currentParticipantIndex, participants, setRoundCounter]);
 
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <Sidebar variant="sidebar" collapsible="icon" className="border-r">
-        <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
-           <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <Swords className="h-6 w-6 text-sidebar-primary" /> {/* Changed icon here */}
-            <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
-          </div>
-          <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
-        </SidebarHeader>
-        <SidebarContent>
-          <ControlsSidebar
-            showGridLines={showGridLines} setShowGridLines={setShowGridLines}
-            zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} // setZoomLevel is less relevant now
-            backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
-            participants={participants} setParticipants={setParticipants}
-            currentParticipantIndex={currentParticipantIndex} setCurrentParticipantIndex={setCurrentParticipantIndex}
-            roundCounter={roundCounter} setRoundCounter={setRoundCounter}
-            isAutoAdvanceOn={isAutoAdvanceOn} setIsAutoAdvanceOn={setIsAutoAdvanceOn}
-            activeTool={activeTool} setActiveTool={setActiveTool}
-            selectedColor={selectedColor} setSelectedColor={setSelectedColor}
-            selectedTokenTemplate={selectedTokenTemplate} setSelectedTokenTemplate={setSelectedTokenTemplate}
-            measurement={measurement} setMeasurement={setMeasurement}
-          />
-        </SidebarContent>
-        <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
-          <Button variant="ghost" className="w-full justify-start">
-            <Settings className="mr-2 h-4 w-4" /> Settings
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className="flex flex-col h-screen overflow-hidden">
-         <header className="p-2 border-b md:hidden flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Battle Board</h2>
-            <SidebarTrigger/>
-        </header>
-        <main className="flex-1 overflow-auto"> {/* Main content area */}
+    <div className="flex h-screen">
+      {/* Left Sidebar for General Controls */}
+      <SidebarProvider defaultOpen={true}>
+        <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
+          <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+              <LandPlot className="h-6 w-6 text-sidebar-primary" />
+              <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
+            </div>
+            {/* Icon visible when collapsed */}
+            <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
+            
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+              <Label htmlFor="toggle-grid-lines-header" className="text-sm text-sidebar-foreground whitespace-nowrap">Grid:</Label>
+              <Switch
+                id="toggle-grid-lines-header"
+                checked={showGridLines}
+                onCheckedChange={setShowGridLines}
+                aria-label="Toggle grid lines"
+              />
+            </div>
+            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
+          </SidebarHeader>
+          <SidebarContent>
+            <ControlsSidebar
+              backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
+              activeTool={activeTool} setActiveTool={setActiveTool}
+              selectedColor={selectedColor} setSelectedColor={setSelectedColor}
+              selectedTokenTemplate={selectedTokenTemplate} setSelectedTokenTemplate={setSelectedTokenTemplate}
+              measurement={measurement} setMeasurement={setMeasurement}
+            />
+          </SidebarContent>
+          <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
+            <Button variant="ghost" className="w-full justify-start">
+              <Settings className="mr-2 h-4 w-4" /> Settings
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
+      </SidebarProvider>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col"> {/* This div will take up remaining space */}
+        <SidebarInset className="flex-1 flex flex-col relative"> {/* Removed overflow-hidden */}
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={zoomLevel} // Passed but SVG viewBox controls zoom
+            zoomLevel={1} // zoomLevel is managed internally by BattleGrid's SVG viewBox
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -127,8 +134,41 @@ export default function BattleBoardPage() {
             measurement={measurement}
             setMeasurement={setMeasurement}
           />
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          <FloatingToolbar
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
+          />
+        </SidebarInset>
+      </div>
+
+      {/* Right Sidebar for Initiative Tracker */}
+      <SidebarProvider defaultOpen={true}>
+        <Sidebar variant="sidebar" collapsible="icon" className="border-l" side="right">
+        <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
+            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+              <ListOrdered className="h-6 w-6 text-sidebar-primary" />
+              <h2 className="text-lg font-semibold text-sidebar-primary">Initiative</h2>
+            </div>
+            {/* Icon visible when collapsed */}
+            <ListOrdered className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
+            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
+          </SidebarHeader>
+          <SidebarContent>
+            <Accordion type="single" collapsible defaultValue="initiative-tracker" className="w-full">
+              <InitiativeTrackerPanel
+                participants={participants}
+                setParticipants={setParticipants}
+                currentParticipantIndex={currentParticipantIndex}
+                setCurrentParticipantIndex={setCurrentParticipantIndex}
+                roundCounter={roundCounter}
+                setRoundCounter={setRoundCounter}
+                isAutoAdvanceOn={isAutoAdvanceOn}
+                setIsAutoAdvanceOn={setIsAutoAdvanceOn}
+              />
+            </Accordion>
+          </SidebarContent>
+        </Sidebar>
+      </SidebarProvider>
+    </div>
   );
 }
