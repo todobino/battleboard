@@ -4,8 +4,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
-import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import FloatingToolbar from '@/components/floating-toolbar';
+import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
@@ -45,18 +45,13 @@ export default function BattleBoardPage() {
 
   useEffect(() => {
     if (activeTool === 'measure_distance' || activeTool === 'measure_radius') {
-      // When a measurement tool is selected, reset any previous measurement
-      // and set the correct type for the new tool.
       setMeasurement({ 
         type: activeTool === 'measure_distance' ? 'distance' : 'radius', 
         startPoint: undefined, 
         endPoint: undefined, 
         result: undefined 
       });
-    } else if (measurement.type !== null) { 
-      // If the active tool is NOT a measurement tool, 
-      // AND a measurement was previously active (e.g. distance or radius type was set),
-      // then clear the measurement.
+    } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') { 
       setMeasurement({ 
         type: null, 
         startPoint: undefined, 
@@ -64,8 +59,7 @@ export default function BattleBoardPage() {
         result: undefined 
       });
     }
-    // This effect should only run when activeTool changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
 
   useEffect(() => {
@@ -107,7 +101,6 @@ export default function BattleBoardPage() {
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    // setCurrentParticipantIndex(participants.length > 0 ? 0 : -1);
     toast({ title: "Combat Ended."});
   };
 
@@ -138,11 +131,10 @@ export default function BattleBoardPage() {
     
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
-      // If combat active, find new index of current participant. If not, set to 0 if it's the first one.
       if (isCombatActive) {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-        setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : 0);
+        setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (newList.length > 0 ? 0 : -1));
       } else {
         if (newList.length === 1) {
           setCurrentParticipantIndex(0);
@@ -210,6 +202,7 @@ export default function BattleBoardPage() {
 
   return (
     <div className="flex h-screen">
+      {/* Main Content Area */}
       <div className="flex-1 relative">
           <BattleGrid
             gridCells={gridCells}
@@ -239,11 +232,14 @@ export default function BattleBoardPage() {
             setBackgroundImageUrl={setBackgroundImageUrl}
             showGridLines={showGridLines}
             setShowGridLines={setShowGridLines}
+            measurement={measurement}
+            setMeasurement={setMeasurement}
           />
       </div>
 
+      {/* Right Sidebar for Initiative Tracker */}
       <SidebarProvider defaultOpen={true}>
-        <Sidebar variant="sidebar" collapsible="icon" className="border-l" side="right">
+        <Sidebar variant="sidebar" collapsible="icon" side="right"> {/* Removed className="border-l" */}
           <SidebarContent className="p-4 space-y-4">
             <InitiativeTrackerPanel
               participantsProp={participants}
