@@ -55,7 +55,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, curren
         {children || <Icon className="h-5 w-5" />}
       </Button>
     </TooltipTrigger>
-    <TooltipContent side="top" align="center">
+    <TooltipContent side="bottom" align="center">
       <p>{label}</p>
     </TooltipContent>
   </Tooltip>
@@ -75,7 +75,6 @@ export default function FloatingToolbar({
     { label: 'Measure Distance', icon: Ruler, tool: 'measure_distance' },
     { label: 'Measure Radius', icon: Maximize, tool: 'measure_radius' },
     { label: 'Combat Actions', icon: Swords, tool: 'swords' },
-    // Map and Character tools are now popover triggers or direct action buttons
     { label: 'Character Focus', icon: PersonStanding, tool: 'character_tool' },
   ];
 
@@ -87,7 +86,7 @@ export default function FloatingToolbar({
 
   return (
     <TooltipProvider>
-      <div className="absolute bottom-4 right-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-xl border border-border z-50">
+      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-xl border border-border z-50">
         {Icon && title && (
           <>
             <div className="flex items-center gap-2 px-2 mr-2">
@@ -126,7 +125,7 @@ export default function FloatingToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side="top" align="center">
+            <TooltipContent side="bottom" align="center">
               <p>Map & Grid Settings</p>
             </TooltipContent>
           </Tooltip>
@@ -159,7 +158,7 @@ export default function FloatingToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side="top" align="center">
+            <TooltipContent side="bottom" align="center">
               <p>Color & Token Tools</p>
             </TooltipContent>
           </Tooltip>

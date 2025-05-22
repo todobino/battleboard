@@ -4,13 +4,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
-// ControlsSidebar import removed
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import FloatingToolbar from '@/components/floating-toolbar';
-import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-// Label and Switch imports removed
-import { LandPlot, ListOrdered } from 'lucide-react'; // PanelLeft and Settings removed
+import { LandPlot, ListOrdered } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
 
@@ -75,10 +73,8 @@ export default function BattleBoardPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Left Sidebar removed */}
-
       {/* Main Content Area */}
-      <SidebarInset className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative">
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
@@ -109,7 +105,7 @@ export default function BattleBoardPage() {
             showGridLines={showGridLines}
             setShowGridLines={setShowGridLines}
           />
-      </SidebarInset>
+      </div>
 
       {/* Right Sidebar for Initiative Tracker */}
       <SidebarProvider defaultOpen={true}>
@@ -141,4 +137,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
