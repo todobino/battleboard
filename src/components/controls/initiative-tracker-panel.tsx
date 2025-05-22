@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Plus, Minus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +57,8 @@ export default function InitiativeTrackerPanel({
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp || [];
   const [newParticipantName, setNewParticipantName] = useState('');
-  const [newParticipantInitiative, setNewParticipantInitiative] = useState('');
+  const [newParticipantInitiative, setNewParticipantInitiative] = useState('10');
+  const [isEditingInitiative, setIsEditingInitiative] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -83,7 +84,8 @@ export default function InitiativeTrackerPanel({
     onAddParticipant(newParticipantData);
 
     setNewParticipantName('');
-    setNewParticipantInitiative('');
+    setNewParticipantInitiative('10'); // Reset initiative to 10
+    setIsEditingInitiative(false); // Reset editing mode
     setNewParticipantType('player'); // Reset type to default
     setDialogOpen(false);
   };
@@ -171,10 +173,64 @@ export default function InitiativeTrackerPanel({
               <Label htmlFor="participant-name-dialog">Name</Label>
               <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" />
             </div>
+            
             <div>
-              <Label htmlFor="participant-initiative-dialog">Initiative</Label>
-              <Input id="participant-initiative-dialog" type="number" value={newParticipantInitiative} onChange={(e) => setNewParticipantInitiative(e.target.value)} placeholder="e.g., 15" />
+              <Label htmlFor="participant-initiative-dialog-display">Initiative</Label>
+              {isEditingInitiative ? (
+                <Input
+                  id="participant-initiative-dialog-input"
+                  type="number"
+                  value={newParticipantInitiative}
+                  onChange={(e) => setNewParticipantInitiative(e.target.value)}
+                  onBlur={() => {
+                    const num = parseInt(newParticipantInitiative, 10);
+                    if (isNaN(num)) {
+                      setNewParticipantInitiative('10'); 
+                    }
+                    setIsEditingInitiative(false);
+                  }}
+                  autoFocus
+                  className="w-20 text-center"
+                />
+              ) : (
+                <div className="flex items-center gap-2 mt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const currentValue = parseInt(newParticipantInitiative, 10) || 0;
+                      setNewParticipantInitiative(String(Math.max(0, currentValue - 1)));
+                    }}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    id="participant-initiative-dialog-display"
+                    onClick={() => setIsEditingInitiative(true)}
+                    className="h-8 px-3 text-base min-w-[40px] text-center justify-center"
+                  >
+                    {newParticipantInitiative}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      const currentValue = parseInt(newParticipantInitiative, 10) || 0;
+                      setNewParticipantInitiative(String(currentValue + 1));
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
+
             <div>
               <Label htmlFor="participant-type-dialog">Type</Label>
               <div className="flex space-x-2 mt-1">
@@ -212,18 +268,6 @@ export default function InitiativeTrackerPanel({
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Auto-advance UI is commented out as per original panel state
-      <div className="flex items-center justify-between mt-4">
-        <Label htmlFor="toggle-auto-advance">Auto-Advance Turn</Label>
-        <Switch
-          id="toggle-auto-advance"
-          checked={isAutoAdvanceOn}
-          onCheckedChange={setIsAutoAdvanceOn}
-          disabled
-        />
-      </div>
-      */}
     </div>
   );
 }
