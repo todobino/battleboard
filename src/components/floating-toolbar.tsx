@@ -148,6 +148,7 @@ export default function FloatingToolbar({
                 <Button
                   variant={activeTool === 'paint_cell' || activeTool === 'place_token' ? 'default' : 'outline'}
                   size="icon"
+                  onClick={() => handleToolClick('paint_cell')} // Added this line
                   className={cn(
                     'rounded-md shadow-lg h-12 w-12 p-2.5',
                      (activeTool === 'paint_cell' || activeTool === 'place_token') ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
@@ -176,3 +177,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
