@@ -58,3 +58,18 @@ export interface Measurement {
   result?: string;
 }
 
+export interface BattleGridProps {
+  gridCells: GridCellData[][];
+  setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
+  tokens: Token[];
+  setTokens: React.Dispatch<React.SetStateAction<Token[]>>;
+  showGridLines: boolean;
+  backgroundImageUrl: string | null;
+  backgroundZoomLevel?: number; // Added for background image zoom
+  activeTool: ActiveTool;
+  selectedColor: string;
+  selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
+  onTokenMove: (tokenId: string, newX: number, newY: number) => void;
+  measurement: Measurement;
+  setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
+}

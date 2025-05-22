@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2 } from 'lucide-react';
+import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import ImageCropDialog from '@/components/image-crop-dialog'; // New import
+import ImageCropDialog from '@/components/image-crop-dialog';
+import { Slider } from '@/components/ui/slider';
 
 interface GridSettingsPanelProps {
   showGridLines: boolean;
@@ -19,12 +20,15 @@ interface GridSettingsPanelProps {
   backgroundImageUrl: string | null;
   setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
+  backgroundZoomLevel: number;
+  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
 }
 
 export default function GridSettingsPanel({
   showGridLines, setShowGridLines,
   backgroundImageUrl, setBackgroundImageUrl,
-  setActiveTool
+  setActiveTool,
+  backgroundZoomLevel, setBackgroundZoomLevel
 }: GridSettingsPanelProps) {
   const { toast } = useToast();
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
@@ -45,7 +49,6 @@ export default function GridSettingsPanel({
       reader.onloadend = () => {
         setUncroppedImageSrc(reader.result as string);
         setIsCropDialogOpen(true);
-        // Clear the file input so the same file can be re-uploaded if needed
         if (event.target) {
           event.target.value = '';
         }
@@ -58,6 +61,7 @@ export default function GridSettingsPanel({
     setBackgroundImageUrl(croppedDataUrl);
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
+    setBackgroundZoomLevel(1); // Reset zoom when new image is set
     toast({ title: "Background Image Updated" });
   };
 
@@ -69,7 +73,7 @@ export default function GridSettingsPanel({
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Grid className="mr-2 h-5 w-5" /> Grid Settings
+        <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
       </div>
       <div className="flex items-center justify-between">
         <Label htmlFor="toggle-grid-lines-popover" className="text-popover-foreground">Show Grid Lines</Label>
@@ -98,14 +102,34 @@ export default function GridSettingsPanel({
           type="file"
           accept="image/*"
           onChange={handleBackgroundImageUpload}
-          className="hidden" // Hide the default input
+          className="hidden" 
         />
         {backgroundImageUrl && (
-          <Button variant="outline" size="sm" onClick={() => setBackgroundImageUrl(null)} className="w-full">
+          <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full">
             <Trash2 className="mr-2 h-4 w-4" /> Remove Background
           </Button>
         )}
       </div>
+
+      {backgroundImageUrl && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="background-zoom-slider" className="text-popover-foreground flex items-center">
+              <ZoomIn className="mr-2 h-4 w-4" /> Background Zoom
+            </Label>
+            <span className="text-sm text-muted-foreground">{(backgroundZoomLevel * 100).toFixed(0)}%</span>
+          </div>
+          <Slider
+            id="background-zoom-slider"
+            min={0.2}
+            max={3}
+            step={0.05}
+            value={[backgroundZoomLevel]}
+            onValueChange={(value) => setBackgroundZoomLevel(value[0])}
+            disabled={!backgroundImageUrl}
+          />
+        </div>
+      )}
 
       {uncroppedImageSrc && (
         <ImageCropDialog

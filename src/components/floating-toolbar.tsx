@@ -4,7 +4,7 @@
 import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, PersonStanding, DraftingCompass, Eraser } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass, Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -30,17 +30,19 @@ interface FloatingToolbarProps {
   setShowGridLines: Dispatch<SetStateAction<boolean>>;
   measurement: Measurement;
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
+  backgroundZoomLevel: number; // Added prop
+  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>; // Added prop
 }
 
 interface ToolButtonProps {
   label: string;
   icon: React.ElementType;
-  tool?: ActiveTool; // Optional: not all buttons directly set a tool (e.g., popover triggers might)
-  currentActiveTool?: ActiveTool; // Optional: only relevant for direct tool buttons
-  onClick?: () => void; // Optional: for direct actions or opening popovers
-  children?: React.ReactNode; // For PopoverTrigger
-  asChild?: boolean; // For PopoverTrigger
-  variantOverride?: "default" | "outline"; // To manually set variant for popover triggers
+  tool?: ActiveTool; 
+  currentActiveTool?: ActiveTool; 
+  onClick?: () => void; 
+  children?: React.ReactNode; 
+  asChild?: boolean; 
+  variantOverride?: "default" | "outline"; 
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick, children, asChild, variantOverride }) => (
@@ -74,6 +76,7 @@ export default function FloatingToolbar({
   backgroundImageUrl, setBackgroundImageUrl,
   showGridLines, setShowGridLines,
   measurement, setMeasurement,
+  backgroundZoomLevel, setBackgroundZoomLevel, // Destructure new props
 }: FloatingToolbarProps) {
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -103,7 +106,6 @@ export default function FloatingToolbar({
           onClick={() => handleToolClick('select')}
         />
 
-        {/* Token Placer Popover */}
         <Popover>
           <ToolButton
             label="Token Placer"
@@ -134,8 +136,6 @@ export default function FloatingToolbar({
           </PopoverContent>
         </Popover>
 
-
-        {/* Measurement Tools Popover */}
         <Popover>
            <ToolButton
             label="Measurement Tools"
@@ -168,7 +168,6 @@ export default function FloatingToolbar({
           </PopoverContent>
         </Popover>
 
-        {/* Grid Settings Popover */}
         <Popover>
           <ToolButton
             label="Map & Grid Settings"
@@ -198,11 +197,12 @@ export default function FloatingToolbar({
               backgroundImageUrl={backgroundImageUrl}
               setBackgroundImageUrl={setBackgroundImageUrl}
               setActiveTool={setActiveTool}
+              backgroundZoomLevel={backgroundZoomLevel} 
+              setBackgroundZoomLevel={setBackgroundZoomLevel}
             />
           </PopoverContent>
         </Popover>
 
-        {/* Color Painter Popover */}
         <Popover>
           <ToolButton
             label="Color Painter"

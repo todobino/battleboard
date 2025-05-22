@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-
 const GRID_ROWS = 30;
 const GRID_COLS = 30;
 
@@ -28,6 +27,7 @@ export default function BattleBoardPage() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+  const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1); // New state for zoom
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
@@ -52,7 +52,6 @@ export default function BattleBoardPage() {
         result: undefined
       });
     } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') {
-      // Clear measurement if switching away from a measurement tool
       setMeasurement({
         type: null,
         startPoint: undefined,
@@ -61,13 +60,12 @@ export default function BattleBoardPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool]); // Only depend on activeTool
+  }, [activeTool]);
 
   useEffect(() => {
     if (participants.length === 0) {
       if (currentParticipantIndex !== -1) setCurrentParticipantIndex(-1);
     } else {
-      // Ensure currentParticipantIndex is valid
       if (currentParticipantIndex < 0 || currentParticipantIndex >= participants.length) {
         setCurrentParticipantIndex(0);
       }
@@ -98,8 +96,8 @@ export default function BattleBoardPage() {
 
   const handleEndCombat = () => {
     setIsCombatActive(false);
-    setRoundCounter(1); // Reset round counter
-    setCurrentParticipantIndex(-1); // No active participant
+    setRoundCounter(1);
+    setCurrentParticipantIndex(-1);
     toast({ title: "Combat Ended."});
   };
 
@@ -134,28 +132,21 @@ export default function BattleBoardPage() {
 
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
-      // If combat is active, try to maintain the current turn focus if possible,
-      // otherwise, if it's a new combatant, it will be sorted.
-      // If combat is not active, and it's the first participant, set them as active.
       if (isCombatActive) {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         let newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
         if (newActiveIndex === -1 && newList.length > 0 && currentParticipantIndex >=0) {
-          // If the old active participant is gone (shouldn't happen on add) or index was valid but now isn't
-          // This logic might need refinement based on desired behavior when adding during combat
           newActiveIndex = (currentParticipantIndex < newList.length) ? currentParticipantIndex : 0;
         } else if (newActiveIndex === -1 && newList.length > 0){
           newActiveIndex = 0;
         }
         setCurrentParticipantIndex(newActiveIndex);
       } else {
-        // If not in combat, or adding the first participant
         if (newList.length === 1 && currentParticipantIndex === -1) {
           setCurrentParticipantIndex(0);
         } else if (prev.length === 0 && newList.length > 0) {
            setCurrentParticipantIndex(0);
         }
-        // Otherwise, currentParticipantIndex remains -1 or its current value until combat starts
       }
       return newList;
     });
@@ -173,19 +164,13 @@ export default function BattleBoardPage() {
       if (filteredList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else if (isRemovingCurrentTurn) {
-        // If removing the current turn holder, advance to the "next" one (which could be the start of the list)
-        // The index remains the same, but the participant at that index is now different.
-        // Or, if it was the last, loop to 0.
         setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
       } else {
-        // If removing someone else, find the ID of the current turn holder in the new list
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
         if (newActiveIndex !== -1) {
           setCurrentParticipantIndex(newActiveIndex);
         } else {
-          // Should not happen if currentParticipantIndex was valid and participant wasn't the one removed
-          // But as a fallback, if the current index is out of bounds, reset to 0
           setCurrentParticipantIndex(currentParticipantIndex >= filteredList.length ? 0 : currentParticipantIndex);
         }
       }
@@ -207,16 +192,15 @@ export default function BattleBoardPage() {
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
       timer = setTimeout(() => {
         handleAdvanceTurn();
-      }, 5000); // Auto-advance every 5 seconds
+      }, 5000); 
     }
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]); // Dependencies for auto-advance
+  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]);
 
 
   return (
     <div className="flex h-screen">
-      {/* Main Content Area */}
       <div className="flex-1 relative">
           <BattleGrid
             gridCells={gridCells}
@@ -225,6 +209,7 @@ export default function BattleBoardPage() {
             setTokens={setTokens}
             showGridLines={showGridLines}
             backgroundImageUrl={backgroundImageUrl}
+            backgroundZoomLevel={backgroundZoomLevel} 
             activeTool={activeTool}
             selectedColor={selectedColor}
             selectedTokenTemplate={selectedTokenTemplate}
@@ -247,10 +232,11 @@ export default function BattleBoardPage() {
             setShowGridLines={setShowGridLines}
             measurement={measurement}
             setMeasurement={setMeasurement}
+            backgroundZoomLevel={backgroundZoomLevel}
+            setBackgroundZoomLevel={setBackgroundZoomLevel}
           />
       </div>
 
-      {/* Right Sidebar for Initiative Tracker */}
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
           <SidebarContent className="p-4 space-y-4">
@@ -291,5 +277,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
-    

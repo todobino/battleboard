@@ -1,28 +1,13 @@
 
 'use client';
 
-import type { GridCellData, Token, ActiveTool, Point, Measurement } from '@/types';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import type { Point, BattleGridProps } from '@/types'; // Updated to use BattleGridProps from types
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-interface BattleGridProps {
-  gridCells: GridCellData[][];
-  setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
-  tokens: Token[];
-  setTokens: React.Dispatch<React.SetStateAction<Token[]>>;
-  showGridLines: boolean;
-  backgroundImageUrl: string | null;
-  activeTool: ActiveTool;
-  selectedColor: string;
-  selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
-  onTokenMove: (tokenId: string, newX: number, newY: number) => void;
-  measurement: Measurement;
-  setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
-}
-
-const GRID_SIZE = 30; // 30x30 grid
-const DEFAULT_CELL_SIZE = 30; // pixels
+const GRID_SIZE = 30; 
+const DEFAULT_CELL_SIZE = 30; 
 const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
 
@@ -33,6 +18,7 @@ export default function BattleGrid({
   setTokens,
   showGridLines,
   backgroundImageUrl,
+  backgroundZoomLevel = 1, // Default zoom to 1
   activeTool,
   onTokenMove,
   selectedColor,
@@ -49,16 +35,14 @@ export default function BattleGrid({
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
-  const [draggingToken, setDraggingToken] = useState<Token | null>(null);
+  const [draggingToken, setDraggingToken] = useState<typeof tokens[0] | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
   const [hoveredCellWhilePainting, setHoveredCellWhilePainting] = useState<Point | null>(null);
 
-
   const { toast } = useToast();
-
   const cellSize = DEFAULT_CELL_SIZE;
 
   useEffect(() => {
@@ -121,7 +105,7 @@ export default function BattleGrid({
         break;
       case 'paint_cell':
         setIsPainting(true);
-        setHoveredCellWhilePainting({ x: gridX, y: gridY }); // Set initial hover for immediate feedback
+        setHoveredCellWhilePainting({ x: gridX, y: gridY }); 
         setGridCells(prev => {
           const newCells = prev.map(row => row.map(cell => ({ ...cell })));
           if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -132,7 +116,7 @@ export default function BattleGrid({
         break;
       case 'place_token':
         if (selectedTokenTemplate) {
-          const newToken: Token = {
+          const newToken = {
             ...selectedTokenTemplate,
             id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             x: gridX,
@@ -153,7 +137,7 @@ export default function BattleGrid({
         break;
       case 'eraser_tool':
         setIsErasing(true);
-        setHoveredCellWhilePainting({ x: gridX, y: gridY }); // Set initial hover
+        setHoveredCellWhilePainting({ x: gridX, y: gridY }); 
         setGridCells(prev => {
             const newCells = prev.map(row => row.map(cell => ({ ...cell })));
             if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -166,7 +150,7 @@ export default function BattleGrid({
     }
   };
 
-  const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: Token) => {
+  const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: typeof tokens[0]) => {
     if (activeTool !== 'select') return;
     event.stopPropagation(); 
     setDraggingToken(token);
@@ -183,48 +167,36 @@ export default function BattleGrid({
       const currentVbParts = viewBox.split(' ').map(Number);
       const svgWidth = svgRef.current.clientWidth;
       const svgHeight = svgRef.current.clientHeight;
-
       if (svgWidth === 0 || svgHeight === 0) return; 
-
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
-
       const zoomFactorX = currentVbWidth / svgWidth;
       const zoomFactorY = currentVbHeight / svgHeight;
-
       const dx = (panStart.x - event.clientX) * zoomFactorX;
       const dy = (panStart.y - event.clientY) * zoomFactorY;
-
       const [vx, vy, vw, vh] = currentVbParts;
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
       setPanStart({ x: event.clientX, y: event.clientY });
-      setHoveredCellWhilePainting(null); // Clear paint hover if panning
-
+      setHoveredCellWhilePainting(null);
     } else if (draggingToken && dragOffset) {
-      // Dragging logic handled on mouseUp
-      setHoveredCellWhilePainting(null); // Clear paint hover if dragging token
+      setHoveredCellWhilePainting(null); 
     } else if (isMeasuring && measurement.startPoint) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
-      
       const endPoint = { x: Math.max(0, Math.min(gridX, GRID_SIZE -1)), y: Math.max(0, Math.min(gridY, GRID_SIZE -1)) };
-
       const dxSquares = endPoint.x - measurement.startPoint.x;
       const dySquares = endPoint.y - measurement.startPoint.y;
       const distInSquares = Math.sqrt(dxSquares*dxSquares + dySquares*dySquares);
       const distInFeet = distInSquares * FEET_PER_SQUARE;
       const roundedDistInFeet = Math.round(distInFeet * 10) / 10; 
-
       const resultText = measurement.type === 'distance'
         ? `Distance: ${roundedDistInFeet} ft`
         : `Radius: ${roundedDistInFeet} ft`;
-
       setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
-      setHoveredCellWhilePainting(null); // Clear paint hover if measuring
+      setHoveredCellWhilePainting(null);
     } else if (isErasing && activeTool === 'eraser_tool') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
-
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
              setHoveredCellWhilePainting({ x: gridX, y: gridY });
              setGridCells(prev => {
@@ -243,12 +215,11 @@ export default function BattleGrid({
                 return prev;
             });
         } else {
-           setHoveredCellWhilePainting(null); // Cursor outside grid
+           setHoveredCellWhilePainting(null);
         }
     } else if (isPainting && activeTool === 'paint_cell') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
-
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
             setHoveredCellWhilePainting({ x: gridX, y: gridY });
             setGridCells(prev => {
@@ -260,10 +231,9 @@ export default function BattleGrid({
                 return prev;
             });
         } else {
-           setHoveredCellWhilePainting(null); // Cursor outside grid
+           setHoveredCellWhilePainting(null); 
         }
     } else {
-        // If no specific drag operation is active, clear the painting hover highlight
         setHoveredCellWhilePainting(null);
     }
   };
@@ -277,7 +247,6 @@ export default function BattleGrid({
       const pos = getMousePosition(event);
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
-
       if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
         onTokenMove(draggingToken.id, gridX, gridY);
       }
@@ -307,6 +276,7 @@ export default function BattleGrid({
     }
     if (isMeasuring) {
       setIsMeasuring(false);
+      // No toast on mouse leave during measurement. Final toast on mouseup.
     }
     if (isErasing) {
       setIsErasing(false);
@@ -321,11 +291,9 @@ export default function BattleGrid({
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
     if(!svgRef.current) return;
-
     const scaleAmount = 1.1; 
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
     const mousePos = getMousePosition(event);
-
     let newVw, newVh;
     if (event.deltaY < 0) { 
       newVw = vw / scaleAmount;
@@ -334,22 +302,24 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
       newVh = vh * scaleAmount;
     }
-
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const minAllowedVw = baseContentWidth / 10; 
     const maxAllowedVw = baseContentWidth * 5;  
-
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
     newVh = (newVw / vw) * vh; 
-
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
-
     setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
   };
 
   const gridContentWidth = GRID_SIZE * cellSize;
   const gridContentHeight = GRID_SIZE * cellSize;
+
+  // Calculate scaled image properties
+  const imgScaledWidth = gridContentWidth * backgroundZoomLevel;
+  const imgScaledHeight = gridContentHeight * backgroundZoomLevel;
+  const imgScaledX = (gridContentWidth - imgScaledWidth) / 2;
+  const imgScaledY = (gridContentHeight - imgScaledHeight) / 2;
 
   return (
     <div className="w-full h-full overflow-hidden bg-battle-grid-bg flex items-center justify-center relative">
@@ -366,7 +336,13 @@ export default function BattleGrid({
         data-ai-hint="battle grid tactical map"
       >
         {backgroundImageUrl && (
-          <image href={backgroundImageUrl} x="0" y="0" width={gridContentWidth} height={gridContentHeight} />
+          <image 
+            href={backgroundImageUrl} 
+            x={imgScaledX} 
+            y={imgScaledY} 
+            width={imgScaledWidth} 
+            height={imgScaledHeight} 
+          />
         )}
 
         <g shapeRendering="crispEdges">
@@ -405,8 +381,8 @@ export default function BattleGrid({
         </g>
         
         <defs>
-          <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="10.8" refY="4.2" orient="auto">
-            <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--accent))" />
           </marker>
         </defs>
 
@@ -499,5 +475,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
-    
