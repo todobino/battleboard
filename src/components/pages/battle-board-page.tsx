@@ -8,7 +8,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, ListOrdered, Swords, Map as MapIcon, PersonStanding, Paintbrush, MousePointerSquareDashed } from 'lucide-react';
+import { LandPlot, ListOrdered } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -82,11 +82,13 @@ export default function BattleBoardPage() {
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
+    // Keep currentParticipantIndex as is, or reset if desired:
+    // setCurrentParticipantIndex(participants.length > 0 ? 0 : -1);
     toast({ title: "Combat Ended."});
   };
 
   const handleAdvanceTurn = () => {
-    if (participants.length === 0 || currentParticipantIndex === -1) {
+    if (!isCombatActive || participants.length === 0 || currentParticipantIndex === -1) {
       toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
       return;
     }
@@ -112,13 +114,23 @@ export default function BattleBoardPage() {
     
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
-      if (prev[currentParticipantIndex]?.id) {
-        const newActiveIndex = newList.findIndex(p => p.id === prev[currentParticipantIndex].id);
-        if (newActiveIndex !== -1) setCurrentParticipantIndex(newActiveIndex);
-      } else if (newList.length > 0 && currentParticipantIndex === -1 && isCombatActive) {
-        setCurrentParticipantIndex(0);
-      } else if (newList.length > 0 && currentParticipantIndex === -1 && !isCombatActive) {
-        setCurrentParticipantIndex(0); // Also set active index if combat not started but adding first
+      // If combat active, find new index of current participant. If not, set to 0 if it's the first one.
+      if (isCombatActive) {
+        const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
+        const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
+        setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : 0);
+      } else {
+         // If not in combat, and adding the first participant, make them current
+        if (newList.length === 1) {
+          setCurrentParticipantIndex(0);
+        } else if (prev.length === 0 && newList.length > 0){ // If was empty, set new one
+          setCurrentParticipantIndex(0);
+        } else {
+          // keep current index or -1 if no current one
+          const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
+          const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
+          setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (newList.length > 0 ? 0 : -1) );
+        }
       }
       return newList;
     });
@@ -129,23 +141,30 @@ export default function BattleBoardPage() {
     setParticipants(prev => {
       const participantToRemove = prev.find(p => p.id === id);
       if (!participantToRemove) return prev;
-
+  
       const filteredList = prev.filter(p => p.id !== id);
       
       if (filteredList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
+        // If the removed participant was the active one
         if (id === oldActiveParticipantId) {
-          setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
+          // If combat is active, the next turn should be the one at the current index (or 0 if last was removed)
+          // If combat is not active, it's less critical, but let's keep it consistent
+          setCurrentParticipantIndex(currentParticipantIndex % filteredList.length); 
         } else {
+          // If a different participant was removed, try to maintain the current active participant
           const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
           if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
           } else {
+            // Fallback if active participant somehow not found (should not happen if logic is correct)
+            // or if index shifted. If current index is now out of bounds, reset to 0.
             if (currentParticipantIndex >= filteredList.length) {
-              setCurrentParticipantIndex(0); 
+              setCurrentParticipantIndex(0);
             }
+            // Otherwise, currentParticipantIndex might still be valid if an earlier item was removed
           }
         }
       }
@@ -170,7 +189,8 @@ export default function BattleBoardPage() {
       }, 5000); 
     }
     return () => clearTimeout(timer);
-  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants, handleAdvanceTurn]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]);
 
 
   return (
@@ -219,7 +239,6 @@ export default function BattleBoardPage() {
             <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
           </SidebarHeader>
           <SidebarContent className="p-4 space-y-4">
-            <Button className="w-full">Load from QuestFlow</Button>
             <InitiativeTrackerPanel
               participants={participants}
               currentParticipantIndex={currentParticipantIndex}
@@ -231,6 +250,11 @@ export default function BattleBoardPage() {
               onResetInitiative={handleResetInitiativeAndCombat}
             />
           </SidebarContent>
+          <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
+            <Button className="w-full opacity-50 cursor-not-allowed" disabled>
+              Load from QuestFlow
+            </Button>
+          </div>
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
               <Button onClick={handleStartCombat} className="w-full">
@@ -252,3 +276,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
