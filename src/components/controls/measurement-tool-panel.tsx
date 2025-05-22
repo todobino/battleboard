@@ -22,11 +22,13 @@ export default function MeasurementToolPanel({
   const handleToolSelect = (tool: 'measure_distance' | 'measure_radius') => {
     setActiveTool(tool);
     // Reset measurement when a tool is selected to ensure a fresh start
-    setMeasurement({ type: tool === 'measure_distance' ? 'distance' : 'radius' });
+    // BattleGrid's mousedown will now initialize the measurement.
+    // BattleBoardPage's useEffect on activeTool also clears measurement.
+    setMeasurement({ type: tool, startPoint: undefined, endPoint: undefined, result: undefined });
   };
   
   const clearMeasurement = () => {
-    setMeasurement({ type: null });
+    setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
     // Optionally, set activeTool back to 'select' or keep the measurement tool active
     // setActiveTool('select'); 
   };
@@ -52,7 +54,7 @@ export default function MeasurementToolPanel({
       </div>
       {(activeTool === 'measure_distance' || activeTool === 'measure_radius') && (
         <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted">
-          {measurement.startPoint && !measurement.endPoint ? "Click a second point on the grid to complete measurement." : "Click a starting point on the grid."}
+          Click and drag on the grid to measure.
         </p>
       )}
       {measurement.result && (

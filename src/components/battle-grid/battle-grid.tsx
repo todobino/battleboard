@@ -55,6 +55,7 @@ export default function BattleGrid({
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [draggingToken, setDraggingToken] = useState<Token | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [isMeasuring, setIsMeasuring] = useState(false);
   const { toast } = useToast();
 
   const cellSize = DEFAULT_CELL_SIZE;
@@ -62,30 +63,34 @@ export default function BattleGrid({
   useEffect(() => {
     const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const contentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
+    
+    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+    const svgPadding = currentBorderWidth / 2; 
 
-    const expectedMinX = 0 - padding;
-    const expectedMinY = 0 - padding;
-    const expectedVw = contentWidth + (padding * 2);
-    const expectedVh = contentHeight + (padding * 2);
+    const expectedMinX = 0 - svgPadding;
+    const expectedMinY = 0 - svgPadding;
+    const expectedVw = contentWidth + (svgPadding * 2);
+    const expectedVh = contentHeight + (svgPadding * 2);
 
     setViewBox(currentVbString => {
         const currentVbParts = currentVbString.split(' ').map(Number);
-        const currentZoom = (GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)) / currentVbParts[2];
-
-        const paddingChanged = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
+        // Check if the current viewBox matches the expected one based on current settings
+        // This is to re-center the view if grid lines are toggled, causing padding to change
+        const needsRecenter = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
                                Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
                                Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                                Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
-
-        if (paddingChanged && currentZoom === 1) {
+        
+        // Only recenter if zoom is effectively 1x (viewBox width matches content width + padding)
+        const currentZoomLevel = (contentWidth + (currentBorderWidth)) / currentVbParts[2];
+        if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) {
              return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
         }
-        return currentVbString;
+        return currentVbString; // Otherwise, keep the user's pan/zoom
     });
   }, [showGridLines]);
 
-  const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement>): Point => {
+  const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const svg = svgRef.current;
     const CTM = svg.getScreenCTM();
@@ -102,7 +107,7 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { // Ctrl or Cmd for panning
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -136,23 +141,13 @@ export default function BattleGrid({
         break;
       case 'measure_distance':
       case 'measure_radius':
-        if (!measurement.startPoint) {
-          setMeasurement({ startPoint: { x: gridX, y: gridY }, type: activeTool === 'measure_distance' ? 'distance' : 'radius', endPoint: undefined, result: undefined });
-        } else {
-          const endPoint = {x: gridX, y: gridY};
-          const dx = endPoint.x - measurement.startPoint.x;
-          const dy = endPoint.y - measurement.startPoint.y;
-          const distInSquares = Math.sqrt(dx*dx + dy*dy);
-          const distInFeet = distInSquares * FEET_PER_SQUARE;
-          const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
-
-          const resultText = measurement.type === 'distance'
-            ? `Distance: ${roundedDistInFeet} ft`
-            : `Radius: ${roundedDistInFeet} ft`;
-
-          setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
-          toast({ title: "Measurement Complete", description: resultText });
-        }
+        setIsMeasuring(true);
+        setMeasurement({ 
+          startPoint: { x: gridX, y: gridY }, 
+          type: activeTool === 'measure_distance' ? 'distance' : 'radius', 
+          endPoint: { x: gridX, y: gridY }, // Initialize endPoint for immediate visual feedback
+          result: undefined 
+        });
         break;
     }
   };
@@ -192,10 +187,24 @@ export default function BattleGrid({
 
     } else if (draggingToken && dragOffset) {
       // Dragging logic is handled on mouseUp
-    } else if ((activeTool === 'measure_distance' || activeTool === 'measure_radius') && measurement.startPoint && !measurement.endPoint) {
+    } else if (isMeasuring && measurement.startPoint) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
-      setMeasurement(prev => ({...prev, endPoint: {x: gridX, y: gridY}}));
+      
+      const endPoint = { x: Math.max(0, Math.min(gridX, GRID_SIZE -1)), y: Math.max(0, Math.min(gridY, GRID_SIZE -1)) };
+
+
+      const dx = endPoint.x - measurement.startPoint.x;
+      const dy = endPoint.y - measurement.startPoint.y;
+      const distInSquares = Math.sqrt(dx*dx + dy*dy);
+      const distInFeet = distInSquares * FEET_PER_SQUARE;
+      const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
+
+      const resultText = measurement.type === 'distance'
+        ? `Distance: ${roundedDistInFeet} ft`
+        : `Radius: ${roundedDistInFeet} ft`;
+
+      setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
     }
   };
 
@@ -214,6 +223,14 @@ export default function BattleGrid({
       }
       setDraggingToken(null);
       setDragOffset(null);
+    }
+    if (isMeasuring) {
+      setIsMeasuring(false);
+      if (measurement.result) {
+        toast({ title: "Measurement Complete", description: measurement.result });
+      }
+      // Keep measurement start/end points for display until a new measurement starts or tool changes
+      // Clearing is handled by BattleBoardPage's useEffect on activeTool change
     }
   };
 
@@ -235,11 +252,11 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10;
-    const maxAllowedVw = baseContentWidth * 5;
+    const minAllowedVw = baseContentWidth / 10; // Max zoom in 10x
+    const maxAllowedVw = baseContentWidth * 5;  // Max zoom out 0.2x
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh;
+    newVh = (newVw / vw) * vh; // Maintain aspect ratio
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -259,7 +276,7 @@ export default function BattleGrid({
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // End panning/dragging if mouse leaves SVG
+        onMouseLeave={handleMouseUp} 
         onWheel={handleWheel}
         preserveAspectRatio="xMidYMid meet"
         data-ai-hint="battle grid tactical map"
@@ -282,12 +299,20 @@ export default function BattleGrid({
                 strokeWidth={showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0}
                 className={cn(
                   'transition-colors duration-100',
-                  (activeTool === 'paint_cell' || activeTool === 'place_token') && 'cursor-pointer hover:opacity-80'
+                  (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius') && 'cursor-crosshair',
+                  (activeTool !== 'paint_cell' && activeTool !== 'place_token' && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') && 'cursor-default'
                 )}
               />
             ))
           )}
         </g>
+        
+        {/* Measurement visual elements */}
+        <defs>
+          <marker id="arrowhead" markerWidth="5" markerHeight="3.5" refX="5" refY="1.75" orient="auto">
+            <polygon points="0 0, 5 1.75, 0 3.5" fill={selectedColor || "hsl(var(--accent))"} />
+          </marker>
+        </defs>
 
         {measurement.startPoint && measurement.endPoint && (
           <g stroke={selectedColor || "hsl(var(--accent))"} strokeWidth="2" fill="none">
@@ -299,7 +324,7 @@ export default function BattleGrid({
                 y2={measurement.endPoint.y * cellSize + cellSize/2}
                 markerEnd="url(#arrowhead)"
               />
-            ) : (
+            ) : ( // 'radius'
               <circle
                 cx={measurement.startPoint.x * cellSize + cellSize/2}
                 cy={measurement.startPoint.y * cellSize + cellSize/2}
@@ -309,18 +334,31 @@ export default function BattleGrid({
             )}
           </g>
         )}
+         {/* Real-time measurement text display */}
+        {isMeasuring && measurement.endPoint && measurement.result && (
+          <text
+            x={measurement.endPoint.x * cellSize + cellSize / 2 + 10} // Offset from cursor/endpoint
+            y={measurement.endPoint.y * cellSize + cellSize / 2 + 10} // Offset from cursor/endpoint
+            fill={selectedColor || "hsl(var(--accent))"}
+            fontSize="10" // Slightly smaller for live display
+            paintOrder="stroke"
+            stroke="hsl(var(--background))" // Outline for better visibility
+            strokeWidth="2px"
+            strokeLinecap="butt"
+            strokeLinejoin="miter"
+            className="pointer-events-none select-none font-semibold"
+          >
+            {measurement.result.replace("Distance: ", "").replace("Radius: ", "")}
+          </text>
+        )}
+
+        {/* Start and End points for measurement */}
         {measurement.startPoint && (
            <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="3" fill={selectedColor || "hsl(var(--accent))"} />
         )}
-         {measurement.endPoint && (
+         {measurement.endPoint && measurement.result && ( // Only show end point if a result is also present (measurement in progress or completed)
            <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="3" fill={selectedColor || "hsl(var(--accent))"} />
         )}
-
-        <defs>
-          <marker id="arrowhead" markerWidth="5" markerHeight="3.5" refX="5" refY="1.75" orient="auto">
-            <polygon points="0 0, 5 1.75, 0 3.5" fill={selectedColor || "hsl(var(--accent))"} />
-          </marker>
-        </defs>
 
         {tokens.map(token => {
           const IconComponent = token.icon;
@@ -366,5 +404,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
-    
