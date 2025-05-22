@@ -4,7 +4,7 @@
 import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass, PersonStanding } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Puzzle, PersonStanding, DraftingCompass, Eraser } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -108,7 +108,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Token Placer"
             icon={Puzzle}
-            onClick={() => handleToolClick('token_placer_tool')} 
+            onClick={() => handleToolClick('token_placer_tool')}
             variantOverride={activeTool === 'token_placer_tool' || activeTool === 'place_token' ? 'default' : 'outline'}
             asChild
           >
@@ -133,14 +133,14 @@ export default function FloatingToolbar({
             />
           </PopoverContent>
         </Popover>
-        
+
 
         {/* Measurement Tools Popover */}
         <Popover>
            <ToolButton
             label="Measurement Tools"
             icon={DraftingCompass}
-            onClick={() => handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance')} 
+            onClick={() => handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance')}
             variantOverride={(activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
             asChild
           >
@@ -234,6 +234,14 @@ export default function FloatingToolbar({
             />
           </PopoverContent>
         </Popover>
+
+        <ToolButton
+          label="Eraser"
+          icon={Eraser}
+          tool="eraser_tool"
+          currentActiveTool={activeTool}
+          onClick={() => handleToolClick('eraser_tool')}
+        />
       </div>
     </TooltipProvider>
   );
