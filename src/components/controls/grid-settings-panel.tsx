@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2, ZoomIn, ScrollText } from 'lucide-react';
+import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
@@ -115,7 +115,7 @@ export default function GridSettingsPanel({
         <div className="lg:w-3/5 space-y-4">
           <div className="space-y-2">
             <Label className="text-popover-foreground flex items-center">
-                <ScrollText className="mr-2 h-4 w-4" /> Default Battlemaps
+                Default Battlemaps
             </Label>
             <ScrollArea className="w-full whitespace-nowrap rounded-md border border-border">
               <div className="flex space-x-2 p-2">
