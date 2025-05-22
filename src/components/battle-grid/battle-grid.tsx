@@ -25,13 +25,13 @@ interface BattleGridProps {
 
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const GRID_LINE_STROKE_WIDTH = 1.5; // Stroke width for grid lines
+const CELL_BORDER_WIDTH = 1; // 1px border for each cell
 
 export default function BattleGrid({
   gridCells,
   tokens,
   showGridLines,
-  zoomLevel, // Note: zoomLevel prop might be less directly used now viewBox handles zoom
+  zoomLevel, 
   backgroundImageUrl,
   activeTool,
   onCellClick, 
@@ -47,9 +47,9 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Expand viewBox slightly to ensure lines on edges are fully visible
-    const padding = GRID_LINE_STROKE_WIDTH / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + GRID_LINE_STROKE_WIDTH} ${initialContentHeight + GRID_LINE_STROKE_WIDTH}`;
+    // Padding to ensure cell borders on the edges are fully visible
+    const padding = CELL_BORDER_WIDTH / 2;
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + CELL_BORDER_WIDTH} ${initialContentHeight + CELL_BORDER_WIDTH}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -60,21 +60,23 @@ export default function BattleGrid({
   const cellSize = DEFAULT_CELL_SIZE; 
 
   useEffect(() => {
-    // Set initial viewBox considering stroke width to prevent clipping
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = GRID_LINE_STROKE_WIDTH / 2; // Half stroke width for padding
+    const padding = CELL_BORDER_WIDTH / 2;
     
-    // Check if viewBox needs reset (e.g. if GRID_SIZE or DEFAULT_CELL_SIZE were dynamic, though they are const here)
-    const currentVbParts = viewBox.split(' ').map(Number);
-    const expectedVw = initialContentWidth + GRID_LINE_STROKE_WIDTH;
-    const expectedVh = initialContentHeight + GRID_LINE_STROKE_WIDTH;
+    const currentVbString = viewBox;
+    const currentVbParts = currentVbString.split(' ').map(Number);
+    
+    const expectedMinX = 0 - padding;
+    const expectedMinY = 0 - padding;
+    const expectedVw = initialContentWidth + CELL_BORDER_WIDTH;
+    const expectedVh = initialContentHeight + CELL_BORDER_WIDTH;
 
-    if (currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh ) {
-        setViewBox(`${0 - padding} ${0 - padding} ${expectedVw} ${expectedVh}`);
+    if (currentVbParts[0] !== expectedMinX || currentVbParts[1] !== expectedMinY || currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh) {
+        setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Recalculate if GRID_SIZE or DEFAULT_CELL_SIZE changed, though they are const.
+  }, []); // Runs once on mount to set initial viewBox based on constants
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -93,7 +95,6 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-       // Allow clicks outside for panning to start
       if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
@@ -101,10 +102,9 @@ export default function BattleGrid({
       return;
     }
 
-
     switch (activeTool) {
       case 'select':
-        if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { // Middle mouse or Ctrl+Left Click
+        if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { 
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
@@ -159,10 +159,9 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart) {
-      // Determine current zoom factor from viewBox width relative to content width
       const currentVbWidth = parseFloat(viewBox.split(' ')[2]);
-      const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + GRID_LINE_STROKE_WIDTH; // base content width including padding
-      const currentZoomFactor = contentWidth / currentVbWidth; // Higher value means more zoomed out
+      const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + CELL_BORDER_WIDTH;
+      const currentZoomFactor = contentWidth / currentVbWidth; 
 
       const dx = (panStart.x - event.clientX) * currentZoomFactor ; 
       const dy = (panStart.y - event.clientY) * currentZoomFactor ;
@@ -212,9 +211,9 @@ export default function BattleGrid({
       newVh = vh * scaleAmount;
     }
     
-    const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; // Base content width for zoom clamping
-    const minDim = contentWidth / 5; // Max zoom in (5x) relative to content
-    const maxDim = contentWidth * 5; // Max zoom out (1/5x) relative to content
+    const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
+    const minDim = baseContentWidth / 5; 
+    const maxDim = baseContentWidth * 5; 
     
     newVw = Math.max(minDim, Math.min(maxDim, newVw));
     newVh = Math.max(minDim, Math.min(maxDim, newVh));
@@ -246,6 +245,7 @@ export default function BattleGrid({
           <image href={backgroundImageUrl} x="0" y="0" width={gridContentWidth} height={gridContentHeight} />
         )}
 
+        {/* Render cells with individual borders */}
         {gridCells.flatMap((row, y) =>
           row.map((cell, x) => (
             <rect
@@ -255,23 +255,15 @@ export default function BattleGrid({
               width={cellSize}
               height={cellSize}
               fill={cell.color || 'transparent'}
+              stroke={showGridLines ? 'var(--border)' : 'transparent'}
+              strokeWidth={CELL_BORDER_WIDTH}
+              shapeRendering="crispEdges"
               className={cn(
                 'transition-colors duration-100',
                 (activeTool === 'paint_cell' || activeTool === 'place_token') && 'cursor-pointer hover:opacity-80'
               )}
             />
           ))
-        )}
-
-        {showGridLines && (
-          <g stroke="var(--border)" strokeWidth={GRID_LINE_STROKE_WIDTH} shapeRendering="crispEdges">
-            {Array.from({ length: GRID_SIZE + 1 }).map((_, i) => (
-              <React.Fragment key={`line-${i}`}>
-                <line x1={i * cellSize} y1="0" x2={i * cellSize} y2={gridContentHeight} />
-                <line x1="0" y1={i * cellSize} x2={gridContentWidth} y2={i * cellSize} />
-              </React.Fragment>
-            ))}
-          </g>
         )}
         
         {measurement.startPoint && measurement.endPoint && (
