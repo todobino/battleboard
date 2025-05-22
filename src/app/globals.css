@@ -55,7 +55,8 @@
     --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
     --chart-5: 20 40% 40%; /* Muted Red-Brown */
 
-    --battle-grid-bg: hsl(30, 45%, 88%); /* Very Light Tan/Brown */
+    /* Diagnostic color for battle grid */
+    --battle-grid-bg: 120 60% 50%; /* Bright Green for testing */
   }
 
   .dark {
@@ -106,7 +107,8 @@
     --chart-4: 40 35% 45%;
     --chart-5: 20 30% 30%;
 
-    --battle-grid-bg: hsl(30, 45%, 88%); /* Very Light Tan/Brown - consistent for grid area */
+    /* Diagnostic color for battle grid */
+    --battle-grid-bg: 120 60% 50%; /* Bright Green for testing - consistent for grid area */
   }
 }
 
