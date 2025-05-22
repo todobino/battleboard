@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2, Plus, Minus } from 'lucide-react';
 import {
   AlertDialog,
@@ -192,78 +191,72 @@ export default function InitiativeTrackerPanel({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg flex justify-between items-center">
-            <span>Turn Order</span>
-            <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          {participants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No participants in turn order.</p>
-          ) : (
-            <ScrollArea className="h-48">
-              <ul className="space-y-2">
-                {participants.map((p, index) => {
-                  const itemIsActive = index === currentParticipantIndex;
-                  return (
-                    <li
-                      key={p.id}
-                      className={cn(
-                        "flex items-center justify-between p-2 rounded-md transition-colors",
-                        itemIsActive ? "bg-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
-                      )}
-                    >
-                      <div className="flex-grow flex flex-col mr-2"> {/* Main content area, takes available space and stacks children vertically */}
-                        {/* Line 1: Initiative and Name */}
-                        <div className="flex items-baseline">
-                          <span className="font-semibold mr-2 text-lg">{p.initiative}</span>
-                          <span className="text-base truncate" title={p.name}>{p.name}</span>
-                        </div>
-                        {/* Line 2: HP, AC, and Type */}
-                        <div className="flex items-center text-xs text-muted-foreground mt-1">
-                          {p.hp !== undefined && <span className="mr-2 whitespace-nowrap">(HP: {p.hp})</span>}
-                          {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded-full text-white whitespace-nowrap",
-                            p.type === 'player' ? 'bg-blue-500' :
-                            p.type === 'enemy' ? 'bg-red-500' :
-                            'bg-green-500' // Ally
-                          )}>
-                            {p.type}
-                          </span>
-                        </div>
-                      </div>
+      <div className="text-lg font-semibold flex justify-between items-center text-foreground">
+        <span>Turn Order</span>
+        <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
+      </div>
 
-                      {/* Remove Button: Pushed to the right by justify-between on li */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove {p.name}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. Are you sure you want to remove this participant?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onRemoveParticipant(p.id)}>Remove</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </li>
-                  );
-                })}
-              </ul>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+      <div>
+        {participants.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No participants in turn order.</p>
+        ) : (
+          <ScrollArea className="h-48">
+            <ul className="space-y-2">
+              {participants.map((p, index) => {
+                const itemIsActive = index === currentParticipantIndex;
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded-md transition-colors",
+                      itemIsActive ? "bg-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="flex-grow flex flex-col mr-2">
+                      <div className="flex items-baseline">
+                        <span className="font-semibold mr-2 text-lg">{p.initiative}</span>
+                        <span className="text-base truncate" title={p.name}>{p.name}</span>
+                      </div>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        {p.hp !== undefined && <span className="mr-2 whitespace-nowrap">(HP: {p.hp})</span>}
+                        {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-full text-white whitespace-nowrap", // Ensure text color is white for visibility
+                          p.type === 'player' ? 'bg-blue-500' :
+                          p.type === 'enemy' ? 'bg-red-500' :
+                          'bg-green-500' // Ally
+                        )}>
+                          {p.type}
+                        </span>
+                      </div>
+                    </div>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove {p.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. Are you sure you want to remove this participant?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onRemoveParticipant(p.id)}>Remove</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </li>
+                );
+              })}
+            </ul>
+          </ScrollArea>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>
@@ -330,3 +323,5 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
+    
