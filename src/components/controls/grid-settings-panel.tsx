@@ -3,6 +3,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool } from '@/types';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Grid, ImageUp, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import ImageCropDialog from '@/components/image-crop-dialog'; // New import
 
 interface GridSettingsPanelProps {
   showGridLines: boolean;
@@ -25,6 +27,8 @@ export default function GridSettingsPanel({
   setActiveTool
 }: GridSettingsPanelProps) {
   const { toast } = useToast();
+  const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
 
   const handleBackgroundImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,11 +43,27 @@ export default function GridSettingsPanel({
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setBackgroundImageUrl(reader.result as string);
-        toast({ title: "Background Image Updated" });
+        setUncroppedImageSrc(reader.result as string);
+        setIsCropDialogOpen(true);
+        // Clear the file input so the same file can be re-uploaded if needed
+        if (event.target) {
+          event.target.value = '';
+        }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropConfirm = (croppedDataUrl: string) => {
+    setBackgroundImageUrl(croppedDataUrl);
+    setIsCropDialogOpen(false);
+    setUncroppedImageSrc(null);
+    toast({ title: "Background Image Updated" });
+  };
+
+  const handleCropCancel = () => {
+    setIsCropDialogOpen(false);
+    setUncroppedImageSrc(null);
   };
 
   return (
@@ -86,6 +106,16 @@ export default function GridSettingsPanel({
           </Button>
         )}
       </div>
+
+      {uncroppedImageSrc && (
+        <ImageCropDialog
+          isOpen={isCropDialogOpen}
+          onOpenChange={setIsCropDialogOpen}
+          imageSrc={uncroppedImageSrc}
+          onCropConfirm={handleCropConfirm}
+          onCropCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
