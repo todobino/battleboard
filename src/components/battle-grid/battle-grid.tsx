@@ -74,19 +74,16 @@ export default function BattleGrid({
 
     setViewBox(currentVbString => {
         const currentVbParts = currentVbString.split(' ').map(Number);
-        // Check if the current viewBox matches the expected one based on current settings
-        // This is to re-center the view if grid lines are toggled, causing padding to change
         const needsRecenter = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
                                Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
                                Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                                Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
         
-        // Only recenter if zoom is effectively 1x (viewBox width matches content width + padding)
         const currentZoomLevel = (contentWidth + (currentBorderWidth)) / currentVbParts[2];
         if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) {
              return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
         }
-        return currentVbString; // Otherwise, keep the user's pan/zoom
+        return currentVbString;
     });
   }, [showGridLines]);
 
@@ -145,7 +142,7 @@ export default function BattleGrid({
         setMeasurement({ 
           startPoint: { x: gridX, y: gridY }, 
           type: activeTool === 'measure_distance' ? 'distance' : 'radius', 
-          endPoint: { x: gridX, y: gridY }, // Initialize endPoint for immediate visual feedback
+          endPoint: { x: gridX, y: gridY },
           result: undefined 
         });
         break;
@@ -193,10 +190,9 @@ export default function BattleGrid({
       
       const endPoint = { x: Math.max(0, Math.min(gridX, GRID_SIZE -1)), y: Math.max(0, Math.min(gridY, GRID_SIZE -1)) };
 
-
-      const dx = endPoint.x - measurement.startPoint.x;
-      const dy = endPoint.y - measurement.startPoint.y;
-      const distInSquares = Math.sqrt(dx*dx + dy*dy);
+      const dxSquares = endPoint.x - measurement.startPoint.x;
+      const dySquares = endPoint.y - measurement.startPoint.y;
+      const distInSquares = Math.sqrt(dxSquares*dxSquares + dySquares*dySquares);
       const distInFeet = distInSquares * FEET_PER_SQUARE;
       const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
 
@@ -229,8 +225,6 @@ export default function BattleGrid({
       if (measurement.result) {
         toast({ title: "Measurement Complete", description: measurement.result });
       }
-      // Keep measurement start/end points for display until a new measurement starts or tool changes
-      // Clearing is handled by BattleBoardPage's useEffect on activeTool change
     }
   };
 
@@ -252,11 +246,11 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; // Max zoom in 10x
-    const maxAllowedVw = baseContentWidth * 5;  // Max zoom out 0.2x
+    const minAllowedVw = baseContentWidth / 10; 
+    const maxAllowedVw = baseContentWidth * 5;  
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; // Maintain aspect ratio
+    newVh = (newVw / vw) * vh; 
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -307,15 +301,14 @@ export default function BattleGrid({
           )}
         </g>
         
-        {/* Measurement visual elements */}
         <defs>
-          <marker id="arrowhead" markerWidth="5" markerHeight="3.5" refX="5" refY="1.75" orient="auto">
-            <polygon points="0 0, 5 1.75, 0 3.5" fill={selectedColor || "hsl(var(--accent))"} />
+          <marker id="arrowhead" markerWidth="6" markerHeight="4.2" refX="6" refY="2.1" orient="auto">
+            <polygon points="0 0, 6 2.1, 0 4.2" fill="hsl(var(--accent))" />
           </marker>
         </defs>
 
         {measurement.startPoint && measurement.endPoint && (
-          <g stroke={selectedColor || "hsl(var(--accent))"} strokeWidth="2" fill="none">
+          <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
             {measurement.type === 'distance' ? (
               <line
                 x1={measurement.startPoint.x * cellSize + cellSize/2}
@@ -324,40 +317,39 @@ export default function BattleGrid({
                 y2={measurement.endPoint.y * cellSize + cellSize/2}
                 markerEnd="url(#arrowhead)"
               />
-            ) : ( // 'radius'
+            ) : ( 
               <circle
                 cx={measurement.startPoint.x * cellSize + cellSize/2}
                 cy={measurement.startPoint.y * cellSize + cellSize/2}
                 r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize}
-                strokeDasharray="4"
+                strokeDasharray="5 3"
               />
             )}
           </g>
         )}
-         {/* Real-time measurement text display */}
+        
         {isMeasuring && measurement.endPoint && measurement.result && (
           <text
-            x={measurement.endPoint.x * cellSize + cellSize / 2 + 10} // Offset from cursor/endpoint
-            y={measurement.endPoint.y * cellSize + cellSize / 2 + 10} // Offset from cursor/endpoint
-            fill={selectedColor || "hsl(var(--accent))"}
-            fontSize="10" // Slightly smaller for live display
+            x={measurement.endPoint.x * cellSize + cellSize / 2 + 15} 
+            y={measurement.endPoint.y * cellSize + cellSize / 2 + 15} 
+            fill="hsl(var(--accent))"
+            fontSize="14" 
             paintOrder="stroke"
-            stroke="hsl(var(--background))" // Outline for better visibility
-            strokeWidth="2px"
+            stroke="hsl(var(--background))" 
+            strokeWidth="3px"
             strokeLinecap="butt"
             strokeLinejoin="miter"
-            className="pointer-events-none select-none font-semibold"
+            className="pointer-events-none select-none font-bold"
           >
             {measurement.result.replace("Distance: ", "").replace("Radius: ", "")}
           </text>
         )}
 
-        {/* Start and End points for measurement */}
         {measurement.startPoint && (
-           <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="3" fill={selectedColor || "hsl(var(--accent))"} />
+           <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
         )}
-         {measurement.endPoint && measurement.result && ( // Only show end point if a result is also present (measurement in progress or completed)
-           <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="3" fill={selectedColor || "hsl(var(--accent))"} />
+         {measurement.endPoint && measurement.result && ( 
+           <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
         )}
 
         {tokens.map(token => {
@@ -404,3 +396,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
