@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { Slider } from '@/components/ui/slider';
 import NextImage from 'next/image';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'; // Added ScrollBar
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface GridSettingsPanelProps {
   showGridLines: boolean;
@@ -77,7 +77,7 @@ export default function GridSettingsPanel({
     setBackgroundImageUrl(croppedDataUrl);
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
-    setBackgroundZoomLevel(1); 
+    setBackgroundZoomLevel(1);
     toast({ title: "Background Image Updated" });
   };
 
@@ -94,24 +94,25 @@ export default function GridSettingsPanel({
 
   return (
     <div className="space-y-4 p-4">
-      <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
-      </div>
-      
-      <div className="flex flex-col lg:flex-row gap-6">
-
-        {/* Left Column: Grid Toggle, Default Maps Carousel, Zoom Slider */}
-        <div className="lg:w-3/5 space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="toggle-grid-lines-popover" className="text-popover-foreground">Show Grid Lines</Label>
+      <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
+        <div className="flex items-center">
+          <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
+        </div>
+        <div className="flex items-center space-x-2">
+            <Label htmlFor="toggle-grid-lines-popover-header" className="text-sm text-popover-foreground">Grid</Label>
             <Switch
-              id="toggle-grid-lines-popover"
+              id="toggle-grid-lines-popover-header"
               checked={showGridLines}
               onCheckedChange={setShowGridLines}
               aria-label="Toggle grid lines"
             />
           </div>
-          
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+
+        {/* Left Column: Default Maps Carousel, Zoom Slider */}
+        <div className="lg:w-3/5 space-y-4">
           <div className="space-y-2">
             <Label className="text-popover-foreground flex items-center">
                 <ScrollText className="mr-2 h-4 w-4" /> Default Battlemaps
@@ -174,7 +175,7 @@ export default function GridSettingsPanel({
         <div className="lg:w-2/5 space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="background-image-upload-popover-main" className="text-popover-foreground">Custom Background Image</Label>
-                <Label 
+                <Label
                 htmlFor="background-image-upload-popover-main"
                 className={cn(
                     "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer",
@@ -185,11 +186,11 @@ export default function GridSettingsPanel({
                 <span className="text-sm">Click or drag to upload</span>
                 </Label>
                 <Input
-                id="background-image-upload-popover-main" // Changed ID to avoid conflict if old one was cached
+                id="background-image-upload-popover-main"
                 type="file"
                 accept="image/*"
                 onChange={handleBackgroundImageUpload}
-                className="hidden" 
+                className="hidden"
                 />
                 {backgroundImageUrl && !defaultBattlemaps.some(map => map.url === backgroundImageUrl) && (
                 <Button variant="outline" size="sm" onClick={() => { setBackgroundImageUrl(null); setBackgroundZoomLevel(1); }} className="w-full">
