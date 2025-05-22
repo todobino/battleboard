@@ -25,7 +25,7 @@ interface BattleGridProps {
 
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
-const CELL_BORDER_WIDTH = 1; // Original planned border width in pixels
+const BORDER_WIDTH_WHEN_VISIBLE = 2; // Desired border width in pixels when grid lines are shown
 
 export default function BattleGrid({
   gridCells,
@@ -47,10 +47,9 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Using a 2px border for testing, so padding needs to accommodate this
-    const diagnosticBorderWidth = 2; 
-    const padding = diagnosticBorderWidth / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + diagnosticBorderWidth} ${initialContentHeight + diagnosticBorderWidth}`;
+    // Padding needs to accommodate half the border width on each side when visible
+    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + BORDER_WIDTH_WHEN_VISIBLE} ${initialContentHeight + BORDER_WIDTH_WHEN_VISIBLE}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -63,23 +62,19 @@ export default function BattleGrid({
   useEffect(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Using a 2px border for testing, so padding needs to accommodate this
-    const diagnosticBorderWidth = 2;
-    const padding = diagnosticBorderWidth / 2;
-    
-    const currentVbString = viewBox;
-    const currentVbParts = currentVbString.split(' ').map(Number);
+    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
     
     const expectedMinX = 0 - padding;
     const expectedMinY = 0 - padding;
-    const expectedVw = initialContentWidth + diagnosticBorderWidth;
-    const expectedVh = initialContentHeight + diagnosticBorderWidth;
+    const expectedVw = initialContentWidth + BORDER_WIDTH_WHEN_VISIBLE;
+    const expectedVh = initialContentHeight + BORDER_WIDTH_WHEN_VISIBLE;
 
+    const currentVbParts = viewBox.split(' ').map(Number);
     if (currentVbParts[0] !== expectedMinX || currentVbParts[1] !== expectedMinY || currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh) {
         setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Runs once on mount to set initial viewBox based on constants for the diagnostic border
+  }, [showGridLines]); // Re-evaluate viewBox if showGridLines changes, though padding is constant now
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -163,8 +158,9 @@ export default function BattleGrid({
     const pos = getMousePosition(event);
     if (isPanning && panStart) {
       const currentVbWidth = parseFloat(viewBox.split(' ')[2]);
-      const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? 2 : 0); // Adjust content width based on visible border
-      const currentZoomFactor = contentWidth / currentVbWidth; 
+      // Content width is now fixed based on grid size and cell size, viewBox padding handles borders
+      const contentWidthWithoutPadding = GRID_SIZE * DEFAULT_CELL_SIZE;
+      const currentZoomFactor = contentWidthWithoutPadding / (currentVbWidth - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0) );
 
       const dx = (panStart.x - event.clientX) * currentZoomFactor ; 
       const dy = (panStart.y - event.clientY) * currentZoomFactor ;
@@ -214,12 +210,24 @@ export default function BattleGrid({
       newVh = vh * scaleAmount;
     }
     
+    // Base content width (grid itself, without padding for borders)
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
-    const minDim = baseContentWidth / 5; 
-    const maxDim = baseContentWidth * 5; 
+    // Min/max dimensions for the *content area* within the viewBox
+    const minContentDimInVb = baseContentWidth / 5; 
+    const maxContentDimInVb = baseContentWidth * 5; 
+
+    // Adjust newVw/newVh to account for the padding if borders are visible
+    const currentPaddingEffect = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     
-    newVw = Math.max(minDim, Math.min(maxDim, newVw));
-    newVh = Math.max(minDim, Math.min(maxDim, newVh));
+    // Clamp the content part of the viewBox
+    let newContentVw = newVw - currentPaddingEffect;
+    let newContentVh = newVh - currentPaddingEffect;
+
+    newContentVw = Math.max(minContentDimInVb, Math.min(maxContentDimInVb, newContentVw));
+    newContentVh = Math.max(minContentDimInVb, Math.min(maxContentDimInVb, newContentVh));
+    
+    newVw = newContentVw + currentPaddingEffect;
+    newVh = newContentVh + currentPaddingEffect;
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -230,10 +238,6 @@ export default function BattleGrid({
   const gridContentWidth = GRID_SIZE * cellSize;
   const gridContentHeight = GRID_SIZE * cellSize;
 
-  // Diagnostic border settings
-  const diagnosticStrokeColor = "yellow";
-  const diagnosticStrokeWidth = 2;
-
   return (
     <div className="w-full h-full overflow-hidden bg-muted flex items-center justify-center relative">
       <svg
@@ -243,7 +247,7 @@ export default function BattleGrid({
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseUp} // Added to stop panning/dragging if mouse leaves SVG
         onWheel={handleWheel}
         preserveAspectRatio="xMidYMid meet"
         data-ai-hint="battle grid tactical map"
@@ -262,9 +266,9 @@ export default function BattleGrid({
               width={cellSize}
               height={cellSize}
               fill={cell.color || 'transparent'}
-              stroke={showGridLines ? diagnosticStrokeColor : 'transparent'}
-              strokeWidth={showGridLines ? diagnosticStrokeWidth : 0}
-              shapeRendering="crispEdges"
+              stroke={showGridLines ? 'hsl(var(--border))' : 'transparent'}
+              strokeWidth={showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0}
+              shapeRendering="crispEdges" // Keep for sharp lines
               className={cn(
                 'transition-colors duration-100',
                 (activeTool === 'paint_cell' || activeTool === 'place_token') && 'cursor-pointer hover:opacity-80'
