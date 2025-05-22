@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
+  html,
+  body {
     @apply h-full;
   }
   :root {
@@ -20,7 +21,7 @@
     --card: 25 18% 12%; /* Darker Card Brown */
     --card-foreground: 35 30% 80%; /* Softer Light Cream/Brown */
 
-    --border: 25 40% 25%; /* Darker, Richer Brown Border */
+    --border: 30 40% 20%; /* Darker, Richer Brown Border */
     --input: 25 15% 30%; /* Dark Muted Brown for Input Border */
 
     --primary: 25 35% 35%; /* Medium Dark Brown */
@@ -47,7 +48,7 @@
     --sidebar-accent-foreground: 35 30% 80%; /* Light Cream/Brown text for sidebar accent */
     --sidebar-border: 25 30% 30%; /* Slightly Lighter Brown for sidebar borders */
     --sidebar-ring: 30 35% 45%; /* Accent Brown for sidebar focus rings */
-    
+
     /* Adjusted Chart Colors for Dark Brown Theme */
     --chart-1: 30 50% 45%; /* Muted Orange-Brown */
     --chart-2: 35 35% 35%; /* Darker Muted Yellow-Brown */
@@ -55,8 +56,8 @@
     --chart-4: 40 45% 55%; /* Lighter Muted Yellow */
     --chart-5: 20 40% 40%; /* Muted Red-Brown */
 
-    /* Diagnostic color for battle grid */
-    --battle-grid-bg: 120 60% 50%; /* Bright Green for testing */
+    /* Battle Grid Background Color */
+    --battle-grid-bg: 60 56% 91%; /* Light Beige */
   }
 
   .dark {
@@ -73,7 +74,7 @@
     --card: 25 6% 5%; /* Almost Black-Brown for cards */
     --card-foreground: 35 20% 78%; /* Lighter Brown/Cream */
 
-    --border: 25 30% 20%; /* Darker, Richer Brown Border for Dark Mode */
+    --border: 30 40% 20%; /* Darker, Richer Brown Border for Dark Mode */
     --input: 25 7% 20%; /* Slightly Lighter Dark Muted Brown for Input Border */
 
     --primary: 25 30% 30%; /* Dark Brown */
@@ -107,8 +108,8 @@
     --chart-4: 40 35% 45%;
     --chart-5: 20 30% 30%;
 
-    /* Diagnostic color for battle grid */
-    --battle-grid-bg: 120 60% 50%; /* Bright Green for testing - consistent for grid area */
+    /* Battle Grid Background Color - same as light theme for consistency of grid area */
+    --battle-grid-bg: 60 56% 91%; /* Light Beige */
   }
 }
 
@@ -116,7 +117,10 @@
   * {
     @apply border-border;
   }
-  body { 
-    @apply bg-background text-foreground;
+  body {
+    @apply bg-background text-foreground h-full;
+  }
+  html {
+    @apply h-full;
   }
 }
