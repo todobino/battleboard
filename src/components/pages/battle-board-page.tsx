@@ -10,6 +10,7 @@ import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent
 import { LandPlot, ListOrdered } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
+import { Switch } from '@/components/ui/switch';
 
 const GRID_ROWS = 20;
 const GRID_COLS = 20;
@@ -71,9 +72,9 @@ export default function BattleBoardPage() {
 
 
   return (
-    <div className="flex h-screen bg-gray-800"> {/* Added bg-gray-800 for overall page background debug */}
+    <div className="flex h-screen"> {/* Removed bg-gray-800 */}
       {/* Main Content Area */}
-      <div className="flex-1 relative bg-blue-700"> {/* Added bg-blue-700 for this container's debug */}
+      <div className="flex-1 relative"> {/* Removed bg-blue-700 */}
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}

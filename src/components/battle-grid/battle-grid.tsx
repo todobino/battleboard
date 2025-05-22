@@ -48,6 +48,7 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
+    // Adjust padding based on whether grid lines are visible and their width
     const padding = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + (padding * 2)} ${initialContentHeight + (padding * 2)}`;
   });
@@ -73,16 +74,21 @@ export default function BattleGrid({
         const currentVbParts = currentVbString.split(' ').map(Number);
         const currentZoom = (GRID_SIZE * DEFAULT_CELL_SIZE + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)) / currentVbParts[2];
         
-        if (Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 || Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 || Math.abs(currentVbParts[2] - expectedVw) > 1e-3 || Math.abs(currentVbParts[3] - expectedVh) > 1e-3) {
-           if (currentZoom === 1) { // Only reset if not zoomed/panned significantly
+        // Only reset viewBox if it's not significantly zoomed or panned
+        // And if the padding expectation has changed (e.g., showGridLines toggled)
+        const paddingChanged = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 || 
+                               Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
+                               Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
+                               Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
+
+        if (paddingChanged && currentZoom === 1) { 
              return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
-           }
         }
         return currentVbString;
     });
   }, [showGridLines]);
 
-  const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
+  const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const svg = svgRef.current;
     const CTM = svg.getScreenCTM();
@@ -99,7 +105,7 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-      if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { // Ctrl or Cmd for panning
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -108,7 +114,7 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { 
+        if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey))) { 
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
@@ -172,21 +178,23 @@ export default function BattleGrid({
       const svgWidth = svgRef.current.clientWidth;
       const svgHeight = svgRef.current.clientHeight;
       
+      if (svgWidth === 0 || svgHeight === 0) return; // Avoid division by zero if SVG not rendered yet
+
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
 
-      const zoomX = currentVbWidth / svgWidth;
-      const zoomY = currentVbHeight / svgHeight;
+      const zoomFactorX = currentVbWidth / svgWidth;
+      const zoomFactorY = currentVbHeight / svgHeight;
       
-      const dx = (panStart.x - event.clientX) * zoomX;
-      const dy = (panStart.y - event.clientY) * zoomY;
+      const dx = (panStart.x - event.clientX) * zoomFactorX;
+      const dy = (panStart.y - event.clientY) * zoomFactorY;
 
       const [vx, vy, vw, vh] = currentVbParts;
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
       setPanStart({ x: event.clientX, y: event.clientY });
 
     } else if (draggingToken && dragOffset) {
-      // Dragging logic (currently no live visual update, happens on mouseUp)
+      // Dragging logic is handled on mouseUp
     } else if ((activeTool === 'measure_distance' || activeTool === 'measure_radius') && measurement.startPoint && !measurement.endPoint) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -230,11 +238,11 @@ export default function BattleGrid({
     }
     
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
-    const minAllowedVw = baseContentWidth / 10; // Max zoom in (e.g. 1/10th of content)
-    const maxAllowedVw = baseContentWidth * 5; // Max zoom out (e.g. 5x content)
+    const minAllowedVw = baseContentWidth / 10; 
+    const maxAllowedVw = baseContentWidth * 5; 
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; // Maintain aspect ratio based on clamped newVw
+    newVh = (newVw / vw) * vh; 
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -246,14 +254,6 @@ export default function BattleGrid({
   const gridContentHeight = GRID_SIZE * cellSize;
 
   return (
-    <div className="w-full h-full bg-purple-600 border-8 border-yellow-400 text-white text-3xl flex items-center justify-center font-bold">
-      BATTLE GRID TEST - IS THIS VISIBLE?
-    </div>
-  );
-
-  // Original SVG rendering commented out for diagnostics:
-  /*
-  return (
     <div className="w-full h-full overflow-hidden bg-battle-grid-bg flex items-center justify-center relative">
       <svg
         ref={svgRef}
@@ -262,7 +262,7 @@ export default function BattleGrid({
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={handleMouseUp} // End panning/dragging if mouse leaves SVG
         onWheel={handleWheel}
         preserveAspectRatio="xMidYMid meet"
         data-ai-hint="battle grid tactical map"
@@ -368,5 +368,4 @@ export default function BattleGrid({
       </svg>
     </div>
   );
-  */
 }
