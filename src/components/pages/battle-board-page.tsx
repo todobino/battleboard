@@ -8,9 +8,9 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, ListOrdered } from 'lucide-react';
+import { LandPlot, ListOrdered, Swords, Map as MapIcon, PersonStanding, Paintbrush, MousePointerSquareDashed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Accordion } from '@/components/ui/accordion';
+// Accordion import removed as it's no longer directly used here for the right sidebar's main content.
 
 
 const GRID_ROWS = 20;
@@ -44,7 +44,6 @@ export default function BattleBoardPage() {
 
   const { toast } = useToast();
 
-  // Effect to keep currentParticipantIndex valid
   useEffect(() => {
     if (participants.length === 0) {
       if (currentParticipantIndex !== -1) setCurrentParticipantIndex(-1);
@@ -84,14 +83,12 @@ export default function BattleBoardPage() {
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    // Optionally reset currentParticipantIndex, or leave as is for next combat
-    // setCurrentParticipantIndex(-1); 
     toast({ title: "Combat Ended."});
   };
 
   const handleAdvanceTurn = () => {
-    if (participants.length === 0) {
-      toast({ title: "Cannot Advance Turn", description: "No participants in combat."});
+    if (participants.length === 0 || currentParticipantIndex === -1) {
+      toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
       return;
     }
     let nextIndex = currentParticipantIndex + 1;
@@ -116,22 +113,11 @@ export default function BattleBoardPage() {
     
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
-      // If this is the first participant and combat hasn't started, make them active.
-      if (newList.length === 1 && !isCombatActive) {
+      if (prev[currentParticipantIndex]?.id) {
+        const newActiveIndex = newList.findIndex(p => p.id === prev[currentParticipantIndex].id);
+        if (newActiveIndex !== -1) setCurrentParticipantIndex(newActiveIndex);
+      } else if (newList.length > 0 && currentParticipantIndex === -1 && isCombatActive) {
         setCurrentParticipantIndex(0);
-      } else if (isCombatActive) {
-         // Re-evaluate current index if active participant's position changed or new participant inserted before
-         const activeParticipantId = prev[currentParticipantIndex]?.id;
-         if (activeParticipantId) {
-            const newIdx = newList.findIndex(p => p.id === activeParticipantId);
-            if (newIdx !== -1 && newIdx !== currentParticipantIndex) {
-                setCurrentParticipantIndex(newIdx);
-            } else if (newIdx === -1) { // Active was somehow removed, should not happen here
-                 setCurrentParticipantIndex(0);
-            }
-         } else if (currentParticipantIndex === -1 && newList.length > 0) {
-            setCurrentParticipantIndex(0); // If combat active but no one was current (e.g. all removed then one added)
-         }
       }
       return newList;
     });
@@ -144,28 +130,27 @@ export default function BattleBoardPage() {
       if (!participantToRemove) return prev;
 
       const filteredList = prev.filter(p => p.id !== id);
-
+      
       if (filteredList.length === 0) {
         setCurrentParticipantIndex(-1);
-        if (isCombatActive) setRoundCounter(1); // Reset round if combat was active and list becomes empty
       } else {
-        // If the removed participant was the one whose turn it was, or if current index is now invalid
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-
-        if (id === oldActiveParticipantId || currentParticipantIndex >= filteredList.length) {
-          // If the active participant was removed, try to advance to the "next" one in the new list
-          // or reset to 0 if it was the last one or the removed caused index to be out of bounds.
-          // The useEffect for currentParticipantIndex will also help sanitize this.
-          setCurrentParticipantIndex(currentParticipantIndex % filteredList.length); 
+        if (id === oldActiveParticipantId) {
+          // If active was removed, advance to the next in line (or loop around)
+          // The % operator handles wrap-around correctly.
+          // If currentParticipantIndex was already 0, this will keep it 0.
+          setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
         } else {
-          // If a non-active participant was removed, the current active participant might shift index.
-          // Find the ID of the participant who *was* active before removal.
-          const newIndexOfPreviouslyActive = filteredList.findIndex(p => p.id === oldActiveParticipantId);
-          if (newIndexOfPreviouslyActive !== -1) {
-              setCurrentParticipantIndex(newIndexOfPreviouslyActive);
+          // If a non-active participant was removed, update currentParticipantIndex if necessary
+          const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
+          if (newActiveIndex !== -1) {
+            setCurrentParticipantIndex(newActiveIndex);
           } else {
-               // Fallback if no previously active found (e.g. list was [A, B], B active, A removed, B is still at index 0)
-               // This case might be covered by the previous 'if' or the useEffect.
+            // This case implies the currentParticipantIndex might now be out of bounds
+            // The useEffect for currentParticipantIndex will sanitize this.
+            if (currentParticipantIndex >= filteredList.length) {
+              setCurrentParticipantIndex(0); // Fallback to start of list
+            }
           }
         }
       }
@@ -182,8 +167,6 @@ export default function BattleBoardPage() {
     toast({ title: "Turn Order Reset & Combat Ended" });
   };
 
-
-  // Auto-advance (currently commented out in InitiativeTrackerPanel)
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
@@ -240,19 +223,17 @@ export default function BattleBoardPage() {
             <ListOrdered className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
           </SidebarHeader>
-          <SidebarContent>
-            <Accordion type="single" collapsible defaultValue="turn-tracker" className="w-full">
-              <InitiativeTrackerPanel
-                participants={participants}
-                currentParticipantIndex={currentParticipantIndex}
-                roundCounter={roundCounter}
-                isAutoAdvanceOn={isAutoAdvanceOn} // Prop still passed, UI for it is commented out in panel
-                setIsAutoAdvanceOn={setIsAutoAdvanceOn} // Prop still passed
-                onAddParticipant={handleAddParticipantToList}
-                onRemoveParticipant={handleRemoveParticipantFromList}
-                onResetInitiative={handleResetInitiativeAndCombat}
-              />
-            </Accordion>
+          <SidebarContent className="p-4">
+            <InitiativeTrackerPanel
+              participants={participants}
+              currentParticipantIndex={currentParticipantIndex}
+              roundCounter={roundCounter}
+              isAutoAdvanceOn={isAutoAdvanceOn}
+              setIsAutoAdvanceOn={setIsAutoAdvanceOn}
+              onAddParticipant={handleAddParticipantToList}
+              onRemoveParticipant={handleRemoveParticipantFromList}
+              onResetInitiative={handleResetInitiativeAndCombat}
+            />
           </SidebarContent>
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
