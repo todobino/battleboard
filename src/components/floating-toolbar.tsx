@@ -108,9 +108,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Token Placer"
             icon={Puzzle}
-            tool="token_placer_tool" // This makes the button highlight if token_placer_tool is active
-            currentActiveTool={activeTool}
-            onClick={() => handleToolClick('token_placer_tool')} // This sets the active tool for highlighting
+            onClick={() => handleToolClick('token_placer_tool')} 
             variantOverride={activeTool === 'token_placer_tool' || activeTool === 'place_token' ? 'default' : 'outline'}
             asChild
           >
@@ -142,7 +140,7 @@ export default function FloatingToolbar({
            <ToolButton
             label="Measurement Tools"
             icon={DraftingCompass}
-            onClick={() => handleToolClick('measure_distance')} // Default to distance or keep active measurement tool
+            onClick={() => handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance')} 
             variantOverride={(activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
             asChild
           >
@@ -204,10 +202,10 @@ export default function FloatingToolbar({
           </PopoverContent>
         </Popover>
 
-        {/* Color Tool Popover */}
+        {/* Color Painter Popover */}
         <Popover>
           <ToolButton
-            label="Color & Paint Tools"
+            label="Color Painter"
             icon={Paintbrush}
             onClick={() => handleToolClick('paint_cell')}
             variantOverride={activeTool === 'paint_cell' ? 'default' : 'outline'}
@@ -221,7 +219,7 @@ export default function FloatingToolbar({
                   'rounded-md shadow-lg h-12 w-12 p-2.5',
                     activeTool === 'paint_cell' ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
                 )}
-                aria-label="Color & Paint Tools"
+                aria-label="Color Painter"
               >
                 <Paintbrush className="h-5 w-5 text-accent-foreground" />
               </Button>

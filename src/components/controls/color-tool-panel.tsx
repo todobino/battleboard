@@ -2,20 +2,17 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool, Token, TokenTemplate } from '@/types';
+import type { ActiveTool } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { Palette } from 'lucide-react';
-import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
 
 interface ColorToolPanelProps {
   activeTool: ActiveTool;
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
   selectedColor: string;
   setSelectedColor: Dispatch<SetStateAction<string>>;
-  setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
 }
 
 const defaultColors = [
@@ -24,35 +21,15 @@ const defaultColors = [
   "#C0C0C0", "#808080", "#000000", "#FFFFFF"
 ];
 
-const tokenTemplates: TokenTemplate[] = [
-  { name: 'Player', color: 'hsl(var(--primary))', icon: PlayerIcon, type: 'player' },
-  { name: 'Enemy', color: 'hsl(var(--destructive))', icon: EnemyIcon, type: 'enemy' },
-  { name: 'Item', color: 'hsl(var(--accent))', icon: ItemIcon, type: 'item' },
-  { name: 'Terrain', color: 'hsl(var(--muted-foreground))', icon: TerrainIcon, type: 'terrain' },
-  { name: 'Generic', color: 'hsl(var(--secondary-foreground))', icon: GenericTokenIcon, type: 'item' },
-];
-
 export default function ColorToolPanel({
   activeTool, setActiveTool,
   selectedColor, setSelectedColor,
-  setSelectedTokenTemplate
 }: ColorToolPanelProps) {
   
-  const handleSelectTokenTemplate = (template: TokenTemplate) => {
-    setSelectedTokenTemplate({
-      color: template.color,
-      icon: template.icon,
-      type: template.type,
-      label: template.name,
-      size: 1,
-    });
-    setActiveTool('place_token');
-  };
-
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Palette className="mr-2 h-5 w-5" /> Color & Token Tool
+        <Palette className="mr-2 h-5 w-5" /> Color Painter
       </div>
       <div>
         <Label htmlFor="color-picker" className="text-popover-foreground">Cell Paint Color</Label>
@@ -86,29 +63,6 @@ export default function ColorToolPanel({
             />
           ))}
         </div>
-      </div>
-
-      <div>
-        <Label className="text-popover-foreground">Place Token</Label>
-        <Card className="mt-1 bg-popover-foreground/5 border-border/50">
-          <CardContent className="p-2 grid grid-cols-3 gap-2">
-            {tokenTemplates.map(template => {
-              const Icon = template.icon;
-              return (
-              <Button
-                key={template.name}
-                variant="outline"
-                className="h-auto flex flex-col items-center p-2 space-y-1 bg-card hover:bg-muted"
-                onClick={() => handleSelectTokenTemplate(template)}
-                aria-label={`Place ${template.name} token`}
-              >
-                {Icon && <Icon className="h-6 w-6" style={{color: template.color}} />}
-                <span className="text-xs text-card-foreground">{template.name}</span>
-              </Button>
-              );
-            })}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
