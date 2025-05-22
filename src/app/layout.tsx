@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Battle Board',
-  description: 'A digital battle board for TTRPGs',
+  description: 'A digital battle board for TTRPGs.',
 };
 
 export default function RootLayout({
