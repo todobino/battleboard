@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -104,7 +105,7 @@ export default function GridSettingsPanel({
             </Button>
           )}
         </div>
-         <Button variant="outline" onClick={() => setActiveTool('select')} className="w-full">
+         <Button variant="outline" onClick={() => setActiveTool('select')} className="w-full whitespace-normal text-xs h-auto py-2">
             Select/Pan Tool (Ctrl+Click or Middle Mouse to Pan, Wheel to Zoom)
         </Button>
       </AccordionContent>

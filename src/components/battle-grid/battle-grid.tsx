@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { GridCellData, Token, ActiveTool, Point, Measurement } from '@/types';
@@ -202,7 +203,7 @@ export default function BattleGrid({
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
     
-    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
+    setViewBox(`${newVx} ${newVy} ${newVw} ${vh}`);
   };
 
 
@@ -214,7 +215,7 @@ export default function BattleGrid({
       <svg
         ref={svgRef}
         viewBox={viewBox}
-        className="w-full h-full border border-border"
+        className="w-full h-full"
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -247,7 +248,7 @@ export default function BattleGrid({
 
         {/* Grid Lines */}
         {showGridLines && (
-          <g stroke="var(--border)" strokeWidth="0.5"> {/* Use CSS var for border */}
+          <g stroke="var(--border)" strokeWidth="1"> {/* Use CSS var for border, increased strokeWidth */}
             {Array.from({ length: GRID_SIZE + 1 }).map((_, i) => (
               <React.Fragment key={`line-${i}`}>
                 <line x1={i * cellSize} y1="0" x2={i * cellSize} y2={gridHeight} />
