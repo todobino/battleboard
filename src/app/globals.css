@@ -57,7 +57,7 @@
     --chart-5: 20 50% 40%; /* Muted Red-Brown */
 
     /* Battle Grid Background Color */
-    --battle-grid-bg: hsl(60, 50%, 85%); /* Light Beige, slightly darker */
+    --battle-grid-bg: hsl(0, 0%, 92%); /* Light Gray */
   }
 
   .dark {
@@ -109,7 +109,7 @@
     --chart-5: 20 35% 30%;
 
     /* Battle Grid Background Color */
-    --battle-grid-bg: hsl(60, 50%, 85%); /* Light Beige, slightly darker */
+    --battle-grid-bg: hsl(0, 0%, 92%); /* Light Gray */
   }
 }
 
