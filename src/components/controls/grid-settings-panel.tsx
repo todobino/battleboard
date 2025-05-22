@@ -27,16 +27,16 @@ interface GridSettingsPanelProps {
 }
 
 const defaultBattlemaps = [
-  { name: 'Forest Clearing', url: 'https://placehold.co/1200x900.png', hint: 'forest clearing' },
-  { name: 'Dungeon Corridor', url: 'https://placehold.co/1200x900.png', hint: 'dungeon corridor' },
-  { name: 'Cobblestone Street', url: 'https://placehold.co/1200x900.png', hint: 'cobblestone street' },
-  { name: 'Tavern Interior', url: 'https://placehold.co/1200x900.png', hint: 'tavern interior' },
-  { name: 'Cave System', url: 'https://placehold.co/1200x900.png', hint: 'cave system' },
-  { name: 'Desert Oasis', url: 'https://placehold.co/1200x900.png', hint: 'desert oasis' },
-  { name: 'Swamp Marsh', url: 'https://placehold.co/1200x900.png', hint: 'swamp marsh' },
-  { name: 'Castle Courtyard', url: 'https://placehold.co/1200x900.png', hint: 'castle courtyard' },
-  { name: 'Ship Deck', url: 'https://placehold.co/1200x900.png', hint: 'ship deck' },
-  { name: 'Mountain Pass', url: 'https://placehold.co/1200x900.png', hint: 'mountain pass' },
+  { name: 'Forest Clearing', url: 'https://placehold.co/600x600.png', hint: 'forest clearing' },
+  { name: 'Dungeon Corridor', url: 'https://placehold.co/600x600.png', hint: 'dungeon corridor' },
+  { name: 'Cobblestone Street', url: 'https://placehold.co/600x600.png', hint: 'cobblestone street' },
+  { name: 'Tavern Interior', url: 'https://placehold.co/600x600.png', hint: 'tavern interior' },
+  { name: 'Cave System', url: 'https://placehold.co/600x600.png', hint: 'cave system' },
+  { name: 'Desert Oasis', url: 'https://placehold.co/600x600.png', hint: 'desert oasis' },
+  { name: 'Swamp Marsh', url: 'https://placehold.co/600x600.png', hint: 'swamp marsh' },
+  { name: 'Castle Courtyard', url: 'https://placehold.co/600x600.png', hint: 'castle courtyard' },
+  { name: 'Ship Deck', url: 'https://placehold.co/600x600.png', hint: 'ship deck' },
+  { name: 'Mountain Pass', url: 'https://placehold.co/600x600.png', hint: 'mountain pass' },
 ];
 
 
@@ -164,7 +164,7 @@ export default function GridSettingsPanel({
                 key={map.name}
                 onClick={() => handleSelectDefaultMap(map.url)}
                 className={cn(
-                  "relative aspect-[4/3] w-full rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all",
+                  "relative aspect-square w-full rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all",
                   backgroundImageUrl === map.url ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border"
                 )}
                 title={`Select ${map.name}`}
