@@ -85,12 +85,12 @@ export default function InitiativeTrackerPanel({
     const hpValue = hpString === '' ? undefined : parseInt(hpString, 10);
     const acValue = acString === '' ? undefined : parseInt(acString, 10);
     
-    if (hpString !== '' && isNaN(hpValue as number)) {
-      toast({ title: "Error", description: "HP must be a number or empty.", variant: "destructive" });
+    if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
+      toast({ title: "Error", description: "HP must be a non-negative number or empty.", variant: "destructive" });
       return;
     }
-    if (acString !== '' && isNaN(acValue as number)) {
-      toast({ title: "Error", description: "AC must be a number or empty.", variant: "destructive" });
+    if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
+      toast({ title: "Error", description: "AC must be a non-negative number or empty.", variant: "destructive" });
       return;
     }
 
@@ -135,11 +135,13 @@ export default function InitiativeTrackerPanel({
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
             if (optional && value.trim() === '') {
-              // Keep it empty if optional and user cleared it
+               // Keep it empty if optional and user cleared it
             } else {
               const num = parseInt(value, 10);
-              if (isNaN(num)) {
-                setValue('10'); 
+              if (isNaN(num) || (!optional && num < 0) || (optional && num <0 && value.trim() !== '')) {
+                setValue('10'); // Default or reset invalid non-optional / negative values
+              } else if (optional && num < 0) {
+                setValue('0'); // If optional and negative, set to 0, or handle as desired
               }
             }
             setIsEditing(false);
@@ -155,8 +157,8 @@ export default function InitiativeTrackerPanel({
             size="icon"
             className="h-8 w-8 shrink-0"
             onClick={() => {
-              const currentValue = parseInt(value, 10) || 0;
-              setValue(String(Math.max(0, currentValue - 1)));
+              const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0); // Treat empty optional as 0 for decrement
+              setValue(String(Math.max((optional ? -Infinity : 0), currentValue - 1))); // Allow negative for optional if needed, or clamp at 0
             }}
           >
             <Minus className="h-4 w-4" />
@@ -176,7 +178,7 @@ export default function InitiativeTrackerPanel({
             size="icon"
             className="h-8 w-8 shrink-0"
             onClick={() => {
-              const currentValue = parseInt(value, 10) || 0;
+              const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0); // Treat empty optional as 0 for increment
               setValue(String(currentValue + 1));
             }}
           >
@@ -213,23 +215,31 @@ export default function InitiativeTrackerPanel({
                         itemIsActive ? "bg-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
                       )}
                     >
-                      <div className="flex items-center flex-wrap">
-                        <span className="font-semibold mr-2">{p.initiative}</span>
-                        <span className="mr-2">{p.name}</span>
-                        {p.hp !== undefined && <span className="mr-1 text-xs text-muted-foreground">(HP: {p.hp})</span>}
-                        {p.ac !== undefined && <span className="mr-2 text-xs text-muted-foreground">(AC: {p.ac})</span>}
-                         <span className={cn(
-                          "ml-auto text-xs px-1.5 py-0.5 rounded-full text-white",
-                           p.type === 'player' ? 'bg-blue-500' :
-                           p.type === 'enemy' ? 'bg-red-500' :
-                           'bg-green-500' // Ally
-                        )}>
-                          {p.type}
-                        </span>
+                      <div className="flex-grow flex flex-col mr-2"> {/* Main content area, takes available space and stacks children vertically */}
+                        {/* Line 1: Initiative and Name */}
+                        <div className="flex items-baseline">
+                          <span className="font-semibold mr-2 text-lg">{p.initiative}</span>
+                          <span className="text-base truncate" title={p.name}>{p.name}</span>
+                        </div>
+                        {/* Line 2: HP, AC, and Type */}
+                        <div className="flex items-center text-xs text-muted-foreground mt-1">
+                          {p.hp !== undefined && <span className="mr-2 whitespace-nowrap">(HP: {p.hp})</span>}
+                          {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded-full text-white whitespace-nowrap",
+                            p.type === 'player' ? 'bg-blue-500' :
+                            p.type === 'enemy' ? 'bg-red-500' :
+                            'bg-green-500' // Ally
+                          )}>
+                            {p.type}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Remove Button: Pushed to the right by justify-between on li */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </AlertDialogTrigger>
@@ -321,3 +331,4 @@ export default function InitiativeTrackerPanel({
   );
 }
 
+    
