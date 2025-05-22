@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2 } from 'lucide-react'; // Removed MousePointerSquareDashed
+import { Grid, ImageUp, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface GridSettingsPanelProps {
   showGridLines: boolean;
@@ -51,7 +52,7 @@ export default function GridSettingsPanel({
         <Grid className="mr-2 h-5 w-5" /> Grid Settings
       </div>
       <div className="flex items-center justify-between">
-        <Label htmlFor="toggle-grid-lines-popover">Show Grid Lines</Label>
+        <Label htmlFor="toggle-grid-lines-popover" className="text-popover-foreground">Show Grid Lines</Label>
         <Switch
           id="toggle-grid-lines-popover"
           checked={showGridLines}
@@ -61,13 +62,23 @@ export default function GridSettingsPanel({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="background-image-upload-popover">Background Image</Label>
+        <Label htmlFor="background-image-upload-popover" className="text-popover-foreground">Background Image</Label>
+        <Label 
+          htmlFor="background-image-upload-popover"
+          className={cn(
+            "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-md cursor-pointer",
+            "bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors"
+          )}
+        >
+          <ImageUp className="h-8 w-8 mb-2" />
+          <span className="text-sm">Click or drag to upload</span>
+        </Label>
         <Input
           id="background-image-upload-popover"
           type="file"
           accept="image/*"
           onChange={handleBackgroundImageUpload}
-          className="text-sm"
+          className="hidden" // Hide the default input
         />
         {backgroundImageUrl && (
           <Button variant="outline" size="sm" onClick={() => setBackgroundImageUrl(null)} className="w-full">
@@ -75,7 +86,6 @@ export default function GridSettingsPanel({
           </Button>
         )}
       </div>
-      {/* Removed Select/Pan Tool button from here */}
     </div>
   );
 }
