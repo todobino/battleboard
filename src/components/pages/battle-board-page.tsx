@@ -81,9 +81,8 @@ export default function BattleBoardPage() {
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
           <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              {/* Title and Icon moved to FloatingToolbar */}
+              {/* Icon and title moved to FloatingToolbar */}
             </div>
-            {/* Icon visible when collapsed (can be the same or different if needed) */}
             <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -123,7 +122,6 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={1} 
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -172,3 +170,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
