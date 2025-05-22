@@ -79,29 +79,11 @@ export default function BattleBoardPage() {
       {/* Left Sidebar for General Controls */}
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
-          <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <LandPlot className="h-6 w-6 text-sidebar-primary" />
-              <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
-            </div>
-            <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
-            
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <Label htmlFor="toggle-grid-lines-header" className="text-sm text-sidebar-foreground whitespace-nowrap">Grid:</Label>
-              <Switch
-                id="toggle-grid-lines-header"
-                checked={showGridLines}
-                onCheckedChange={setShowGridLines}
-                aria-label="Toggle grid lines"
-              />
-            </div>
-            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
-          </SidebarHeader>
+          {/* SidebarHeader removed as per request */}
           <SidebarContent>
             <ControlsSidebar
               backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
               activeTool={activeTool} setActiveTool={setActiveTool}
-              // Removed selectedColor, setSelectedColor, selectedTokenTemplate, setSelectedTokenTemplate props
               measurement={measurement} setMeasurement={setMeasurement}
             />
           </SidebarContent>
@@ -129,7 +111,6 @@ export default function BattleBoardPage() {
             onTokenMove={handleTokenMove}
             measurement={measurement}
             setMeasurement={setMeasurement}
-            // zoomLevel={zoomLevel} -- Removed, handled by SVG's viewBox directly
           />
           <FloatingToolbar
             activeTool={activeTool}
@@ -173,3 +154,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
