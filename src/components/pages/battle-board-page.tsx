@@ -81,10 +81,9 @@ export default function BattleBoardPage() {
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
           <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-              <LandPlot className="h-6 w-6 text-sidebar-primary" />
-              <h2 className="text-lg font-semibold text-sidebar-primary">Battle Board</h2>
+              {/* Title and Icon moved to FloatingToolbar */}
             </div>
-            {/* Icon visible when collapsed */}
+            {/* Icon visible when collapsed (can be the same or different if needed) */}
             <LandPlot className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             
             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
@@ -116,15 +115,15 @@ export default function BattleBoardPage() {
       </SidebarProvider>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col"> {/* This div will take up remaining space */}
-        <SidebarInset className="flex-1 flex flex-col relative"> {/* Removed overflow-hidden */}
+      <div className="flex-1 flex flex-col">
+        <SidebarInset className="flex-1 flex flex-col relative">
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={1} // zoomLevel is managed internally by BattleGrid's SVG viewBox
+            zoomLevel={1} 
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -137,6 +136,8 @@ export default function BattleBoardPage() {
           <FloatingToolbar
             activeTool={activeTool}
             setActiveTool={setActiveTool}
+            title="Battle Board"
+            Icon={LandPlot}
           />
         </SidebarInset>
       </div>
@@ -149,7 +150,6 @@ export default function BattleBoardPage() {
               <ListOrdered className="h-6 w-6 text-sidebar-primary" />
               <h2 className="text-lg font-semibold text-sidebar-primary">Initiative</h2>
             </div>
-            {/* Icon visible when collapsed */}
             <ListOrdered className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
             <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
           </SidebarHeader>
