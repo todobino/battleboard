@@ -3,13 +3,11 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool } from '@/types';
-import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Grid, ZoomIn, ZoomOut, ImageUp, Trash2 } from 'lucide-react';
+import { Grid, ImageUp, Trash2, MousePointerSquareDashed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface GridSettingsPanelProps {
@@ -48,40 +46,42 @@ export default function GridSettingsPanel({
   };
 
   return (
-    <AccordionItem value="grid-settings">
-      <AccordionTrigger>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
         <Grid className="mr-2 h-5 w-5" /> Grid Settings
-      </AccordionTrigger>
-      <AccordionContent className="space-y-4 p-1">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="toggle-grid-lines">Show Grid Lines</Label>
-          <Switch
-            id="toggle-grid-lines"
-            checked={showGridLines}
-            onCheckedChange={setShowGridLines}
-            aria-label="Toggle grid lines"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="background-image-upload">Background Image</Label>
-          <Input
-            id="background-image-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleBackgroundImageUpload}
-            className="text-sm"
-          />
-          {backgroundImageUrl && (
-            <Button variant="outline" size="sm" onClick={() => setBackgroundImageUrl(null)} className="w-full">
-              <Trash2 className="mr-2 h-4 w-4" /> Remove Background
-            </Button>
-          )}
-        </div>
-         <Button variant="outline" onClick={() => setActiveTool('select')} className="w-full whitespace-normal text-xs h-auto py-2">
-            Select/Pan Tool (Ctrl+Click or Middle Mouse to Pan, Wheel to Zoom)
-        </Button>
-      </AccordionContent>
-    </AccordionItem>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="toggle-grid-lines-popover">Show Grid Lines</Label>
+        <Switch
+          id="toggle-grid-lines-popover"
+          checked={showGridLines}
+          onCheckedChange={setShowGridLines}
+          aria-label="Toggle grid lines"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="background-image-upload-popover">Background Image</Label>
+        <Input
+          id="background-image-upload-popover"
+          type="file"
+          accept="image/*"
+          onChange={handleBackgroundImageUpload}
+          className="text-sm"
+        />
+        {backgroundImageUrl && (
+          <Button variant="outline" size="sm" onClick={() => setBackgroundImageUrl(null)} className="w-full">
+            <Trash2 className="mr-2 h-4 w-4" /> Remove Background
+          </Button>
+        )}
+      </div>
+       <Button 
+          variant="outline" 
+          onClick={() => setActiveTool('select')} 
+          className="w-full whitespace-normal text-xs h-auto py-2"
+        >
+          <MousePointerSquareDashed className="mr-2 h-4 w-4"/> Select/Pan Tool (Ctrl+Click or Middle Mouse to Pan, Wheel to Zoom)
+      </Button>
+    </div>
   );
 }

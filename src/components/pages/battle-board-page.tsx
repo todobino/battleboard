@@ -11,7 +11,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { LandPlot, Settings, ListOrdered } from 'lucide-react';
+import { LandPlot, Settings, ListOrdered, PanelLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
 
@@ -46,8 +46,7 @@ export default function BattleBoardPage() {
   const { toast } = useToast();
 
   const handleCellClick = useCallback((x: number, y: number) => {
-    // console.log(`Cell clicked: ${x}, ${y}, Active Tool: ${activeTool}`);
-    // Cell click logic is now primarily handled within BattleGrid based on activeTool
+    // Cell click logic is primarily handled within BattleGrid
   }, []);
 
   const handleTokenMove = useCallback((tokenId: string, newX: number, newY: number) => {
@@ -80,13 +79,19 @@ export default function BattleBoardPage() {
       {/* Left Sidebar for General Controls */}
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
-          {/* SidebarHeader removed as per previous request */}
+          <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
+             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                <PanelLeft className="h-6 w-6 text-sidebar-primary" />
+                <h2 className="text-lg font-semibold text-sidebar-primary">Controls</h2>
+              </div>
+              <PanelLeft className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
+            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
+          </SidebarHeader>
           <SidebarContent>
             <ControlsSidebar
-              backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
-              activeTool={activeTool} setActiveTool={setActiveTool}
-              showGridLines={showGridLines} setShowGridLines={setShowGridLines}
-              // measurement and setMeasurement props removed
+              activeTool={activeTool} 
+              setActiveTool={setActiveTool}
+              // Props for GridSettingsPanel removed
             />
           </SidebarContent>
           <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
@@ -105,6 +110,7 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
+            zoomLevel={1} // zoomLevel prop is currently unused in BattleGrid but kept for potential future use
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -123,6 +129,10 @@ export default function BattleBoardPage() {
             setSelectedColor={setSelectedColor}
             selectedTokenTemplate={selectedTokenTemplate}
             setSelectedTokenTemplate={setSelectedTokenTemplate}
+            backgroundImageUrl={backgroundImageUrl}
+            setBackgroundImageUrl={setBackgroundImageUrl}
+            showGridLines={showGridLines}
+            setShowGridLines={setShowGridLines}
           />
       </SidebarInset>
 

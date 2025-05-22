@@ -4,12 +4,13 @@
 import type { ActiveTool, Token } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { Ruler, Maximize, Paintbrush, MousePointerSquareDashed, Swords, Map, PersonStanding } from 'lucide-react';
+import { Ruler, Maximize, Swords, Paintbrush, MousePointerSquareDashed, Map, PersonStanding, LandPlot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import ColorToolPanel from '@/components/controls/color-tool-panel';
+import GridSettingsPanel from '@/components/controls/grid-settings-panel';
 
 
 interface FloatingToolbarProps {
@@ -21,6 +22,10 @@ interface FloatingToolbarProps {
   setSelectedColor: Dispatch<SetStateAction<string>>;
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  backgroundImageUrl: string | null;
+  setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
+  showGridLines: boolean;
+  setShowGridLines: Dispatch<SetStateAction<boolean>>;
 }
 
 interface ToolButtonProps {
@@ -29,9 +34,11 @@ interface ToolButtonProps {
   tool: ActiveTool;
   currentActiveTool: ActiveTool;
   onClick: () => void;
+  children?: React.ReactNode; // For PopoverTrigger
+  asChild?: boolean; // For PopoverTrigger
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick }) => (
+const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, currentActiveTool, onClick, children, asChild }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <Button
@@ -43,8 +50,9 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: Icon, tool, curren
           currentActiveTool === tool ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
         )}
         aria-label={label}
+        asChild={asChild}
       >
-        <Icon className="h-5 w-5" />
+        {children || <Icon className="h-5 w-5" />}
       </Button>
     </TooltipTrigger>
     <TooltipContent side="top" align="center">
@@ -57,17 +65,18 @@ export default function FloatingToolbar({
   activeTool, setActiveTool, 
   title, Icon,
   selectedColor, setSelectedColor,
-  selectedTokenTemplate, setSelectedTokenTemplate
+  selectedTokenTemplate, setSelectedTokenTemplate,
+  backgroundImageUrl, setBackgroundImageUrl,
+  showGridLines, setShowGridLines
 }: FloatingToolbarProps) {
   
-  const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick'>[] = [
+  const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick' | 'children' | 'asChild'>[] = [
     { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
     { label: 'Measure Distance', icon: Ruler, tool: 'measure_distance' },
     { label: 'Measure Radius', icon: Maximize, tool: 'measure_radius' },
-    { label: 'Swords Action', icon: Swords, tool: 'swords' },
-    { label: 'Map View', icon: Map, tool: 'map_tool' },
+    { label: 'Combat Actions', icon: Swords, tool: 'swords' },
+    // Map and Character tools are now popover triggers or direct action buttons
     { label: 'Character Focus', icon: PersonStanding, tool: 'character_tool' },
-    // Paintbrush is now a PopoverTrigger
   ];
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -98,6 +107,41 @@ export default function FloatingToolbar({
           />
         ))}
 
+        {/* Grid Settings Popover */}
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={activeTool === 'map_tool' ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={() => handleToolClick('map_tool')}
+                  className={cn(
+                    'rounded-md shadow-lg h-12 w-12 p-2.5',
+                    activeTool === 'map_tool' ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+                  )}
+                  aria-label="Map & Grid Settings"
+                >
+                  <Map className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center">
+              <p>Map & Grid Settings</p>
+            </TooltipContent>
+          </Tooltip>
+          <PopoverContent className="w-80" side="top" align="end">
+            <GridSettingsPanel
+              showGridLines={showGridLines}
+              setShowGridLines={setShowGridLines}
+              backgroundImageUrl={backgroundImageUrl}
+              setBackgroundImageUrl={setBackgroundImageUrl}
+              setActiveTool={setActiveTool}
+            />
+          </PopoverContent>
+        </Popover>
+
+        {/* Color & Token Tool Popover */}
         <Popover>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -120,16 +164,13 @@ export default function FloatingToolbar({
             </TooltipContent>
           </Tooltip>
           <PopoverContent className="w-80" side="top" align="end">
-            {/* Wrap ColorToolPanel in a div if it doesn't have its own top-level wrapper for styling within popover */}
-            <div className="p-0"> 
-              <ColorToolPanel
-                activeTool={activeTool}
-                setActiveTool={setActiveTool}
-                selectedColor={selectedColor}
-                setSelectedColor={setSelectedColor}
-                setSelectedTokenTemplate={setSelectedTokenTemplate}
-              />
-            </div>
+            <ColorToolPanel
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              selectedColor={selectedColor}
+              setSelectedColor={setSelectedColor}
+              setSelectedTokenTemplate={setSelectedTokenTemplate}
+            />
           </PopoverContent>
         </Popover>
       </div>
