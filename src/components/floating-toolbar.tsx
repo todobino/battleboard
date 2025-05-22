@@ -87,7 +87,7 @@ export default function FloatingToolbar({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-md border border-border z-50">
+      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
         {Icon && title && (
           <>
             <div className="flex items-center gap-2 px-2 mr-2">
