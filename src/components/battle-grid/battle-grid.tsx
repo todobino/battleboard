@@ -26,6 +26,7 @@ interface BattleGridProps {
 const GRID_SIZE = 20; // 20x20 grid
 const DEFAULT_CELL_SIZE = 30; // pixels
 const BORDER_WIDTH_WHEN_VISIBLE = 2; // Desired border width in pixels when grid lines are shown
+const FEET_PER_SQUARE = 5; // Each square represents 5 feet
 
 export default function BattleGrid({
   gridCells,
@@ -47,7 +48,6 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    // Padding needs to accommodate half the border width on each side when visible
     const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + BORDER_WIDTH_WHEN_VISIBLE} ${initialContentHeight + BORDER_WIDTH_WHEN_VISIBLE}`;
   });
@@ -62,7 +62,8 @@ export default function BattleGrid({
   useEffect(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
+    // Padding accommodates half the border width on each side when visible
+    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2; 
     
     const expectedMinX = 0 - padding;
     const expectedMinY = 0 - padding;
@@ -70,11 +71,12 @@ export default function BattleGrid({
     const expectedVh = initialContentHeight + BORDER_WIDTH_WHEN_VISIBLE;
 
     const currentVbParts = viewBox.split(' ').map(Number);
+    // Only update viewBox if it strictly needs to change based on padding logic
     if (currentVbParts[0] !== expectedMinX || currentVbParts[1] !== expectedMinY || currentVbParts[2] !== expectedVw || currentVbParts[3] !== expectedVh) {
         setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showGridLines]); // Re-evaluate viewBox if showGridLines changes, though padding is constant now
+  }, []); // Only run once on mount to initialize viewBox based on constants
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement>): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -133,9 +135,14 @@ export default function BattleGrid({
           const endPoint = {x: gridX, y: gridY};
           const dx = endPoint.x - measurement.startPoint.x;
           const dy = endPoint.y - measurement.startPoint.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          const roundedDist = Math.round(dist * 10) / 10;
-          const resultText = measurement.type === 'distance' ? `Distance: ${roundedDist} units` : `Radius: ${roundedDist} units`;
+          const distInSquares = Math.sqrt(dx*dx + dy*dy);
+          const distInFeet = distInSquares * FEET_PER_SQUARE;
+          const roundedDistInFeet = Math.round(distInFeet * 10) / 10; // Keep one decimal place for feet
+
+          const resultText = measurement.type === 'distance' 
+            ? `Distance: ${roundedDistInFeet} ft` 
+            : `Radius: ${roundedDistInFeet} ft`;
+            
           setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
           toast({ title: "Measurement Complete", description: resultText });
         }
@@ -157,17 +164,25 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart) {
-      const currentVbWidth = parseFloat(viewBox.split(' ')[2]);
-      // Content width is now fixed based on grid size and cell size, viewBox padding handles borders
-      const contentWidthWithoutPadding = GRID_SIZE * DEFAULT_CELL_SIZE;
-      const currentZoomFactor = contentWidthWithoutPadding / (currentVbWidth - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0) );
+      const currentVbParts = viewBox.split(' ').map(Number);
+      const currentVbWidth = currentVbParts[2];
+      const currentVbHeight = currentVbParts[3];
+      
+      // Base content width (grid itself, without padding for borders)
+      const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
+      const baseContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
+      
+      // Calculate effective zoom factor based on the content area of the viewBox
+      const currentZoomFactorX = baseContentWidth / (currentVbWidth - BORDER_WIDTH_WHEN_VISIBLE);
+      const currentZoomFactorY = baseContentHeight / (currentVbHeight - BORDER_WIDTH_WHEN_VISIBLE);
 
-      const dx = (panStart.x - event.clientX) * currentZoomFactor ; 
-      const dy = (panStart.y - event.clientY) * currentZoomFactor ;
+      const dx = (panStart.x - event.clientX) * currentZoomFactorX; 
+      const dy = (panStart.y - event.clientY) * currentZoomFactorY;
 
-      const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
+      const [vx, vy, vw, vh] = currentVbParts;
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
       setPanStart({ x: event.clientX, y: event.clientY });
+
     } else if (draggingToken && dragOffset) {
       // Dragging logic (currently no live visual update, happens on mouseUp)
     } else if ((activeTool === 'measure_distance' || activeTool === 'measure_radius') && measurement.startPoint && !measurement.endPoint) {
@@ -210,16 +225,14 @@ export default function BattleGrid({
       newVh = vh * scaleAmount;
     }
     
-    // Base content width (grid itself, without padding for borders)
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE; 
-    // Min/max dimensions for the *content area* within the viewBox
+    const baseContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
+    
     const minContentDimInVb = baseContentWidth / 5; 
     const maxContentDimInVb = baseContentWidth * 5; 
 
-    // Adjust newVw/newVh to account for the padding if borders are visible
-    const currentPaddingEffect = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+    const currentPaddingEffect = BORDER_WIDTH_WHEN_VISIBLE; // Assumes borders are always accounted for with a 2px effect
     
-    // Clamp the content part of the viewBox
     let newContentVw = newVw - currentPaddingEffect;
     let newContentVh = newVh - currentPaddingEffect;
 
@@ -247,7 +260,7 @@ export default function BattleGrid({
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // Added to stop panning/dragging if mouse leaves SVG
+        onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
         preserveAspectRatio="xMidYMid meet"
         data-ai-hint="battle grid tactical map"
@@ -256,7 +269,6 @@ export default function BattleGrid({
           <image href={backgroundImageUrl} x="0" y="0" width={gridContentWidth} height={gridContentHeight} />
         )}
 
-        {/* Render cells with individual borders */}
         {gridCells.flatMap((row, y) =>
           row.map((cell, x) => (
             <rect
@@ -268,7 +280,7 @@ export default function BattleGrid({
               fill={cell.color || 'transparent'}
               stroke={showGridLines ? 'hsl(var(--border))' : 'transparent'}
               strokeWidth={showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0}
-              shapeRendering="crispEdges" // Keep for sharp lines
+              shapeRendering="crispEdges"
               className={cn(
                 'transition-colors duration-100',
                 (activeTool === 'paint_cell' || activeTool === 'place_token') && 'cursor-pointer hover:opacity-80'
