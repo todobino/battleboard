@@ -4,14 +4,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
-import ControlsSidebar from '@/components/controls/controls-sidebar';
+// ControlsSidebar import removed
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import FloatingToolbar from '@/components/floating-toolbar';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { LandPlot, Settings, ListOrdered, PanelLeft } from 'lucide-react';
+// Label and Switch imports removed
+import { LandPlot, ListOrdered } from 'lucide-react'; // PanelLeft and Settings removed
 import { useToast } from '@/hooks/use-toast';
 import { Accordion } from '@/components/ui/accordion';
 
@@ -76,31 +75,7 @@ export default function BattleBoardPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Left Sidebar for General Controls */}
-      <SidebarProvider defaultOpen={true}>
-        <Sidebar variant="sidebar" collapsible="icon" className="border-r" side="left">
-          <SidebarHeader className="p-2 flex items-center justify-between border-b border-sidebar-border">
-             <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                <PanelLeft className="h-6 w-6 text-sidebar-primary" />
-                <h2 className="text-lg font-semibold text-sidebar-primary">Controls</h2>
-              </div>
-              <PanelLeft className="h-6 w-6 text-sidebar-primary hidden group-data-[collapsible=icon]:block" />
-            <SidebarTrigger className="md:hidden group-data-[collapsible=icon]:hidden" />
-          </SidebarHeader>
-          <SidebarContent>
-            <ControlsSidebar
-              activeTool={activeTool} 
-              setActiveTool={setActiveTool}
-              // Props for GridSettingsPanel removed
-            />
-          </SidebarContent>
-          <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden border-t border-sidebar-border">
-            <Button variant="ghost" className="w-full justify-start">
-              <Settings className="mr-2 h-4 w-4" /> Settings
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
-      </SidebarProvider>
+      {/* Left Sidebar removed */}
 
       {/* Main Content Area */}
       <SidebarInset className="flex-1 flex flex-col relative">
@@ -110,7 +85,7 @@ export default function BattleBoardPage() {
             tokens={tokens}
             setTokens={setTokens}
             showGridLines={showGridLines}
-            zoomLevel={1} // zoomLevel prop is currently unused in BattleGrid but kept for potential future use
+            zoomLevel={1} 
             backgroundImageUrl={backgroundImageUrl}
             activeTool={activeTool}
             selectedColor={selectedColor}
@@ -166,3 +141,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
