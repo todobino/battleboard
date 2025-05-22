@@ -4,7 +4,7 @@
 import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, PencilRuler, Paintbrush, MousePointerSquareDashed, Map, Puzzle, DraftingCompass } from 'lucide-react';
+import { LandPlot, PencilRuler, Paintbrush, MousePointerSquareDashed, Map, Puzzle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -77,7 +77,6 @@ export default function FloatingToolbar({
   const mainTools: Omit<ToolButtonProps, 'currentActiveTool' | 'onClick' | 'children' | 'asChild'>[] = [
     { label: 'Select/Pan', icon: MousePointerSquareDashed, tool: 'select' },
     { label: 'Token Placer', icon: Puzzle, tool: 'token_placer_tool' },
-    { label: 'Drafting Tools', icon: DraftingCompass, tool: 'drafting_compass_tool' }, // Example, might be a popover
   ];
 
   const handleToolClick = (tool: ActiveTool) => {

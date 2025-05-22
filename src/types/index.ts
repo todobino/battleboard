@@ -38,8 +38,8 @@ export type ActiveTool =
   | 'measure_distance'
   | 'measure_radius'
   | 'map_tool'
-  | 'token_placer_tool' // Changed from 'character_tool'
-  | 'drafting_compass_tool';
+  | 'token_placer_tool';
+
 
 export interface TokenTemplate {
   name: string;
