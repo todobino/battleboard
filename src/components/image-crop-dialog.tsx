@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Crop } from 'lucide-react';
+import { Crop, Grid } from 'lucide-react';
 
 interface ImageCropDialogProps {
   isOpen: boolean;
@@ -23,6 +23,7 @@ interface ImageCropDialogProps {
 }
 
 const MAX_CANVAS_DISPLAY_SIZE = 400; // Max width/height for the canvas in the dialog
+const GRID_OVERLAY_CELLS = 30; // For a 30x30 grid overlay
 
 export default function ImageCropDialog({
   isOpen,
@@ -55,8 +56,29 @@ export default function ImageCropDialog({
     // Draw the image scaled to fit the canvas
     ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
+    // Draw grid overlay
+    const cellWidth = canvas.width / GRID_OVERLAY_CELLS;
+    const cellHeight = canvas.height / GRID_OVERLAY_CELLS;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; // Semi-transparent white
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 2]); // Dashed lines
+
+    for (let i = 1; i < GRID_OVERLAY_CELLS; i++) {
+      // Vertical lines
+      ctx.beginPath();
+      ctx.moveTo(i * cellWidth, 0);
+      ctx.lineTo(i * cellWidth, canvas.height);
+      ctx.stroke();
+      // Horizontal lines
+      ctx.beginPath();
+      ctx.moveTo(0, i * cellHeight);
+      ctx.lineTo(canvas.width, i * cellHeight);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]); // Reset line dash
+
     // Draw the crop selection square
-    if (cropRect) {
+    if (cropRect && cropRect.size > 0) {
       ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)'; // Bright yellow for visibility
       ctx.lineWidth = 2;
       ctx.strokeRect(cropRect.x, cropRect.y, cropRect.size, cropRect.size);
@@ -74,7 +96,7 @@ export default function ImageCropDialog({
       ctx.closePath();
       ctx.fill();
     }
-  }, [imgElement, cropRect]);
+  }, [imgElement, cropRect, canvasDisplaySize]);
 
   useEffect(() => {
     if (isOpen && imageSrc) {
@@ -98,9 +120,14 @@ export default function ImageCropDialog({
           canvasRef.current.width = displayWidth;
           canvasRef.current.height = displayHeight;
         }
-        setScaleFactor(naturalWidth / displayWidth);
+        // Calculate scaleFactor based on display width relative to natural width
+        setScaleFactor(naturalWidth / displayWidth); 
         setCropRect(null); // Reset crop on new image
       };
+      img.onerror = () => {
+        // Handle image loading error if necessary
+        setImgElement(null);
+      }
       img.src = imageSrc;
     } else {
       setImgElement(null); // Clear image when dialog closes or no src
@@ -136,8 +163,8 @@ export default function ImageCropDialog({
     const dx = pos.x - startDragPoint.x;
     const dy = pos.y - startDragPoint.y;
 
-    // Constrain to square: use the smaller dimension
-    const size = Math.min(Math.abs(dx), Math.abs(dy));
+    // Constrain to square: use the smaller dimension from the drag start
+    let size = Math.min(Math.abs(dx), Math.abs(dy));
     
     let newX = startDragPoint.x;
     let newY = startDragPoint.y;
@@ -153,12 +180,25 @@ export default function ImageCropDialog({
     const canvas = canvasRef.current;
     if(!canvas) return;
 
-    const finalX = Math.max(0, Math.min(newX, canvas.width - size));
-    const finalY = Math.max(0, Math.min(newY, canvas.height - size));
-    const finalSize = Math.min(size, canvas.width - finalX, canvas.height - finalY);
+    // Clamp size if it goes out of bounds
+    if (newX + size > canvas.width) {
+        size = canvas.width - newX;
+    }
+    if (newY + size > canvas.height) {
+        size = canvas.height - newY;
+    }
+    if (newX < 0) {
+        size += newX; // Effectively size = size - Math.abs(newX)
+        newX = 0;
+    }
+    if (newY < 0) {
+        size += newY; // Effectively size = size - Math.abs(newY)
+        newY = 0;
+    }
+    size = Math.max(0, size); // Ensure size is not negative
 
 
-    setCropRect({ x: finalX, y: finalY, size: finalSize });
+    setCropRect({ x: newX, y: newY, size: size });
   };
 
   const handleMouseUp = () => {
@@ -176,11 +216,18 @@ export default function ImageCropDialog({
   };
 
   const handleConfirm = () => {
-    if (!cropRect || !imgElement || cropRect.size === 0) {
-      onCropCancel(); // Or show a message
+    if (!imgElement || !imageSrc) {
+      onCropCancel(); 
       return;
     }
 
+    if (!cropRect || cropRect.size === 0) {
+      // No valid crop selected, or crop selection is zero size. Use the original image.
+      onCropConfirm(imageSrc);
+      return;
+    }
+
+    // Valid crop selected, proceed with cropping
     const offscreenCanvas = document.createElement('canvas');
     const actualX = cropRect.x * scaleFactor;
     const actualY = cropRect.y * scaleFactor;
@@ -206,13 +253,13 @@ export default function ImageCropDialog({
   };
 
   const handleCancelDialog = () => {
-    onOpenChange(false); // This will trigger the onCropCancel in GridSettingsPanel if needed via useEffect
+    onOpenChange(false); 
     onCropCancel();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open) handleCancelDialog(); // Ensure cancel logic runs if dialog is closed externally
+        if (!open) handleCancelDialog(); 
         else onOpenChange(true);
       }}
     >
@@ -223,6 +270,7 @@ export default function ImageCropDialog({
           </DialogTitle>
           <DialogDescription>
             Click and drag on the image to select a square area for your battle map background.
+            Or, click "Use Image" to use the original uploaded image without cropping.
           </DialogDescription>
         </DialogHeader>
         <div className="p-6 pt-0 flex justify-center items-center" data-ai-hint="image crop tool">
@@ -246,8 +294,8 @@ export default function ImageCropDialog({
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleConfirm} disabled={!cropRect || cropRect.size === 0}>
-            Crop Image
+          <Button type="button" onClick={handleConfirm} disabled={!imgElement}>
+            {cropRect && cropRect.size > 0 ? "Crop & Use Image" : "Use Original Image"}
           </Button>
         </DialogFooter>
       </DialogContent>
