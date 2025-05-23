@@ -1,9 +1,9 @@
 import React from 'react';
-import { UserRound, ShieldAlert, Circle, Mountain, Trees, Waves, HelpCircle, CircleUserRound } from 'lucide-react';
+import { UserRound, ShieldAlert, Circle, Mountain, Trees, Waves, HelpCircle, CircleUserRound, Box } from 'lucide-react';
 
 export const PlayerIcon = CircleUserRound; // Changed from UserRound
 export const EnemyIcon = ShieldAlert;
-export const ItemIcon = Circle; // Default item icon
+export const ItemIcon = Box; // Changed from Circle
 export const TerrainIcon = Mountain; // Default terrain icon
 export const GenericTokenIcon = HelpCircle;
 
