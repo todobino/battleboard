@@ -24,6 +24,20 @@ const snapToVertex = (pos: Point, cellSize: number): Point => ({
   y: Math.round(pos.y / cellSize) * cellSize,
 });
 
+// Helper functions for distance to line segment
+function sqr(x: number) { return x * x; }
+function dist2(v: Point, w: Point) { return sqr(v.x - w.x) + sqr(v.y - w.y); }
+function distToSegmentSquared(p: Point, v: Point, w: Point) {
+  const l2 = dist2(v, w);
+  if (l2 === 0) return dist2(p, v);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return dist2(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+}
+function distanceToLineSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
+  return Math.sqrt(distToSegmentSquared({ x: px, y: py }, { x: x1, y: y1 }, { x: x2, y: y2 }));
+}
+
 
 export default function BattleGrid({
   gridCells,
@@ -106,6 +120,59 @@ export default function BattleGrid({
     };
   };
 
+  const eraseContentAtCell = (gridX: number, gridY: number) => {
+    setGridCells(prev => {
+      const newCells = prev.map(row => row.map(cell => ({ ...cell })));
+      if (newCells[gridY] && newCells[gridY][gridX]) {
+        newCells[gridY][gridX].color = undefined;
+      }
+      return newCells;
+    });
+    setTokens(prev => prev.filter(token => !(token.x === gridX && token.y === gridY)));
+
+    const cellCenterX = gridX * cellSize + cellSize / 2;
+    const cellCenterY = gridY * cellSize + cellSize / 2;
+
+    setDrawnShapes(prevShapes =>
+      prevShapes.filter(shape => {
+        if (shape.type === 'line') {
+          const distToLine = distanceToLineSegment(
+            cellCenterX, cellCenterY,
+            shape.startPoint.x, shape.startPoint.y,
+            shape.endPoint.x, shape.endPoint.y
+          );
+          // Keep the shape if the cell center is further than a small threshold from the line
+          return distToLine > (shape.strokeWidth / 2 + 2); // e.g. half stroke width + 2px buffer
+        } else if (shape.type === 'circle') {
+          const distToCircleCenter = Math.sqrt(
+            Math.pow(cellCenterX - shape.startPoint.x, 2) +
+            Math.pow(cellCenterY - shape.startPoint.y, 2)
+          );
+          const radius = Math.sqrt(
+            Math.pow(shape.endPoint.x - shape.startPoint.x, 2) +
+            Math.pow(shape.endPoint.y - shape.startPoint.y, 2)
+          );
+          // Keep the shape if the cell center is outside the circle
+          return distToCircleCenter > radius;
+        } else if (shape.type === 'square') {
+          const rectX = Math.min(shape.startPoint.x, shape.endPoint.x);
+          const rectY = Math.min(shape.startPoint.y, shape.endPoint.y);
+          const rectWidth = Math.abs(shape.endPoint.x - shape.startPoint.x);
+          const rectHeight = Math.abs(shape.endPoint.y - shape.startPoint.y);
+          // Keep the shape if the cell center is outside the square
+          return !(
+            cellCenterX >= rectX &&
+            cellCenterX <= rectX + rectWidth &&
+            cellCenterY >= rectY &&
+            cellCenterY <= rectY + rectHeight
+          );
+        }
+        return true; // Keep unknown shapes
+      })
+    );
+  };
+
+
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
@@ -177,14 +244,7 @@ export default function BattleGrid({
       case 'eraser_tool':
         setIsErasing(true);
         setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-        setGridCells(prev => {
-            const newCells = prev.map(row => row.map(cell => ({ ...cell })));
-            if (newCells[gridY] && newCells[gridY][gridX]) {
-                newCells[gridY][gridX].color = undefined;
-            }
-            return newCells;
-        });
-        setTokens(prev => prev.filter(token => !(token.x === gridX && token.y === gridY)));
+        eraseContentAtCell(gridX, gridY);
         break;
       case 'draw_line':
       case 'draw_circle':
@@ -200,7 +260,7 @@ export default function BattleGrid({
             startPoint: startP,
             endPoint: startP, // Initialize endPoint to startPoint
             color: activeTool === 'draw_line' ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-            fillColor: activeTool !== 'draw_line' ? 'hsla(var(--accent-hsl), 0.5)' : undefined, // Use HSLA for transparency
+            fillColor: activeTool !== 'draw_line' ? 'hsla(var(--accent-hsl), 0.5)' : undefined, 
             strokeWidth: activeTool === 'draw_line' ? 2 : 1,
           });
         }
@@ -237,7 +297,7 @@ export default function BattleGrid({
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingToken && dragOffset && activeTool === 'select') {
-      setHoveredCellWhilePaintingOrErasing(null); // Don't highlight cells when dragging a token
+      setHoveredCellWhilePaintingOrErasing(null); 
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -252,37 +312,28 @@ export default function BattleGrid({
         : `Radius: ${roundedDistInFeet} ft`;
       setMeasurement(prev => ({ ...prev!, endPoint, result: resultText }));
       setHoveredCellWhilePaintingOrErasing(null);
-    } else if ((isErasing && activeTool === 'eraser_tool') || (isPainting && activeTool === 'paint_cell')) {
+    } else if (isErasing && activeTool === 'eraser_tool') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
              setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-             if (isErasing) {
-                setGridCells(prev => {
-                    const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
-                    if (newCells[gridY][gridX].color !== undefined) {
-                        newCells[gridY][gridX].color = undefined;
-                        return newCells;
-                    }
-                    return prev;
-                });
-                setTokens(prev => {
-                    const tokenExistsOnCell = prev.some(token => token.x === gridX && token.y === gridY);
-                    if (tokenExistsOnCell) {
-                        return prev.filter(token => !(token.x === gridX && token.y === gridY));
-                    }
-                    return prev;
-                });
-             } else if (isPainting) {
-                setGridCells(prev => {
-                    const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
-                     if (newCells[gridY] && newCells[gridY][gridX] && newCells[gridY][gridX].color !== selectedColor) {
-                        newCells[gridY][gridX].color = selectedColor;
-                        return newCells;
-                    }
-                    return prev;
-                });
-             }
+             eraseContentAtCell(gridX, gridY);
+        } else {
+           setHoveredCellWhilePaintingOrErasing(null);
+        }
+    } else if (isPainting && activeTool === 'paint_cell') {
+        const gridX = Math.floor(pos.x / cellSize);
+        const gridY = Math.floor(pos.y / cellSize);
+        if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
+            setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
+            setGridCells(prev => {
+                const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
+                if (newCells[gridY] && newCells[gridY][gridX] && newCells[gridY][gridX].color !== selectedColor) {
+                    newCells[gridY][gridX].color = selectedColor;
+                    return newCells;
+                }
+                return prev;
+            });
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
         }
@@ -331,8 +382,6 @@ export default function BattleGrid({
       setCurrentDrawingShape(null);
       setIsDrawing(false);
       setDrawingStartPoint(null);
-      // Optionally switch back to select tool, or keep drawing tool active
-      // setActiveTool('select');
     }
   };
 
@@ -342,8 +391,6 @@ export default function BattleGrid({
       setPanStart(null);
     }
     if (isMeasuring) {
-      // Don't clear measurement result on mouse leave, only on new measurement or tool switch
-      // setIsMeasuring(false); // Keep it true to allow finishing outside and coming back
     }
     if (isErasing) {
         setIsErasing(false);
@@ -353,8 +400,6 @@ export default function BattleGrid({
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
     }
-    // If actively drawing and mouse leaves, finalize shape if desired, or discard
-    // For now, let's keep currentDrawingShape as is; user can complete by re-entering and mouseup
   };
 
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
@@ -376,17 +421,17 @@ export default function BattleGrid({
     }
     
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; // Max zoom in 10x
-    const maxAllowedVw = baseContentWidth * 5;  // Max zoom out 0.2x
+    const minAllowedVw = baseContentWidth / 10; 
+    const maxAllowedVw = baseContentWidth * 5;  
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; // Maintain aspect ratio based on newVw
+    newVh = (newVw / vw) * vh; 
 
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
 
-    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`); // Use newVh calculated from newVw
+    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`); 
   };
 
   const gridContentWidth = GRID_SIZE * cellSize;
@@ -397,10 +442,19 @@ export default function BattleGrid({
   const imgScaledX = (gridContentWidth - imgScaledWidth) / 2;
   const imgScaledY = (gridContentHeight - imgScaledHeight) / 2;
 
-  const getCursorStyle = () => {
+ const getCursorStyle = () => {
     if (isPanning || (draggingToken && activeTool === 'select')) return 'cursor-grabbing';
-    if (activeTool === 'select') return 'cursor-default'; // Grab handled by token or pan
-    if (['paint_cell', 'place_token', 'measure_distance', 'measure_radius', 'eraser_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(activeTool)) return 'cursor-crosshair';
+    if (activeTool === 'select') return 'cursor-default';
+    if ([
+      'paint_cell', 
+      'place_token', 
+      'measure_distance', 
+      'measure_radius', 
+      'eraser_tool', 
+      'draw_line', 
+      'draw_circle', 
+      'draw_square'
+    ].includes(activeTool)) return 'cursor-crosshair';
     return 'cursor-default';
   };
 
@@ -451,7 +505,7 @@ export default function BattleGrid({
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Thicker highlight border
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
               />
@@ -621,19 +675,19 @@ export default function BattleGrid({
           let backgroundFill = 'black';
             switch (token.type) {
                 case 'player':
-                backgroundFill = 'hsl(120, 40%, 25%)'; // Green
+                backgroundFill = 'hsl(120, 40%, 25%)'; 
                 break;
                 case 'enemy':
-                backgroundFill = 'hsl(0, 60%, 30%)';   // Red
+                backgroundFill = 'hsl(0, 60%, 30%)';   
                 break;
                 case 'item':
-                backgroundFill = 'hsl(270, 40%, 30%)'; // Purple
+                backgroundFill = 'hsl(270, 40%, 30%)'; 
                 break;
                 case 'terrain':
-                backgroundFill = 'hsl(var(--muted))'; // Dark Gray
+                backgroundFill = 'hsl(var(--muted))'; 
                 break;
                 case 'generic':
-                backgroundFill = 'hsl(30, 70%, 40%)'; // Orange
+                backgroundFill = 'hsl(30, 70%, 40%)'; 
                 break;
                 default:
                 backgroundFill = 'black';
@@ -676,4 +730,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
