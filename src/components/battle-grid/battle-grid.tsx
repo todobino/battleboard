@@ -31,7 +31,7 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2; // Initial padding based on 1px potential border
+    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + padding * 2} ${initialContentHeight + padding * 2}`;
   });
   const [isPanning, setIsPanning] = useState(false);
@@ -41,7 +41,9 @@ export default function BattleGrid({
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
-  const [hoveredCellWhilePainting, setHoveredCellWhilePainting] = useState<Point | null>(null);
+  const [hoveredCellWhilePaintingOrErasing, setHoveredCellWhilePaintingOrErasing] = useState<Point | null>(null);
+  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
+
 
   const { toast } = useToast();
   const cellSize = DEFAULT_CELL_SIZE;
@@ -64,8 +66,8 @@ export default function BattleGrid({
                             Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                             Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
 
-      const currentZoomLevel = contentWidth / currentVbParts[2]; // Simpler zoom check
-      if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) { // Only recenter if roughly at 1x zoom
+      const currentZoomLevel = contentWidth / currentVbParts[2];
+      if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) {
            return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
       }
       return currentVbString;
@@ -99,14 +101,14 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        if (event.button === 0 || event.button === 1) { // Left or Middle click for select/pan
+        if (event.button === 0 || event.button === 1) {
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
         break;
       case 'paint_cell':
         setIsPainting(true);
-        setHoveredCellWhilePainting({ x: gridX, y: gridY });
+        setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
         setGridCells(prev => {
           const newCells = prev.map(row => row.map(cell => ({ ...cell })));
           if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -138,7 +140,7 @@ export default function BattleGrid({
         break;
       case 'eraser_tool':
         setIsErasing(true);
-        setHoveredCellWhilePainting({ x: gridX, y: gridY });
+        setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
         setGridCells(prev => {
             const newCells = prev.map(row => row.map(cell => ({ ...cell })));
             if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -178,9 +180,9 @@ export default function BattleGrid({
       const [vx, vy, vw, vh] = currentVbParts;
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
       setPanStart({ x: event.clientX, y: event.clientY });
-      setHoveredCellWhilePainting(null);
+      setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingToken && dragOffset && activeTool === 'select') {
-      setHoveredCellWhilePainting(null);
+      setHoveredCellWhilePaintingOrErasing(null);
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -194,12 +196,12 @@ export default function BattleGrid({
         ? `Distance: ${roundedDistInFeet} ft`
         : `Radius: ${roundedDistInFeet} ft`;
       setMeasurement(prev => ({ ...prev, endPoint, result: resultText }));
-      setHoveredCellWhilePainting(null);
+      setHoveredCellWhilePaintingOrErasing(null);
     } else if (isErasing && activeTool === 'eraser_tool') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
-             setHoveredCellWhilePainting({ x: gridX, y: gridY });
+             setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
              setGridCells(prev => {
                 const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
                 if (newCells[gridY][gridX].color !== undefined) {
@@ -216,13 +218,13 @@ export default function BattleGrid({
                 return prev;
             });
         } else {
-           setHoveredCellWhilePainting(null);
+           setHoveredCellWhilePaintingOrErasing(null);
         }
     } else if (isPainting && activeTool === 'paint_cell') {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
         if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
-            setHoveredCellWhilePainting({ x: gridX, y: gridY });
+            setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
             setGridCells(prev => {
                 const newCells = [...prev.map(r => [...r.map(c => ({...c}))])];
                  if (newCells[gridY] && newCells[gridY][gridX] && newCells[gridY][gridX].color !== selectedColor) {
@@ -232,10 +234,10 @@ export default function BattleGrid({
                 return prev;
             });
         } else {
-           setHoveredCellWhilePainting(null);
+           setHoveredCellWhilePaintingOrErasing(null);
         }
     } else {
-        setHoveredCellWhilePainting(null);
+        setHoveredCellWhilePaintingOrErasing(null);
     }
   };
 
@@ -262,11 +264,11 @@ export default function BattleGrid({
     }
     if (isErasing) {
         setIsErasing(false);
-        setHoveredCellWhilePainting(null);
+        setHoveredCellWhilePaintingOrErasing(null);
     }
     if (isPainting) {
         setIsPainting(false);
-        setHoveredCellWhilePainting(null);
+        setHoveredCellWhilePaintingOrErasing(null);
     }
   };
 
@@ -280,11 +282,11 @@ export default function BattleGrid({
     }
     if (isErasing) {
       setIsErasing(false);
-      setHoveredCellWhilePainting(null);
+      setHoveredCellWhilePaintingOrErasing(null);
     }
     if (isPainting) {
       setIsPainting(false);
-      setHoveredCellWhilePainting(null);
+      setHoveredCellWhilePaintingOrErasing(null);
     }
   };
 
@@ -360,10 +362,10 @@ export default function BattleGrid({
         <g shapeRendering="crispEdges">
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => {
-              const isHighlighted = hoveredCellWhilePainting &&
+              const isHighlighted = hoveredCellWhilePaintingOrErasing &&
                                   ((isPainting && activeTool === 'paint_cell') || (isErasing && activeTool === 'eraser_tool')) &&
-                                  hoveredCellWhilePainting.x === x &&
-                                  hoveredCellWhilePainting.y === y;
+                                  hoveredCellWhilePaintingOrErasing.x === x &&
+                                  hoveredCellWhilePaintingOrErasing.y === y;
               return (
               <rect
                 key={cell.id}
@@ -374,12 +376,12 @@ export default function BattleGrid({
                 fill={cell.color || 'transparent'}
                 stroke={
                   isHighlighted
-                    ? 'hsl(var(--ring))' // Highlight color for painting/erasing hover
+                    ? 'hsl(var(--ring))'
                     : showGridLines ? 'black' : 'transparent'
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Thicker highlight border
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
               />
@@ -453,6 +455,8 @@ export default function BattleGrid({
               key={token.id}
               transform={`translate(${currentX * cellSize}, ${currentY * cellSize})`}
               onMouseDown={(e) => handleTokenMouseDown(e, token)}
+              onMouseEnter={() => setHoveredTokenId(token.id)}
+              onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
                 activeTool === 'select' && 'cursor-grab',
                 draggingToken?.id === token.id && 'cursor-grabbing'
@@ -463,7 +467,7 @@ export default function BattleGrid({
                 cy={cellSize / 2}
                 r={cellSize / 2}
                 fill="black"
-                stroke="hsl(var(--accent))"
+                stroke={hoveredTokenId === token.id && activeTool === 'select' ? 'hsl(var(--accent))' : 'black'}
                 strokeWidth="1"
               />
               {IconComponent && (
@@ -472,11 +476,10 @@ export default function BattleGrid({
                   y={iconOffset}
                   width={iconDisplaySize}
                   height={iconDisplaySize}
-                  color={token.color}
+                  color={'hsl(var(--primary-foreground))'}
                   strokeWidth={1.5}
                 />
               )}
-              {/* Text label rendering removed */}
             </g>
           );
         })}
