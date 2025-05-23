@@ -31,8 +31,8 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + (padding * 2)} ${initialContentHeight + (padding * 2)}`;
+    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2; // Initial padding based on 1px potential border
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + padding * 2} ${initialContentHeight + padding * 2}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -49,29 +49,29 @@ export default function BattleGrid({
   useEffect(() => {
     const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const contentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const svgPadding = currentBorderWidth / 2;
 
     const expectedMinX = 0 - svgPadding;
     const expectedMinY = 0 - svgPadding;
-    const expectedVw = contentWidth + (svgPadding * 2);
-    const expectedVh = contentHeight + (svgPadding * 2);
+    const expectedVw = contentWidth + currentBorderWidth;
+    const expectedVh = contentHeight + currentBorderWidth;
 
     setViewBox(currentVbString => {
-        const currentVbParts = currentVbString.split(' ').map(Number);
-        const needsRecenter = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
-                               Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
-                               Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
-                               Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
+      const currentVbParts = currentVbString.split(' ').map(Number);
+      const needsRecenter = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
+                            Math.abs(currentVbParts[1] - expectedMinY) > 1e-3 ||
+                            Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
+                            Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
 
-        const currentZoomLevel = (contentWidth + (currentBorderWidth)) / currentVbParts[2];
-        if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) {
-             return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
-        }
-        return currentVbString;
+      const currentZoomLevel = contentWidth / currentVbParts[2]; // Simpler zoom check
+      if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) { // Only recenter if roughly at 1x zoom
+           return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
+      }
+      return currentVbString;
     });
-  }, [showGridLines]);
+  }, [showGridLines, cellSize]);
+
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -90,7 +90,7 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -99,7 +99,7 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        if (event.button === 0 || event.button === 1) {
+        if (event.button === 0 || event.button === 1) { // Left or Middle click for select/pan
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
@@ -179,9 +179,9 @@ export default function BattleGrid({
       setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePainting(null);
-    } else if (draggingToken && dragOffset) {
+    } else if (draggingToken && dragOffset && activeTool === 'select') {
       setHoveredCellWhilePainting(null);
-    } else if (isMeasuring && measurement.startPoint) {
+    } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
       const endPoint = { x: Math.max(0, Math.min(gridX, GRID_SIZE -1)), y: Math.max(0, Math.min(gridY, GRID_SIZE -1)) };
@@ -244,7 +244,7 @@ export default function BattleGrid({
       setIsPanning(false);
       setPanStart(null);
     }
-    if (draggingToken) {
+    if (draggingToken && activeTool === 'select') {
       const pos = getMousePosition(event);
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -307,11 +307,11 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; 
+    const minAllowedVw = baseContentWidth / 10;
     const maxAllowedVw = baseContentWidth * 5;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; 
+    newVh = (newVw / vw) * vh;
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -335,7 +335,7 @@ export default function BattleGrid({
         className={cn(
           "w-full h-full",
           (isPanning || draggingToken) ? 'cursor-grabbing' :
-          (activeTool === 'select' && !isPanning && !draggingToken) ? 'cursor-default' : // Default for select unless dragging/panning
+          (activeTool === 'select' && !isPanning && !draggingToken) ? 'cursor-default' :
           (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') ? 'cursor-crosshair' :
           'cursor-default'
         )}
@@ -374,7 +374,7 @@ export default function BattleGrid({
                 fill={cell.color || 'transparent'}
                 stroke={
                   isHighlighted
-                    ? 'hsl(var(--ring))'
+                    ? 'hsl(var(--ring))' // Highlight color for painting/erasing hover
                     : showGridLines ? 'black' : 'transparent'
                 }
                 strokeWidth={
@@ -382,9 +382,6 @@ export default function BattleGrid({
                     ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Thicker highlight border
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
-                className={cn(
-                  (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') && 'cursor-crosshair'
-                )}
               />
               );
             })
@@ -445,9 +442,6 @@ export default function BattleGrid({
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
           
-          // For dragging: use current mouse position relative to drag offset
-          // For static tokens: use token.x, token.y
-          // This logic was causing issues with getMousePosition, so simplified: static rendering first
           const currentX = token.x;
           const currentY = token.y;
 
@@ -469,6 +463,8 @@ export default function BattleGrid({
                 cy={cellSize / 2}
                 r={cellSize / 2}
                 fill="black"
+                stroke="hsl(var(--accent))"
+                strokeWidth="1"
               />
               {IconComponent && (
                 <IconComponent
@@ -477,22 +473,10 @@ export default function BattleGrid({
                   width={iconDisplaySize}
                   height={iconDisplaySize}
                   color={token.color}
-                  strokeWidth={1.5} 
+                  strokeWidth={1.5}
                 />
               )}
-              {token.label && (
-                <text
-                  x={cellSize / 2}
-                  y={cellSize / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={cellSize * 0.4}
-                  fill="white"
-                  className="pointer-events-none select-none font-bold"
-                >
-                  {token.label.substring(0, 1).toUpperCase()}
-                </text>
-              )}
+              {/* Text label rendering removed */}
             </g>
           );
         })}
@@ -500,4 +484,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
