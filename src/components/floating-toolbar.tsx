@@ -5,7 +5,7 @@ import type { ActiveTool, Token, Measurement } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -260,6 +260,14 @@ export default function FloatingToolbar({
         </Popover>
 
         <ToolButton
+          label="Shape Tools"
+          icon={Shapes}
+          tool="shapes_tool"
+          currentActiveTool={activeTool}
+          onClick={() => handleToolClick('shapes_tool')}
+        />
+
+        <ToolButton
           label="Eraser"
           icon={Eraser}
           tool="eraser_tool"
@@ -270,4 +278,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-

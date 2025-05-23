@@ -19,7 +19,7 @@ export interface Token {
   color: string; // Token's primary color (e.g., for its circle or icon fill)
   label?: string; // Optional label for the token
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
-  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic'; // Added 'generic'
+  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
   size?: number; // in grid units, default 1
 }
 
@@ -41,14 +41,15 @@ export type ActiveTool =
   | 'measure_radius'
   | 'map_tool'
   | 'token_placer_tool'
-  | 'eraser_tool';
+  | 'eraser_tool'
+  | 'shapes_tool';
 
 
 export interface TokenTemplate {
   name: string;
   color: string;
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element);
-  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic'; // Added 'generic'
+  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
 }
 
 export interface Measurement {
@@ -73,4 +74,3 @@ export interface BattleGridProps {
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
 }
-
