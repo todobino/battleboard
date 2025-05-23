@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Token, TokenTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Puzzle } from 'lucide-react';
+import { Users } from 'lucide-react'; // Changed from Puzzle
 import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
 
 interface TokenPlacerPanelProps {
@@ -31,8 +31,8 @@ export default function TokenPlacerPanel({
       color: template.color,
       icon: template.icon,
       type: template.type,
-      label: template.name,
-      size: 1,
+      label: template.name, // Ensure label is set from template name
+      size: 1, // Default size
     });
     setActiveTool('place_token');
   };
@@ -40,7 +40,7 @@ export default function TokenPlacerPanel({
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Puzzle className="mr-2 h-5 w-5" /> Tokens & Terrain
+        <Users className="mr-2 h-5 w-5" /> Tokens & Terrain
       </div>
       <Card className="bg-popover-foreground/5 border-border/50">
         <CardContent className="p-2 grid grid-cols-3 gap-2">

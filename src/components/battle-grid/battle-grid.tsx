@@ -1,7 +1,8 @@
 
 'use client';
 
-import type { Point, BattleGridProps } from '@/types';
+import type { Point, BattleGridProps, Token as TokenType } from '@/types';
+import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -35,7 +36,7 @@ export default function BattleGrid({
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
-  const [draggingToken, setDraggingToken] = useState<typeof tokens[0] | null>(null);
+  const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
@@ -89,7 +90,7 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { // Middle or Ctrl/Cmd + Left for pan
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -98,7 +99,6 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        // Allow simple left-click or middle-click for panning on grid background
         if (event.button === 0 || event.button === 1) {
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
@@ -151,7 +151,7 @@ export default function BattleGrid({
     }
   };
 
-  const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: typeof tokens[0]) => {
+  const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
     if (activeTool !== 'select') return;
     event.stopPropagation();
     setDraggingToken(token);
@@ -307,11 +307,11 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10;
+    const minAllowedVw = baseContentWidth / 10; 
     const maxAllowedVw = baseContentWidth * 5;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh;
+    newVh = (newVw / vw) * vh; 
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -335,8 +335,9 @@ export default function BattleGrid({
         className={cn(
           "w-full h-full",
           (isPanning || draggingToken) ? 'cursor-grabbing' :
+          (activeTool === 'select' && (isPanning || draggingToken === null)) ? 'cursor-default' : // Grab if hovering grid bg with select, unless dragging
           (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') ? 'cursor-crosshair' :
-          'cursor-default' // Default cursor for select tool hover (on grid bg) and any other case
+          'cursor-default'
         )}
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
@@ -378,7 +379,7 @@ export default function BattleGrid({
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Thicker highlight border
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
                 className={cn(
@@ -442,7 +443,7 @@ export default function BattleGrid({
          )}
 
         {tokens.map(token => {
-          const IconComponent = token.icon;
+          const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
           const currentX = draggingToken?.id === token.id && dragOffset && svgRef.current
             ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).x - dragOffset.x) / cellSize
             : token.x;
@@ -450,50 +451,94 @@ export default function BattleGrid({
             ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).y - dragOffset.y) / cellSize
             : token.y;
 
-          return (
-            <g
-              key={token.id}
-              transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
-              onMouseDown={(e) => handleTokenMouseDown(e, token)}
-              className={cn(
-                activeTool === 'select' && 'cursor-grab',
-                draggingToken?.id === token.id && 'cursor-grabbing'
-              )}
-            >
-              {IconComponent ? (
-                <IconComponent
-                  className="w-full h-full p-1"
-                  style={{ color: token.color, width: cellSize * (token.size || 1), height: cellSize * (token.size || 1) }}
-                />
-              ) : (
+          if (token.type === 'player') {
+            const iconSize = cellSize * 0.8;
+            const iconOffset = (cellSize - iconSize) / 2;
+            return (
+              <g
+                key={token.id}
+                transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
+                onMouseDown={(e) => handleTokenMouseDown(e, token)}
+                className={cn(
+                  activeTool === 'select' && 'cursor-grab',
+                  draggingToken?.id === token.id && 'cursor-grabbing'
+                )}
+              >
                 <circle
-                  cx={cellSize / 2 * (token.size || 1)}
-                  cy={cellSize / 2 * (token.size || 1)}
-                  r={cellSize / 2.5 * (token.size || 1)}
-                  fill={token.color}
-                  stroke="hsl(var(--foreground))"
-                  strokeWidth="1"
+                  cx={cellSize / 2}
+                  cy={cellSize / 2}
+                  r={cellSize / 2}
+                  fill="hsl(var(--battle-grid-bg))"
                 />
-              )}
-              {token.label && (
-                <text
-                  x={cellSize / 2 * (token.size || 1)}
-                  y={cellSize / 2 * (token.size || 1)}
-                  textAnchor="middle"
-                  dy=".3em"
-                  fontSize={cellSize / 3}
-                  fill="hsl(var(--primary-foreground))"
-                  className="pointer-events-none select-none"
-                >
-                  {token.label.substring(0,1).toUpperCase()}
-                </text>
-              )}
-            </g>
-          );
+                {IconComponent && (
+                  <IconComponent
+                    x={iconOffset}
+                    y={iconOffset}
+                    width={iconSize}
+                    height={iconSize}
+                    color={token.color}
+                  />
+                )}
+                {token.label && (
+                  <text
+                    x={cellSize / 2}
+                    y={cellSize / 2}
+                    textAnchor="middle"
+                    dy=".3em"
+                    fontSize={iconSize / 1.5}
+                    fill="hsl(var(--primary-foreground))"
+                    className="pointer-events-none select-none font-bold"
+                  >
+                    {token.label.substring(0, 1).toUpperCase()}
+                  </text>
+                )}
+              </g>
+            );
+          } else {
+            // Original rendering for other tokens
+            return (
+              <g
+                key={token.id}
+                transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
+                onMouseDown={(e) => handleTokenMouseDown(e, token)}
+                className={cn(
+                  activeTool === 'select' && 'cursor-grab',
+                  draggingToken?.id === token.id && 'cursor-grabbing'
+                )}
+              >
+                {IconComponent ? (
+                  <IconComponent
+                    className="w-full h-full p-1"
+                    style={{ color: token.color, width: cellSize * (token.size || 1), height: cellSize * (token.size || 1) }}
+                  />
+                ) : (
+                  <circle
+                    cx={cellSize / 2 * (token.size || 1)}
+                    cy={cellSize / 2 * (token.size || 1)}
+                    r={cellSize / 2.5 * (token.size || 1)}
+                    fill={token.color}
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth="1"
+                  />
+                )}
+                {token.label && (
+                  <text
+                    x={cellSize / 2 * (token.size || 1)}
+                    y={cellSize / 2 * (token.size || 1)}
+                    textAnchor="middle"
+                    dy=".3em"
+                    fontSize={cellSize / 3}
+                    fill="hsl(var(--primary-foreground))"
+                    className="pointer-events-none select-none"
+                  >
+                    {token.label.substring(0,1).toUpperCase()}
+                  </text>
+                )}
+              </g>
+            );
+          }
         })}
       </svg>
     </div>
   );
 }
-
-    
