@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ColorToolPanelProps {
   activeTool: ActiveTool;
@@ -33,21 +34,26 @@ export default function ColorToolPanel({
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
         <div className="flex items-center">
-          <Palette className="mr-2 h-5 w-5" /> Select Color
+          <Palette className="mr-2 h-5 w-5" /> Color Painter
         </div>
-        <Input
-          id="color-picker-input-header"
-          type="color"
-          value={selectedColor}
-          onChange={(e) => setSelectedColor(e.target.value)}
-          className="w-10 h-10 p-1 border-none" // Adjusted for header placement
-          onFocus={() => setActiveTool('paint_cell')}
-        />
-      </div>
-      
-      <div>
-        {/* "Selected Color" label removed from here as it's now part of the header concept */}
-        {/* The input type="color" has been moved to the header */}
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Input
+                id="color-picker-input-header"
+                type="color"
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+                className="w-10 h-10 p-1 border-none"
+                onFocus={() => setActiveTool('paint_cell')}
+                aria-label="Custom color picker"
+              />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Custom Color</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       <div className="mt-3">
