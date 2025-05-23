@@ -260,7 +260,7 @@ export default function BattleGrid({
             startPoint: startP,
             endPoint: startP, // Initialize endPoint to startPoint
             color: activeTool === 'draw_line' ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-            fillColor: activeTool !== 'draw_line' ? 'hsla(var(--accent-hsl), 0.5)' : undefined, 
+            fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined, 
             strokeWidth: activeTool === 'draw_line' ? 2 : 1,
           });
         }
@@ -687,7 +687,7 @@ export default function BattleGrid({
                 backgroundFill = 'hsl(var(--muted))'; 
                 break;
                 case 'generic':
-                backgroundFill = 'hsl(30, 70%, 40%)'; 
+                backgroundFill = 'hsl(var(--accent))'; 
                 break;
                 default:
                 backgroundFill = 'black';
@@ -730,3 +730,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
