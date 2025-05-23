@@ -93,33 +93,28 @@ export default function BattleGrid({
 
     if (activeTool === 'select' && (event.button === 0 || event.button === 1)) {
         if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
-            // If click is outside grid boundaries, only pan if middle mouse or ctrl/meta + left
             if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
                  setIsPanning(true);
                  setPanStart({ x: event.clientX, y: event.clientY });
             }
             return;
         }
-        // Inside grid boundaries with select tool, left or middle click initiates pan
         setIsPanning(true);
         setPanStart({ x: event.clientX, y: event.clientY });
-        return; // Panning on grid background for select tool
+        return; 
     }
 
 
-    // For tools other than select, or specific select tool actions not caught above
     if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
       if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
-         // Allow panning outside grid for any tool if middle/ctrl+click
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
-      return; // Click is outside grid, and not a general pan action for other tools
+      return; 
     }
 
 
     switch (activeTool) {
-      // 'select' case is handled above for grid background clicks
       case 'paint_cell':
         setIsPainting(true);
         setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
@@ -172,7 +167,7 @@ export default function BattleGrid({
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
     if (activeTool !== 'select') return;
-    event.stopPropagation(); // Prevent grid's mousedown from firing (which would start panning)
+    event.stopPropagation(); 
     setDraggingToken(token);
     const pos = getMousePosition(event);
     setDragOffset({
@@ -199,7 +194,7 @@ export default function BattleGrid({
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingToken && dragOffset && activeTool === 'select') {
-      setHoveredCellWhilePaintingOrErasing(null); // No cell highlight when dragging a token
+      setHoveredCellWhilePaintingOrErasing(null); 
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -254,7 +249,6 @@ export default function BattleGrid({
            setHoveredCellWhilePaintingOrErasing(null);
         }
     } else {
-        // Clear hover highlight if no specific tool action is happening
         setHoveredCellWhilePaintingOrErasing(null);
     }
   };
@@ -297,8 +291,6 @@ export default function BattleGrid({
     }
     if (isMeasuring) {
       setIsMeasuring(false);
-      // Optionally clear measurement visuals if mouse leaves grid during measure
-      // setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
     }
     if (isErasing) {
         setIsErasing(false);
@@ -329,11 +321,11 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; // Max zoom in
-    const maxAllowedVw = baseContentWidth * 5;  // Max zoom out
+    const minAllowedVw = baseContentWidth / 10; 
+    const maxAllowedVw = baseContentWidth * 5;  
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; // Maintain aspect ratio
+    newVh = (newVw / vw) * vh; 
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
@@ -401,7 +393,7 @@ export default function BattleGrid({
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Make highlight border slightly thicker
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
               />
@@ -411,8 +403,8 @@ export default function BattleGrid({
         </g>
 
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9.5" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--accent))" />
+          <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
+            <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
           </marker>
         </defs>
 
@@ -457,7 +449,7 @@ export default function BattleGrid({
          {measurement.startPoint && (
            <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
          )}
-         {measurement.endPoint && measurement.result && ( // Only show endPoint circle if measurement is complete/has result
+         {measurement.endPoint && measurement.result && ( 
            <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
          )}
 
@@ -471,13 +463,25 @@ export default function BattleGrid({
           const iconOffset = (cellSize - iconDisplaySize) / 2;
 
           let backgroundFill = 'black'; // Default background
-            if (token.type === 'player') {
-            backgroundFill = 'hsl(120, 35%, 18%)'; // Dark Green
-            } else if (token.type === 'enemy') {
-            backgroundFill = 'hsl(0, 40%, 22%)';   // Dark Red
-            } else if (token.type === 'item') {
-            backgroundFill = 'hsl(270, 30%, 20%)'; // Dark Purple
-            }
+          switch (token.type) {
+            case 'player':
+              backgroundFill = 'hsl(120, 40%, 25%)'; // Dark Green
+              break;
+            case 'enemy':
+              backgroundFill = 'hsl(0, 60%, 30%)';   // Red
+              break;
+            case 'item':
+              backgroundFill = 'hsl(270, 40%, 30%)'; // Dark Purple
+              break;
+            case 'terrain':
+              backgroundFill = 'hsl(var(--muted))'; // Dark Gray (from theme)
+              break;
+            case 'generic': // Assuming 'generic' is a valid type; was item previously for color
+              backgroundFill = 'hsl(30, 70%, 40%)'; // Orange
+              break;
+            default:
+              backgroundFill = 'black';
+          }
 
 
           return (
@@ -497,7 +501,7 @@ export default function BattleGrid({
                 cy={cellSize / 2}
                 r={cellSize / 2}
                 fill={backgroundFill}
-                stroke={hoveredTokenId === token.id && activeTool === 'select' ? 'hsl(var(--accent))' : 'black'}
+                stroke={hoveredTokenId === token.id && activeTool === 'select' ? 'hsl(var(--accent))' : 'hsl(var(--primary-foreground))'}
                 strokeWidth="1"
               />
               {IconComponent && (
@@ -506,7 +510,7 @@ export default function BattleGrid({
                   y={iconOffset}
                   width={iconDisplaySize}
                   height={iconDisplaySize}
-                  color={'hsl(var(--primary-foreground))'} // White icon
+                  color={'hsl(var(--primary-foreground))'} 
                   strokeWidth={1.5}
                 />
               )}
