@@ -70,6 +70,7 @@ export default function BattleGrid({
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
@@ -141,8 +142,7 @@ export default function BattleGrid({
             shape.startPoint.x, shape.startPoint.y,
             shape.endPoint.x, shape.endPoint.y
           );
-          // Keep the shape if the cell center is further than a small threshold from the line
-          return distToLine > (shape.strokeWidth / 2 + 2); // e.g. half stroke width + 2px buffer
+          return distToLine > (shape.strokeWidth / 2 + 2); 
         } else if (shape.type === 'circle') {
           const distToCircleCenter = Math.sqrt(
             Math.pow(cellCenterX - shape.startPoint.x, 2) +
@@ -152,14 +152,12 @@ export default function BattleGrid({
             Math.pow(shape.endPoint.x - shape.startPoint.x, 2) +
             Math.pow(shape.endPoint.y - shape.startPoint.y, 2)
           );
-          // Keep the shape if the cell center is outside the circle
           return distToCircleCenter > radius;
         } else if (shape.type === 'square') {
           const rectX = Math.min(shape.startPoint.x, shape.endPoint.x);
           const rectY = Math.min(shape.startPoint.y, shape.endPoint.y);
           const rectWidth = Math.abs(shape.endPoint.x - shape.startPoint.x);
           const rectHeight = Math.abs(shape.endPoint.y - shape.startPoint.y);
-          // Keep the shape if the cell center is outside the square
           return !(
             cellCenterX >= rectX &&
             cellCenterX <= rectX + rectWidth &&
@@ -167,7 +165,7 @@ export default function BattleGrid({
             cellCenterY <= rectY + rectHeight
           );
         }
-        return true; // Keep unknown shapes
+        return true;
       })
     );
   };
@@ -258,7 +256,7 @@ export default function BattleGrid({
             id: `shape-${Date.now()}`,
             type: activeTool === 'draw_line' ? 'line' : activeTool === 'draw_circle' ? 'circle' : 'square',
             startPoint: startP,
-            endPoint: startP, // Initialize endPoint to startPoint
+            endPoint: startP, 
             color: activeTool === 'draw_line' ? 'hsl(var(--accent))' : 'hsl(var(--border))',
             fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined, 
             strokeWidth: activeTool === 'draw_line' ? 2 : 1,
@@ -277,6 +275,7 @@ export default function BattleGrid({
       x: pos.x - token.x * cellSize,
       y: pos.y - token.y * cellSize
     });
+    setDraggingTokenPosition(null); 
   };
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
@@ -297,6 +296,19 @@ export default function BattleGrid({
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingToken && dragOffset && activeTool === 'select') {
+      const currentMouseSvgPos = getMousePosition(event);
+      const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
+      const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
+
+      const gridX = Math.floor(newTargetTokenOriginX / cellSize);
+      const gridY = Math.floor(newTargetTokenOriginY / cellSize);
+      
+      const clampedGridX = Math.max(0, Math.min(gridX, GRID_SIZE - 1));
+      const clampedGridY = Math.max(0, Math.min(gridY, GRID_SIZE - 1));
+
+      if (!draggingTokenPosition || draggingTokenPosition.x !== clampedGridX || draggingTokenPosition.y !== clampedGridY) {
+        setDraggingTokenPosition({ x: clampedGridX, y: clampedGridY });
+      }
       setHoveredCellWhilePaintingOrErasing(null); 
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
@@ -354,14 +366,14 @@ export default function BattleGrid({
       setPanStart(null);
     }
     if (draggingToken && activeTool === 'select') {
-      const pos = getMousePosition(event);
-      const gridX = Math.floor(pos.x / cellSize);
-      const gridY = Math.floor(pos.y / cellSize);
-      if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
-        onTokenMove(draggingToken.id, gridX, gridY);
+      if (draggingTokenPosition) {
+        const finalX = Math.max(0, Math.min(draggingTokenPosition.x, GRID_SIZE - 1));
+        const finalY = Math.max(0, Math.min(draggingTokenPosition.y, GRID_SIZE - 1));
+        onTokenMove(draggingToken.id, finalX, finalY);
       }
       setDraggingToken(null);
       setDragOffset(null);
+      setDraggingTokenPosition(null);
     }
     if (isMeasuring) {
       setIsMeasuring(false);
@@ -391,6 +403,7 @@ export default function BattleGrid({
       setPanStart(null);
     }
     if (isMeasuring) {
+      // Optionally finalize measurement if mouse leaves while measuring
     }
     if (isErasing) {
         setIsErasing(false);
@@ -444,7 +457,8 @@ export default function BattleGrid({
 
  const getCursorStyle = () => {
     if (isPanning || (draggingToken && activeTool === 'select')) return 'cursor-grabbing';
-    if (activeTool === 'select') return 'cursor-default';
+    if (activeTool === 'select' && !draggingToken) return 'cursor-default'; // Default for select unless dragging a token
+    if (activeTool === 'select' && draggingToken) return 'cursor-grabbing'; // Ensure grabbing for token drag
     if ([
       'paint_cell', 
       'place_token', 
@@ -612,8 +626,8 @@ export default function BattleGrid({
 
 
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9.5" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--accent))" />
+          <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
+            <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
           </marker>
         </defs>
 
@@ -666,8 +680,14 @@ export default function BattleGrid({
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
 
-          const currentX = token.x;
-          const currentY = token.y;
+          let currentX = token.x;
+          let currentY = token.y;
+
+          if (draggingToken && token.id === draggingToken.id && draggingTokenPosition) {
+            currentX = draggingTokenPosition.x;
+            currentY = draggingTokenPosition.y;
+          }
+
 
           const iconDisplaySize = cellSize * 0.8;
           const iconOffset = (cellSize - iconDisplaySize) / 2;
