@@ -108,6 +108,10 @@ export default function FloatingToolbar({
     setIsTokenPlacerPopoverOpen(false); // Close popover when a token is selected
   };
 
+  const handleColorSelected = () => {
+    setIsColorPainterPopoverOpen(false); // Close popover when a color is selected
+  };
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
@@ -200,7 +204,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Tokens & Terrain"
             icon={Users}
-            onClick={() => {
+             onClick={() => {
                 handleToolClick('token_placer_tool');
                 setIsTokenPlacerPopoverOpen(prev => !prev);
             }}
@@ -255,6 +259,7 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               selectedColor={selectedColor}
               setSelectedColor={setSelectedColor}
+              onColorSelect={handleColorSelected}
             />
           </PopoverContent>
         </Popover>
