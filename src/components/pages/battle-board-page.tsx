@@ -2,14 +2,26 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
+import { LandPlot, Play, SkipForward, Square, PlusCircle, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const GRID_ROWS = 30;
 const GRID_COLS = 30;
@@ -32,7 +44,7 @@ export default function BattleBoardPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
   const [roundCounter, setRoundCounter] = useState<number>(1);
-  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false);
+  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false); // Kept for now
   const [isCombatActive, setIsCombatActive] = useState<boolean>(false);
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
@@ -43,6 +55,16 @@ export default function BattleBoardPage() {
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
   const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
 
+  // State for Add Combatant Dialog (moved from InitiativeTrackerPanel)
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newParticipantName, setNewParticipantName] = useState('');
+  const [newParticipantInitiative, setNewParticipantInitiative] = useState('10');
+  const [isEditingInitiative, setIsEditingInitiative] = useState(false);
+  const [newParticipantHp, setNewParticipantHp] = useState('10');
+  const [isEditingHp, setIsEditingHp] = useState(false);
+  const [newParticipantAc, setNewParticipantAc] = useState('10');
+  const [isEditingAc, setIsEditingAc] = useState(false);
+  const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
 
   const { toast } = useToast();
 
@@ -55,12 +77,10 @@ export default function BattleBoardPage() {
         result: undefined
       });
     } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') {
-       // Clear measurement if switching away from a measurement tool
        if (measurement.startPoint || measurement.endPoint || measurement.result) {
         setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
       }
     }
-    // Clear current drawing shape if tool changes away from drawing
     if (currentDrawingShape && !['draw_line', 'draw_circle', 'draw_square'].includes(activeTool)) {
       setCurrentDrawingShape(null);
     }
@@ -103,7 +123,7 @@ export default function BattleBoardPage() {
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    setCurrentParticipantIndex(-1);
+    // setCurrentParticipantIndex(-1); // Keep current participant for reference, or reset if desired
     toast({ title: "Combat Ended."});
   };
 
@@ -141,17 +161,29 @@ export default function BattleBoardPage() {
       if (isCombatActive) {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         let newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-        if (newActiveIndex === -1 && newList.length > 0 && currentParticipantIndex >=0) {
-          newActiveIndex = (currentParticipantIndex < newList.length) ? currentParticipantIndex : 0;
-        } else if (newActiveIndex === -1 && newList.length > 0){
-          newActiveIndex = 0;
+        
+        if (newActiveIndex === -1 && newList.length > 0) { // If current active was removed or not found
+            newActiveIndex = (currentParticipantIndex < newList.length && currentParticipantIndex >=0) ? currentParticipantIndex : 0;
+        } else if (newActiveIndex === -1 && newList.length > 0) { // Fallback if no previous active
+            newActiveIndex = 0;
+        } else if (oldActiveParticipantId && newActiveIndex === -1 && prev.length > 0) { // If old active existed but gone now
+             newActiveIndex = Math.min(currentParticipantIndex, newList.length -1);
         }
-        setCurrentParticipantIndex(newActiveIndex);
-      } else {
-        if (newList.length === 1 && currentParticipantIndex === -1) {
-          setCurrentParticipantIndex(0);
-        } else if (prev.length === 0 && newList.length > 0) {
+
+
+        setCurrentParticipantIndex(newActiveIndex === -1 && newList.length > 0 ? 0 : newActiveIndex);
+
+      } else { // Combat not active
+        if (prev.length === 0 && newList.length > 0) { // First participant added
            setCurrentParticipantIndex(0);
+        } else if (newList.length > prev.length) { // Adding to existing list, keep current index if valid, else adjust
+            const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
+            const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
+            if (newActiveIndex !== -1) {
+                 setCurrentParticipantIndex(newActiveIndex);
+            } else if (newList.length > 0) {
+                 setCurrentParticipantIndex(0); // Or some other logic if current becomes invalid
+            }
         }
       }
       return newList;
@@ -159,45 +191,46 @@ export default function BattleBoardPage() {
     toast({ title: "Participant Added", description: `${newParticipant.name} added.` });
   };
 
-  const handleRemoveParticipantFromList = (id: string) => {
-    setParticipants(prev => {
-      const participantToRemove = prev.find(p => p.id === id);
-      if (!participantToRemove) return prev;
-
-      const isRemovingCurrentTurn = prev[currentParticipantIndex]?.id === id;
-      const filteredList = prev.filter(p => p.id !== id);
-
-      if (filteredList.length === 0) {
+  const handleRemoveParticipantFromList = (idToRemove: string) => {
+    setParticipants(prevParticipants => {
+      const participantToRemove = prevParticipants.find(p => p.id === idToRemove);
+      if (!participantToRemove) return prevParticipants;
+  
+      const isRemovingCurrentTurn = prevParticipants[currentParticipantIndex]?.id === idToRemove;
+      const newList = prevParticipants.filter(p => p.id !== idToRemove);
+  
+      if (newList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else if (isRemovingCurrentTurn) {
-        // If removing current, advance to next (or 0 if current was last)
-        // The modulo handles wrapping around
-        setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
+        // If removing current, the new index should be the same, effectively advancing.
+        // The list is shorter, so modulo might be needed if it was the last one.
+        setCurrentParticipantIndex(currentParticipantIndex % newList.length);
       } else {
-        // If removing someone else, find the current active participant's new index
-        const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-        const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
+        // If removing someone else, find the current active participant's new index.
+        // This is important if the removed participant was before the current one.
+        const oldActiveParticipantId = prevParticipants[currentParticipantIndex]?.id;
+        const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
         if (newActiveIndex !== -1) {
           setCurrentParticipantIndex(newActiveIndex);
         } else {
-          // This case should ideally not happen if logic is correct,
-          // but as a fallback, reset to 0 or maintain if still valid.
-          setCurrentParticipantIndex(currentParticipantIndex >= filteredList.length ? 0 : currentParticipantIndex);
+          // Fallback: if current active is somehow not in new list (should not happen if not removing current)
+          // or if no current active, reset to 0.
+          setCurrentParticipantIndex(currentParticipantIndex >= newList.length ? 0 : currentParticipantIndex);
         }
       }
-      return filteredList;
+      return newList;
     });
     toast({ title: "Participant Removed" });
   };
   
 
-  const handleResetInitiativeAndCombat = () => {
-    setParticipants([]);
-    setCurrentParticipantIndex(-1);
-    setRoundCounter(1);
-    setIsCombatActive(false);
-    toast({ title: "Turn Order Reset & Combat Ended" });
-  };
+  // const handleResetInitiativeAndCombat = () => { // Button was removed previously
+  //   setParticipants([]);
+  //   setCurrentParticipantIndex(-1);
+  //   setRoundCounter(1);
+  //   setIsCombatActive(false);
+  //   toast({ title: "Turn Order Reset & Combat Ended" });
+  // };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -210,10 +243,133 @@ export default function BattleBoardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]);
 
+  // Form submission logic for Add Combatant Dialog
+  const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newParticipantName.trim() || !newParticipantInitiative.trim()) {
+      toast({ title: "Error", description: "Name and initiative are required.", variant: "destructive" });
+      return;
+    }
+    const initiativeValue = parseInt(newParticipantInitiative, 10);
+    if (isNaN(initiativeValue)) {
+      toast({ title: "Error", description: "Initiative must be a number.", variant: "destructive" });
+      return;
+    }
+
+    const hpString = newParticipantHp.trim();
+    const acString = newParticipantAc.trim();
+
+    const hpValue = hpString === '' ? undefined : parseInt(hpString, 10);
+    const acValue = acString === '' ? undefined : parseInt(acString, 10);
+    
+    if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
+      toast({ title: "Error", description: "Health Points must be a non-negative number or empty.", variant: "destructive" });
+      return;
+    }
+    if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
+      toast({ title: "Error", description: "Armor Class must be a non-negative number or empty.", variant: "destructive" });
+      return;
+    }
+
+    const newParticipantData: Omit<Participant, 'id'> = {
+      name: newParticipantName.trim(),
+      initiative: initiativeValue,
+      type: newParticipantType,
+      hp: hpValue,
+      ac: acValue,
+    };
+
+    handleAddParticipantToList(newParticipantData);
+
+    setNewParticipantName('');
+    setNewParticipantInitiative('10'); 
+    setIsEditingInitiative(false); 
+    setNewParticipantHp('10');
+    setIsEditingHp(false);
+    setNewParticipantAc('10');
+    setIsEditingAc(false);
+    setNewParticipantType('player'); 
+    setDialogOpen(false);
+  };
+  
+  // Numeric input renderer for Add Combatant Dialog
+  const renderNumericInput = (
+    value: string,
+    setValue: Dispatch<SetStateAction<string>>,
+    isEditing: boolean,
+    setIsEditing: Dispatch<SetStateAction<boolean>>,
+    label: string,
+    idPrefix: string,
+    optional: boolean = false
+  ) => (
+    <div className="flex-1 space-y-1">
+      <Label htmlFor={`${idPrefix}-display`}>{label}</Label>
+      {isEditing ? (
+        <Input
+          id={`${idPrefix}-input`}
+          type="number"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => {
+            if (optional && value.trim() === '') {
+               // Keep it empty if optional and user cleared it
+            } else {
+              const num = parseInt(value, 10);
+              if (isNaN(num) || (!optional && num < 0) || (optional && num <0 && value.trim() !== '')) {
+                setValue('10'); // Default or reset invalid non-optional / negative values
+              } else if (optional && num < 0 && value.trim() !== '') {
+                setValue('0'); // If optional and negative, set to 0, or handle as desired
+              }
+            }
+            setIsEditing(false);
+          }}
+          autoFocus
+          className="w-full text-center"
+        />
+      ) : (
+        <div className="flex items-center gap-1 mt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => {
+              const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0);
+              setValue(String(Math.max((optional ? -Infinity : 0), currentValue - 1)));
+            }}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            id={`${idPrefix}-display`}
+            onClick={() => setIsEditing(true)}
+            className="h-8 px-2 text-base w-full justify-center"
+          >
+            {value || (optional ? 'N/A' : '10')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => {
+              const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0);
+              setValue(String(currentValue + 1));
+            }}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
 
   return (
     <div className="flex h-screen">
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-battle-grid-bg">
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
@@ -261,17 +417,81 @@ export default function BattleBoardPage() {
               participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}
               roundCounter={roundCounter}
-              isAutoAdvanceOn={isAutoAdvanceOn}
-              setIsAutoAdvanceOn={setIsAutoAdvanceOn}
-              onAddParticipant={handleAddParticipantToList}
+              // isAutoAdvanceOn={isAutoAdvanceOn} // Kept for now
+              // setIsAutoAdvanceOn={setIsAutoAdvanceOn} // Kept for now
               onRemoveParticipant={handleRemoveParticipantFromList}
-              onResetInitiative={handleResetInitiativeAndCombat}
+              // onResetInitiative={handleResetInitiativeAndCombat} // Button was removed previously
             />
           </SidebarContent>
-          {/* "Load from QuestFlow" section removed */}
+          
+          <div className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Combatant
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Combatant</DialogTitle>
+                  <DialogDescription>
+                    Enter the details for the new combatant to add to the turn order.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
+                  <div>
+                    <Label htmlFor="participant-name-dialog">Name</Label>
+                    <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" />
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog")}
+                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health Points", "participant-hp-dialog", true)}
+                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor Class", "participant-ac-dialog", true)}
+                  </div>
+
+                  <div>
+                    <Label>Type</Label>
+                    <div className="flex space-x-2 mt-1">
+                      <Button
+                        type="button"
+                        variant={newParticipantType === 'player' ? 'default' : 'outline'}
+                        onClick={() => setNewParticipantType('player')}
+                        className="flex-1"
+                      >
+                        Player
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={newParticipantType === 'enemy' ? 'default' : 'outline'}
+                        onClick={() => setNewParticipantType('enemy')}
+                        className="flex-1"
+                      >
+                        Enemy
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={newParticipantType === 'ally' ? 'default' : 'outline'}
+                        onClick={() => setNewParticipantType('ally')}
+                        className="flex-1"
+                      >
+                        Ally
+                      </Button>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">
+                      Add to Turn Order
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
-              <Button onClick={handleStartCombat} className="w-full">
+              <Button onClick={handleStartCombat} className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground">
                 <Play className="mr-2 h-4 w-4" /> Start Combat
               </Button>
             ) : (
@@ -290,4 +510,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-
