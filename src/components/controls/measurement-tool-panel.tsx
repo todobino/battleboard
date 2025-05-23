@@ -4,7 +4,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Measurement } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Ruler, Maximize } from 'lucide-react';
+import { Ruler, Circle } from 'lucide-react'; // Changed Maximize to Circle, Ruler kept for now
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -13,24 +13,21 @@ interface MeasurementToolPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
   measurement: Measurement;
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
+  onToolSelect?: () => void; // Callback to close popover
 }
 
 export default function MeasurementToolPanel({
-  activeTool, setActiveTool, measurement, setMeasurement
+  activeTool, setActiveTool, measurement, setMeasurement, onToolSelect
 }: MeasurementToolPanelProps) {
 
   const handleToolSelect = (tool: 'measure_distance' | 'measure_radius') => {
     setActiveTool(tool);
-    // Reset measurement when a tool is selected to ensure a fresh start
-    // BattleGrid's mousedown will now initialize the measurement.
-    // BattleBoardPage's useEffect on activeTool also clears measurement.
     setMeasurement({ type: tool, startPoint: undefined, endPoint: undefined, result: undefined });
+    onToolSelect?.(); // Close the popover
   };
-  
+
   const clearMeasurement = () => {
     setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
-    // Optionally, set activeTool back to 'select' or keep the measurement tool active
-    // setActiveTool('select'); 
   };
 
   return (
@@ -49,7 +46,7 @@ export default function MeasurementToolPanel({
           variant={activeTool === 'measure_radius' ? "default" : "outline"}
           onClick={() => handleToolSelect('measure_radius')}
         >
-          <Maximize className="mr-2 h-4 w-4" /> Radius
+          <Circle className="mr-2 h-4 w-4" /> Radius
         </Button>
       </div>
       {(activeTool === 'measure_distance' || activeTool === 'measure_radius') && (

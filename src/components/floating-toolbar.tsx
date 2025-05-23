@@ -5,7 +5,7 @@ import type { ActiveTool, Token, Measurement, DrawnShape } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -34,27 +34,26 @@ interface FloatingToolbarProps {
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
-  // Props for Shape Tools will be managed internally or via BattleBoardPage if shapes are persisted
 }
 
 interface ToolButtonProps {
   label: string;
   icon: React.ElementType;
-  tool?: ActiveTool | ActiveTool[]; 
+  tool?: ActiveTool | ActiveTool[];
   currentActiveTool?: ActiveTool;
   onClick?: () => void;
   children?: React.ReactNode;
   asChild?: boolean;
   variantOverride?: "default" | "outline";
-  isActive?: boolean; 
+  isActive?: boolean;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive }) => {
-  let isButtonActive = isActive; 
-  if (isButtonActive === undefined && tool && currentActiveTool) { 
+  let isButtonActive = isActive;
+  if (isButtonActive === undefined && tool && currentActiveTool) {
     isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
   }
-  
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -101,24 +100,30 @@ export default function FloatingToolbar({
     if (setActiveTool) {
       setActiveTool(tool);
     }
-    // Close other popovers
-    if (tool !== 'map_tool') setIsMapSettingsPopoverOpen(false);
-    if (!['measure_distance', 'measure_radius'].includes(tool)) setIsMeasurementPopoverOpen(false);
-    if (!['token_placer_tool', 'place_token'].includes(tool)) setIsTokenPlacerPopoverOpen(false);
-    if (tool !== 'paint_cell') setIsColorPainterPopoverOpen(false);
-    if (!['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) setIsShapeToolPopoverOpen(false);
+    // Close other popovers if they are not the one being interacted with
+    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius', 'drafting_compass_tool'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) {
+        setIsMapSettingsPopoverOpen(false);
+        setIsMeasurementPopoverOpen(false);
+        setIsTokenPlacerPopoverOpen(false);
+        setIsColorPainterPopoverOpen(false);
+        setIsShapeToolPopoverOpen(false);
+    }
   };
 
   const handleTokenTemplateSelected = () => {
-    setIsTokenPlacerPopoverOpen(false); 
+    setIsTokenPlacerPopoverOpen(false);
   };
 
   const handleColorSelected = () => {
     setIsColorPainterPopoverOpen(false);
   };
-  
+
   const handleShapeToolSelected = () => {
     setIsShapeToolPopoverOpen(false);
+  };
+
+  const handleMeasurementToolSelected = () => {
+    setIsMeasurementPopoverOpen(false);
   };
 
   return (
@@ -173,17 +178,20 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
+              requestCloseContainingPopover={() => setIsMapSettingsPopoverOpen(false)}
             />
           </PopoverContent>
         </Popover>
-        
+
         <Popover open={isMeasurementPopoverOpen} onOpenChange={setIsMeasurementPopoverOpen}>
            <ToolButton
             label="Measurement Tools"
             icon={DraftingCompass}
             onClick={() => {
-                handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance'); 
+                // No specific tool set here, popover opens for selection
                 setIsMeasurementPopoverOpen(prev => !prev);
+                // Optionally, set a general measurement tool category if needed
+                // handleToolClick('measurement_category');
             }}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
             asChild
@@ -205,6 +213,7 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               measurement={measurement}
               setMeasurement={setMeasurement}
+              onToolSelect={handleMeasurementToolSelected}
             />
           </PopoverContent>
         </Popover>
@@ -239,7 +248,7 @@ export default function FloatingToolbar({
             />
           </PopoverContent>
         </Popover>
-        
+
         <Popover open={isColorPainterPopoverOpen} onOpenChange={setIsColorPainterPopoverOpen}>
           <ToolButton
             label="Color Painter"
@@ -314,4 +323,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
