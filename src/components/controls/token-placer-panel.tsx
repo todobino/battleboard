@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 
 interface TokenPlacerPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
   setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  onTokenTemplateSelect?: () => void; // Callback to close popover
 }
 
 const tokenTemplates: TokenTemplate[] = [
@@ -18,23 +20,25 @@ const tokenTemplates: TokenTemplate[] = [
   { name: 'Enemy', color: 'hsl(0, 60%, 30%)', icon: EnemyIcon, type: 'enemy' },
   { name: 'Item', color: 'hsl(270, 40%, 30%)', icon: ItemIcon, type: 'item' },
   { name: 'Terrain', color: 'hsl(var(--muted))', icon: TerrainIcon, type: 'terrain' },
-  { name: 'Generic', color: 'hsl(var(--accent))', icon: GenericTokenIcon, type: 'generic' }, // Updated to theme accent orange
+  { name: 'Generic', color: 'hsl(var(--accent))', icon: GenericTokenIcon, type: 'generic' },
 ];
 
 export default function TokenPlacerPanel({
   setActiveTool,
   setSelectedTokenTemplate,
+  onTokenTemplateSelect,
 }: TokenPlacerPanelProps) {
 
   const handleSelectTokenTemplate = (template: TokenTemplate) => {
     setSelectedTokenTemplate({
-      color: template.color, // This color is used by the token on the grid
+      color: template.color,
       icon: template.icon,
       type: template.type,
       label: template.name,
       size: 1,
     });
     setActiveTool('place_token');
+    onTokenTemplateSelect?.(); // Call the callback to close the popover
   };
 
   return (
@@ -50,7 +54,10 @@ export default function TokenPlacerPanel({
             <Button
               key={template.name}
               variant="outline"
-              className="h-auto flex flex-col items-center p-2 space-y-1"
+              className={cn(
+                "h-auto flex flex-col items-center p-2 space-y-1",
+                "hover:border-accent" // Add orange border on hover
+              )}
               style={{ backgroundColor: template.color }}
               onClick={() => handleSelectTokenTemplate(template)}
               aria-label={`Place ${template.name} token`}
@@ -65,3 +72,4 @@ export default function TokenPlacerPanel({
     </div>
   );
 }
+
