@@ -15,7 +15,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
+  DialogFooter as FormDialogFooter, // Renamed to avoid conflict with SidebarFooter
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -44,7 +44,7 @@ export default function BattleBoardPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
   const [roundCounter, setRoundCounter] = useState<number>(1);
-  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false); // Kept for now
+  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false);
   const [isCombatActive, setIsCombatActive] = useState<boolean>(false);
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
@@ -55,7 +55,7 @@ export default function BattleBoardPage() {
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
   const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
 
-  // State for Add Combatant Dialog (moved from InitiativeTrackerPanel)
+  // State for Add Combatant Dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantInitiative, setNewParticipantInitiative] = useState('10');
@@ -162,27 +162,27 @@ export default function BattleBoardPage() {
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         let newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
         
-        if (newActiveIndex === -1 && newList.length > 0) { // If current active was removed or not found
+        if (newActiveIndex === -1 && newList.length > 0) { 
             newActiveIndex = (currentParticipantIndex < newList.length && currentParticipantIndex >=0) ? currentParticipantIndex : 0;
-        } else if (newActiveIndex === -1 && newList.length > 0) { // Fallback if no previous active
+        } else if (newActiveIndex === -1 && newList.length > 0) { 
             newActiveIndex = 0;
-        } else if (oldActiveParticipantId && newActiveIndex === -1 && prev.length > 0) { // If old active existed but gone now
+        } else if (oldActiveParticipantId && newActiveIndex === -1 && prev.length > 0) { 
              newActiveIndex = Math.min(currentParticipantIndex, newList.length -1);
         }
 
 
         setCurrentParticipantIndex(newActiveIndex === -1 && newList.length > 0 ? 0 : newActiveIndex);
 
-      } else { // Combat not active
-        if (prev.length === 0 && newList.length > 0) { // First participant added
+      } else { 
+        if (prev.length === 0 && newList.length > 0) { 
            setCurrentParticipantIndex(0);
-        } else if (newList.length > prev.length) { // Adding to existing list, keep current index if valid, else adjust
+        } else if (newList.length > prev.length) { 
             const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
             const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
             if (newActiveIndex !== -1) {
                  setCurrentParticipantIndex(newActiveIndex);
             } else if (newList.length > 0) {
-                 setCurrentParticipantIndex(0); // Or some other logic if current becomes invalid
+                 setCurrentParticipantIndex(0); 
             }
         }
       }
@@ -202,19 +202,13 @@ export default function BattleBoardPage() {
       if (newList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else if (isRemovingCurrentTurn) {
-        // If removing current, the new index should be the same, effectively advancing.
-        // The list is shorter, so modulo might be needed if it was the last one.
         setCurrentParticipantIndex(currentParticipantIndex % newList.length);
       } else {
-        // If removing someone else, find the current active participant's new index.
-        // This is important if the removed participant was before the current one.
         const oldActiveParticipantId = prevParticipants[currentParticipantIndex]?.id;
         const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
         if (newActiveIndex !== -1) {
           setCurrentParticipantIndex(newActiveIndex);
         } else {
-          // Fallback: if current active is somehow not in new list (should not happen if not removing current)
-          // or if no current active, reset to 0.
           setCurrentParticipantIndex(currentParticipantIndex >= newList.length ? 0 : currentParticipantIndex);
         }
       }
@@ -223,15 +217,6 @@ export default function BattleBoardPage() {
     toast({ title: "Participant Removed" });
   };
   
-
-  // const handleResetInitiativeAndCombat = () => { // Button was removed previously
-  //   setParticipants([]);
-  //   setCurrentParticipantIndex(-1);
-  //   setRoundCounter(1);
-  //   setIsCombatActive(false);
-  //   toast({ title: "Turn Order Reset & Combat Ended" });
-  // };
-
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
@@ -369,7 +354,7 @@ export default function BattleBoardPage() {
 
   return (
     <div className="flex h-screen">
-      <div className="flex-1 relative bg-battle-grid-bg">
+      <div className="flex-1 relative"> {/* Container for grid and toolbar */}
           <BattleGrid
             gridCells={gridCells}
             setGridCells={setGridCells}
@@ -417,10 +402,7 @@ export default function BattleBoardPage() {
               participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}
               roundCounter={roundCounter}
-              // isAutoAdvanceOn={isAutoAdvanceOn} // Kept for now
-              // setIsAutoAdvanceOn={setIsAutoAdvanceOn} // Kept for now
               onRemoveParticipant={handleRemoveParticipantFromList}
-              // onResetInitiative={handleResetInitiativeAndCombat} // Button was removed previously
             />
           </SidebarContent>
           
@@ -479,11 +461,11 @@ export default function BattleBoardPage() {
                       </Button>
                     </div>
                   </div>
-                  <DialogFooter>
+                  <FormDialogFooter>
                     <Button type="submit">
                       Add to Turn Order
                     </Button>
-                  </DialogFooter>
+                  </FormDialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -496,7 +478,7 @@ export default function BattleBoardPage() {
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button onClick={handleAdvanceTurn} className="flex-1">
+                <Button onClick={handleAdvanceTurn} className="flex-1 bg-blue-600 hover:bg-blue-700 text-primary-foreground">
                   <SkipForward className="mr-2 h-4 w-4" /> Next Turn
                 </Button>
                 <Button onClick={handleEndCombat} variant="destructive" className="flex-1">
