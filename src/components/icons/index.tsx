@@ -1,10 +1,10 @@
 import React from 'react';
-import { UserRound, ShieldAlert, Circle, Mountain, Trees, Waves, HelpCircle, CircleUserRound, Box } from 'lucide-react';
+import { CircleUserRound, Swords, Box, Mountain, HelpCircle } from 'lucide-react'; // Changed ShieldAlert to Swords
 
-export const PlayerIcon = CircleUserRound; // Changed from UserRound
-export const EnemyIcon = ShieldAlert;
-export const ItemIcon = Box; // Changed from Circle
-export const TerrainIcon = Mountain; // Default terrain icon
+export const PlayerIcon = CircleUserRound;
+export const EnemyIcon = Swords; // Changed from ShieldAlert
+export const ItemIcon = Box;
+export const TerrainIcon = Mountain;
 export const GenericTokenIcon = HelpCircle;
 
 // Example of a simple custom SVG icon if needed
