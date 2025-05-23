@@ -18,7 +18,7 @@ const tokenTemplates: TokenTemplate[] = [
   { name: 'Enemy', color: 'hsl(0, 60%, 30%)', icon: EnemyIcon, type: 'enemy' },
   { name: 'Item', color: 'hsl(270, 40%, 30%)', icon: ItemIcon, type: 'item' },
   { name: 'Terrain', color: 'hsl(var(--muted))', icon: TerrainIcon, type: 'terrain' },
-  { name: 'Generic', color: 'hsl(50, 95%, 55%)', icon: GenericTokenIcon, type: 'generic' }, // Updated to yellow
+  { name: 'Generic', color: 'hsl(var(--accent))', icon: GenericTokenIcon, type: 'generic' }, // Updated to theme accent orange
 ];
 
 export default function TokenPlacerPanel({
@@ -50,13 +50,13 @@ export default function TokenPlacerPanel({
             <Button
               key={template.name}
               variant="outline"
-              className="h-auto flex flex-col items-center p-2 space-y-1" // Removed bg-card and hover:bg-muted
-              style={{ backgroundColor: template.color }} // Set dynamic background color
+              className="h-auto flex flex-col items-center p-2 space-y-1"
+              style={{ backgroundColor: template.color }}
               onClick={() => handleSelectTokenTemplate(template)}
               aria-label={`Place ${template.name} token`}
             >
-              {Icon && <Icon className="h-6 w-6" color={"hsl(var(--primary-foreground))"} />} {/* Icon color white */}
-              <span className="text-xs text-primary-foreground">{template.name}</span> {/* Text color white */}
+              {Icon && <Icon className="h-6 w-6" color={"hsl(var(--primary-foreground))"} />}
+              <span className="text-xs text-primary-foreground">{template.name}</span>
             </Button>
             );
           })}
