@@ -8,8 +8,7 @@ import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Play, SkipForward, Square, ListOrdered } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const GRID_ROWS = 30;
@@ -269,11 +268,7 @@ export default function BattleBoardPage() {
               onResetInitiative={handleResetInitiativeAndCombat}
             />
           </SidebarContent>
-          <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-            <Button className="w-full opacity-50 cursor-not-allowed" disabled>
-              Load from QuestFlow
-            </Button>
-          </div>
+          {/* "Load from QuestFlow" section removed */}
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
               <Button onClick={handleStartCombat} className="w-full">
