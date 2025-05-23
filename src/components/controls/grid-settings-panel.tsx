@@ -24,7 +24,6 @@ interface GridSettingsPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
-  requestCloseContainingPopover?: () => void;
 }
 
 const defaultBattlemaps = [
@@ -48,7 +47,6 @@ export default function GridSettingsPanel({
   setActiveTool,
   backgroundZoomLevel,
   setBackgroundZoomLevel,
-  requestCloseContainingPopover,
 }: GridSettingsPanelProps) {
   const { toast } = useToast();
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
@@ -68,8 +66,7 @@ export default function GridSettingsPanel({
       const reader = new FileReader();
       reader.onloadend = () => {
         setUncroppedImageSrc(reader.result as string);
-        requestCloseContainingPopover?.(); // Close the map settings popover
-        setIsCropDialogOpen(true); // Then open the crop dialog
+        setIsCropDialogOpen(true); // Open the crop dialog
         event.target.value = ''; // Reset file input
       };
       reader.readAsDataURL(file);
@@ -82,7 +79,6 @@ export default function GridSettingsPanel({
     setUncroppedImageSrc(null);
     setBackgroundZoomLevel(1); // Reset zoom when new image is set
     toast({ title: 'Background Image Updated' });
-    // requestCloseContainingPopover?.(); // Already closed when crop dialog opened, but ensures if it was somehow reopened.
   };
 
   const handleCropCancel = () => {
@@ -94,7 +90,6 @@ export default function GridSettingsPanel({
     setBackgroundImageUrl(url);
     setBackgroundZoomLevel(1); // Reset zoom for default maps
     toast({ title: 'Default Battlemap Selected' });
-    requestCloseContainingPopover?.();
   };
 
   return (
@@ -119,7 +114,7 @@ export default function GridSettingsPanel({
 
       {/* Main content row: Default Maps & Upload or Zoom */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Default Maps & Zoom slider */}
+        {/* Left Column: Default Maps */}
         <div className="lg:w-3/5 space-y-4">
           <div>
             <Label className="text-popover-foreground flex items-center">Default Battlemaps</Label>
@@ -165,6 +160,49 @@ export default function GridSettingsPanel({
                 </Button>
               )}
           </div>
+        </div>
+
+        {/* Right Column: Image Uploader & Zoom */}
+        <div className="lg:w-2/5 space-y-4">
+          <div>
+            <Label
+              htmlFor="background-image-upload-popover-main"
+              className="text-popover-foreground flex items-center"
+            >
+              Upload Background
+            </Label>
+            <Label
+              htmlFor="background-image-upload-popover-main"
+              className={cn(
+                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer',
+                'bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors'
+              )}
+            >
+              <ImageUp className="h-8 w-8 mb-2" />
+              <span className="text-sm">Click or drag to upload</span>
+            </Label>
+            <Input
+              id="background-image-upload-popover-main"
+              type="file"
+              accept="image/*"
+              onChange={handleBackgroundImageUpload}
+              className="hidden"
+            />
+            {backgroundImageUrl &&
+              !defaultBattlemaps.some((m) => m.url === backgroundImageUrl) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBackgroundImageUrl(null);
+                    setBackgroundZoomLevel(1);
+                  }}
+                  className="w-full mt-2"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Background
+                </Button>
+              )}
+          </div>
           
           {backgroundImageUrl && (
             <div className="space-y-2 pt-2">
@@ -186,47 +224,6 @@ export default function GridSettingsPanel({
               />
             </div>
           )}
-        </div>
-
-        {/* Right Column: Image Uploader */}
-        <div className="lg:w-2/5 space-y-2">
-          <Label
-            htmlFor="background-image-upload-popover-main"
-            className="text-popover-foreground flex items-center"
-          >
-            Upload Background
-          </Label>
-          <Label
-            htmlFor="background-image-upload-popover-main"
-            className={cn(
-              'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer',
-              'bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors'
-            )}
-          >
-            <ImageUp className="h-8 w-8 mb-2" />
-            <span className="text-sm">Click or drag to upload</span>
-          </Label>
-          <Input
-            id="background-image-upload-popover-main"
-            type="file"
-            accept="image/*"
-            onChange={handleBackgroundImageUpload}
-            className="hidden"
-          />
-          {backgroundImageUrl &&
-            !defaultBattlemaps.some((m) => m.url === backgroundImageUrl) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setBackgroundImageUrl(null);
-                  setBackgroundZoomLevel(1);
-                }}
-                className="w-full"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Background
-              </Button>
-            )}
         </div>
       </div>
 

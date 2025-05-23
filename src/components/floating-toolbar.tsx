@@ -101,7 +101,7 @@ export default function FloatingToolbar({
       setActiveTool(tool);
     }
     // Close other popovers if they are not the one being interacted with
-    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius', 'drafting_compass_tool'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) {
+    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) {
         setIsMapSettingsPopoverOpen(false);
         setIsMeasurementPopoverOpen(false);
         setIsTokenPlacerPopoverOpen(false);
@@ -178,7 +178,6 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
-              requestCloseContainingPopover={() => setIsMapSettingsPopoverOpen(false)}
             />
           </PopoverContent>
         </Popover>
@@ -188,10 +187,7 @@ export default function FloatingToolbar({
             label="Measurement Tools"
             icon={DraftingCompass}
             onClick={() => {
-                // No specific tool set here, popover opens for selection
                 setIsMeasurementPopoverOpen(prev => !prev);
-                // Optionally, set a general measurement tool category if needed
-                // handleToolClick('measurement_category');
             }}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
             asChild
