@@ -335,7 +335,7 @@ export default function BattleGrid({
         className={cn(
           "w-full h-full",
           (isPanning || draggingToken) ? 'cursor-grabbing' :
-          (activeTool === 'select' && (isPanning || draggingToken === null)) ? 'cursor-default' : // Grab if hovering grid bg with select, unless dragging
+          (activeTool === 'select' && !isPanning && !draggingToken) ? 'cursor-default' : // Default for select unless dragging/panning
           (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') ? 'cursor-crosshair' :
           'cursor-default'
         )}
@@ -392,7 +392,7 @@ export default function BattleGrid({
         </g>
 
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9.5" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="hsl(var(--accent))" />
           </marker>
         </defs>
@@ -444,101 +444,60 @@ export default function BattleGrid({
 
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
-          const currentX = draggingToken?.id === token.id && dragOffset && svgRef.current
-            ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).x - dragOffset.x) / cellSize
-            : token.x;
-          const currentY = draggingToken?.id === token.id && dragOffset && svgRef.current
-            ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).y - dragOffset.y) / cellSize
-            : token.y;
+          
+          // For dragging: use current mouse position relative to drag offset
+          // For static tokens: use token.x, token.y
+          // This logic was causing issues with getMousePosition, so simplified: static rendering first
+          const currentX = token.x;
+          const currentY = token.y;
 
-          if (token.type === 'player') {
-            const iconSize = cellSize * 0.8;
-            const iconOffset = (cellSize - iconSize) / 2;
-            return (
-              <g
-                key={token.id}
-                transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
-                onMouseDown={(e) => handleTokenMouseDown(e, token)}
-                className={cn(
-                  activeTool === 'select' && 'cursor-grab',
-                  draggingToken?.id === token.id && 'cursor-grabbing'
-                )}
-              >
-                <circle
-                  cx={cellSize / 2}
-                  cy={cellSize / 2}
-                  r={cellSize / 2}
-                  fill="hsl(var(--battle-grid-bg))"
+          const iconDisplaySize = cellSize * 0.8;
+          const iconOffset = (cellSize - iconDisplaySize) / 2;
+
+          return (
+            <g
+              key={token.id}
+              transform={`translate(${currentX * cellSize}, ${currentY * cellSize})`}
+              onMouseDown={(e) => handleTokenMouseDown(e, token)}
+              className={cn(
+                activeTool === 'select' && 'cursor-grab',
+                draggingToken?.id === token.id && 'cursor-grabbing'
+              )}
+            >
+              <circle
+                cx={cellSize / 2}
+                cy={cellSize / 2}
+                r={cellSize / 2}
+                fill="black"
+              />
+              {IconComponent && (
+                <IconComponent
+                  x={iconOffset}
+                  y={iconOffset}
+                  width={iconDisplaySize}
+                  height={iconDisplaySize}
+                  color={token.color}
+                  strokeWidth={1.5} 
                 />
-                {IconComponent && (
-                  <IconComponent
-                    x={iconOffset}
-                    y={iconOffset}
-                    width={iconSize}
-                    height={iconSize}
-                    color={token.color}
-                  />
-                )}
-                {token.label && (
-                  <text
-                    x={cellSize / 2}
-                    y={cellSize / 2}
-                    textAnchor="middle"
-                    dy=".3em"
-                    fontSize={iconSize / 1.5}
-                    fill="hsl(var(--primary-foreground))"
-                    className="pointer-events-none select-none font-bold"
-                  >
-                    {token.label.substring(0, 1).toUpperCase()}
-                  </text>
-                )}
-              </g>
-            );
-          } else {
-            // Original rendering for other tokens
-            return (
-              <g
-                key={token.id}
-                transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
-                onMouseDown={(e) => handleTokenMouseDown(e, token)}
-                className={cn(
-                  activeTool === 'select' && 'cursor-grab',
-                  draggingToken?.id === token.id && 'cursor-grabbing'
-                )}
-              >
-                {IconComponent ? (
-                  <IconComponent
-                    className="w-full h-full p-1"
-                    style={{ color: token.color, width: cellSize * (token.size || 1), height: cellSize * (token.size || 1) }}
-                  />
-                ) : (
-                  <circle
-                    cx={cellSize / 2 * (token.size || 1)}
-                    cy={cellSize / 2 * (token.size || 1)}
-                    r={cellSize / 2.5 * (token.size || 1)}
-                    fill={token.color}
-                    stroke="hsl(var(--foreground))"
-                    strokeWidth="1"
-                  />
-                )}
-                {token.label && (
-                  <text
-                    x={cellSize / 2 * (token.size || 1)}
-                    y={cellSize / 2 * (token.size || 1)}
-                    textAnchor="middle"
-                    dy=".3em"
-                    fontSize={cellSize / 3}
-                    fill="hsl(var(--primary-foreground))"
-                    className="pointer-events-none select-none"
-                  >
-                    {token.label.substring(0,1).toUpperCase()}
-                  </text>
-                )}
-              </g>
-            );
-          }
+              )}
+              {token.label && (
+                <text
+                  x={cellSize / 2}
+                  y={cellSize / 2}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={cellSize * 0.4}
+                  fill="white"
+                  className="pointer-events-none select-none font-bold"
+                >
+                  {token.label.substring(0, 1).toUpperCase()}
+                </text>
+              )}
+            </g>
+          );
         })}
       </svg>
     </div>
   );
 }
+
