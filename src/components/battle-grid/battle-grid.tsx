@@ -98,9 +98,7 @@ export default function BattleGrid({
 
     switch (activeTool) {
       case 'select':
-        // If left-click (button 0) or middle-click (button 1) on the grid background initiates panning.
-        // Token dragging is handled by handleTokenMouseDown, which stops propagation.
-        if (event.button === 0 || event.button === 1) {
+        if (event.button === 0 || event.button === 1) { // Left-click or middle-click for panning
           setIsPanning(true);
           setPanStart({ x: event.clientX, y: event.clientY });
         }
@@ -154,7 +152,7 @@ export default function BattleGrid({
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: typeof tokens[0]) => {
     if (activeTool !== 'select') return;
-    event.stopPropagation();
+    event.stopPropagation(); // Prevent grid pan from starting when clicking a token
     setDraggingToken(token);
     const pos = getMousePosition(event);
     setDragOffset({
@@ -181,6 +179,7 @@ export default function BattleGrid({
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePainting(null);
     } else if (draggingToken && dragOffset) {
+      // Token dragging logic is handled primarily by mouse up, but could update visual position here if desired
       setHoveredCellWhilePainting(null);
     } else if (isMeasuring && measurement.startPoint) {
       const gridX = Math.floor(pos.x / cellSize);
@@ -249,17 +248,24 @@ export default function BattleGrid({
       const pos = getMousePosition(event);
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
+      // Check if the token was dropped within grid boundaries
       if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
         onTokenMove(draggingToken.id, gridX, gridY);
+      } else {
+        // If dropped outside, snap back to original position or handle as desired
+        // For now, we just don't call onTokenMove, so it stays at its last valid position
+        // or you could reset it to its original position if stored.
       }
       setDraggingToken(null);
       setDragOffset(null);
     }
     if (isMeasuring) {
       setIsMeasuring(false);
+      // Toast is shown only on mouse up to give the final measurement
       if (measurement.result) {
         toast({ title: "Measurement Complete", description: measurement.result });
       }
+      // Measurement state (line/circle) remains visible until the tool changes or explicitly cleared.
     }
     if (isErasing) {
         setIsErasing(false);
@@ -272,13 +278,19 @@ export default function BattleGrid({
   };
 
   const handleMouseLeave = () => {
+    // If panning and mouse leaves, stop panning.
     if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
     }
+    // If measuring and mouse leaves, stop measuring.
     if (isMeasuring) {
       setIsMeasuring(false);
-      // No toast on mouse leave during measurement. Final toast on mouseup.
+      // Toast is typically shown on mouse up, not mouse leave.
+      // If you want a toast here, add:
+      // if (measurement.result) {
+      //   toast({ title: "Measurement Ended", description: measurement.result });
+      // }
     }
     if (isErasing) {
       setIsErasing(false);
@@ -288,29 +300,41 @@ export default function BattleGrid({
       setIsPainting(false);
       setHoveredCellWhilePainting(null);
     }
+    // If dragging a token and mouse leaves, might want to finalize the drag
+    // or snap it back. For now, it will finalize on next mouseup.
   };
 
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
     if(!svgRef.current) return;
+
     const scaleAmount = 1.1;
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
     const mousePos = getMousePosition(event);
+
     let newVw, newVh;
-    if (event.deltaY < 0) {
+
+    if (event.deltaY < 0) { // Zoom in
       newVw = vw / scaleAmount;
       newVh = vh / scaleAmount;
-    } else {
+    } else { // Zoom out
       newVw = vw * scaleAmount;
       newVh = vh * scaleAmount;
     }
+
+    // Define min/max zoom levels relative to the base content width
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10;
-    const maxAllowedVw = baseContentWidth * 5;
+    const minAllowedVw = baseContentWidth / 10; // Max zoom in (viewBox is 1/10th of content)
+    const maxAllowedVw = baseContentWidth * 5;  // Max zoom out (viewBox is 5x content)
+
+    // Clamp the new viewBox width and height
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh;
+    newVh = (newVw / vw) * vh; // Maintain aspect ratio based on clamped newVw
+
+    // Recalculate top-left corner to zoom around mouse position
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
+
     setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
   };
 
@@ -328,7 +352,13 @@ export default function BattleGrid({
       <svg
         ref={svgRef}
         viewBox={viewBox}
-        className="w-full h-full"
+        className={cn(
+          "w-full h-full",
+          isPanning ? 'cursor-grabbing' :
+          activeTool === 'select' ? (draggingToken ? 'cursor-grabbing' : 'cursor-grab') :
+          (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') ? 'cursor-crosshair' :
+          'cursor-default'
+        )}
         onMouseDown={handleGridMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -364,17 +394,17 @@ export default function BattleGrid({
                 fill={cell.color || 'transparent'}
                 stroke={
                   isHighlighted
-                    ? 'hsl(var(--ring))'
+                    ? 'hsl(var(--ring))' // Highlight color from theme
                     : showGridLines ? 'black' : 'transparent'
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 // Make highlight border thicker
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
                 className={cn(
-                  (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') && 'cursor-crosshair',
-                  (activeTool !== 'paint_cell' && activeTool !== 'place_token' && activeTool !== 'measure_distance' && activeTool !== 'measure_radius' && activeTool !== 'eraser_tool') && 'cursor-default'
+                  (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') && 'cursor-crosshair'
+                  // Default cursor is now handled by the parent SVG for select/pan
                 )}
               />
               );
@@ -388,6 +418,7 @@ export default function BattleGrid({
           </marker>
         </defs>
 
+        {/* Measurement drawing */}
         {measurement.startPoint && measurement.endPoint && (
           <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
             {measurement.type === 'distance' ? (
@@ -409,6 +440,7 @@ export default function BattleGrid({
           </g>
         )}
 
+        {/* Real-time measurement text */}
         {isMeasuring && measurement.endPoint && measurement.result && (
           <text
             x={measurement.endPoint.x * cellSize + cellSize / 2 + 20}
@@ -426,21 +458,34 @@ export default function BattleGrid({
           </text>
         )}
 
-        {measurement.startPoint && (
+        {/* Start and End points for measurement */}
+         {measurement.startPoint && (
            <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
-        )}
-         {measurement.endPoint && measurement.result && (
+         )}
+         {measurement.endPoint && measurement.result && ( // Only show end point circle if result is also present (meaning measurement is active/ended)
            <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
-        )}
+         )}
 
+        {/* Tokens */}
         {tokens.map(token => {
           const IconComponent = token.icon;
+          // Determine current position for draggingToken smoothly
+          const currentX = draggingToken?.id === token.id && dragOffset && svgRef.current
+            ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).x - dragOffset.x) / cellSize
+            : token.x;
+          const currentY = draggingToken?.id === token.id && dragOffset && svgRef.current
+            ? (getMousePosition({ clientX: panStart?.x || 0, clientY: panStart?.y || 0, ...({} as React.MouseEvent<SVGSVGElement>) }).y - dragOffset.y) / cellSize
+            : token.y;
+
           return (
             <g
               key={token.id}
               transform={`translate(${token.x * cellSize}, ${token.y * cellSize})`}
               onMouseDown={(e) => handleTokenMouseDown(e, token)}
-              className={cn(activeTool === 'select' && 'cursor-grab', draggingToken?.id === token.id && 'cursor-grabbing')}
+              className={cn(
+                activeTool === 'select' && 'cursor-grab',
+                draggingToken?.id === token.id && 'cursor-grabbing'
+              )}
             >
               {IconComponent ? (
                 <IconComponent
