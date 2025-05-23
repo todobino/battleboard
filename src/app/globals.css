@@ -57,59 +57,7 @@
     --chart-5: 20 50% 40%; /* Muted Red-Brown */
 
     /* Battle Grid Background Color */
-    --battle-grid-bg: hsl(0, 0%, 92%); /* Light Gray */
-  }
-
-  .dark {
-    /* Even Darker Brown Theme - "Dark Mode" */
-    --background: 30 50% 8%; /* Very, Very Dark Brown (almost black-brown) */
-    --foreground: 30 18% 78%; /* Lighter Brown/Cream for better contrast */
-
-    --muted: 30 35% 12%; /* Extremely Dark Muted Brown */
-    --muted-foreground: 30 18% 58%; /* Muted Light Brown */
-
-    --popover: 30 55% 5%; /* Almost Black-Brown for popovers */
-    --popover-foreground: 30 18% 78%; /* Lighter Brown/Cream */
-
-    --card: 30 55% 5%; /* Almost Black-Brown for cards */
-    --card-foreground: 30 18% 78%; /* Lighter Brown/Cream */
-
-    --border: 30 45% 20%; /* Darker, Richer Brown Border for Dark Mode */
-    --input: 30 35% 20%; /* Slightly Lighter Dark Muted Brown for Input Border */
-
-    --primary: 30 60% 30%; /* Dark Brown */
-    --primary-foreground: 30 12% 80%; /* Cream */
-
-    --secondary: 30 40% 12%; /* Very Dark Muted Brown */
-    --secondary-foreground: 30 18% 65%; /* Lighter Brown */
-
-    --accent: 30 65% 40%; /* Muted Dark Accent Brown */
-    --accent-foreground: 30 12% 85%; /* Cream */
-
-    --destructive: 0 55% 40%; /* Slightly darker Red for destructive in dark mode */
-    --destructive-foreground: 0 0% 90%; /* Light color for text on destructive */
-
-    --ring: 30 65% 45%; /* Accent-related Brown for focus rings */
-
-    /* Sidebar specific colors for dark mode */
-    --sidebar-background: 30 45% 4%; /* Extremely Dark Brown for Sidebar */
-    --sidebar-foreground: 30 20% 70%; /* Light Brown/Cream for sidebar text */
-    --sidebar-primary: 30 55% 35%; /* Muted Dark Brown for dark sidebar primary */
-    --sidebar-primary-foreground: 30 15% 82%; /* Cream for text on dark sidebar primary */
-    --sidebar-accent: 30 30% 20%; /* Dark Muted Brown for dark sidebar accents */
-    --sidebar-accent-foreground: 30 20% 78%; /* Light Brown/Cream text for dark sidebar accent */
-    --sidebar-border: 30 30% 22%; /* Darker Brown for dark sidebar borders */
-    --sidebar-ring: 30 55% 40%; /* Muted Accent Brown for dark sidebar focus rings */
-
-    /* Adjusted Chart Colors for Very Dark Brown Theme */
-    --chart-1: 30 50% 35%;
-    --chart-2: 35 30% 25%;
-    --chart-3: 25 20% 15%;
-    --chart-4: 40 40% 45%;
-    --chart-5: 20 35% 30%;
-
-    /* Battle Grid Background Color */
-    --battle-grid-bg: hsl(0, 0%, 92%); /* Light Gray */
+    --battle-grid-bg: hsl(60, 50%, 85%);
   }
 }
 
