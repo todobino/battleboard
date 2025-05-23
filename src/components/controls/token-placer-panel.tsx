@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Token, TokenTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users } from 'lucide-react'; 
+import { Users } from 'lucide-react';
 import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
 
 interface TokenPlacerPanelProps {
@@ -18,21 +18,21 @@ const tokenTemplates: TokenTemplate[] = [
   { name: 'Enemy', color: 'hsl(0, 60%, 30%)', icon: EnemyIcon, type: 'enemy' },
   { name: 'Item', color: 'hsl(270, 40%, 30%)', icon: ItemIcon, type: 'item' },
   { name: 'Terrain', color: 'hsl(var(--muted))', icon: TerrainIcon, type: 'terrain' },
-  { name: 'Generic', color: 'hsl(30, 70%, 40%)', icon: GenericTokenIcon, type: 'generic' },
+  { name: 'Generic', color: 'hsl(50, 95%, 55%)', icon: GenericTokenIcon, type: 'generic' }, // Updated to yellow
 ];
 
 export default function TokenPlacerPanel({
   setActiveTool,
   setSelectedTokenTemplate,
 }: TokenPlacerPanelProps) {
-  
+
   const handleSelectTokenTemplate = (template: TokenTemplate) => {
     setSelectedTokenTemplate({
-      color: template.color, // This color might be used by the icon if not overridden later
+      color: template.color, // This color is used by the token on the grid
       icon: template.icon,
       type: template.type,
-      label: template.name, 
-      size: 1, 
+      label: template.name,
+      size: 1,
     });
     setActiveTool('place_token');
   };
@@ -50,12 +50,13 @@ export default function TokenPlacerPanel({
             <Button
               key={template.name}
               variant="outline"
-              className="h-auto flex flex-col items-center p-2 space-y-1 bg-card hover:bg-muted"
+              className="h-auto flex flex-col items-center p-2 space-y-1" // Removed bg-card and hover:bg-muted
+              style={{ backgroundColor: template.color }} // Set dynamic background color
               onClick={() => handleSelectTokenTemplate(template)}
               aria-label={`Place ${template.name} token`}
             >
-              {Icon && <Icon className="h-6 w-6" style={{color: template.color}} />}
-              <span className="text-xs text-card-foreground">{template.name}</span>
+              {Icon && <Icon className="h-6 w-6" color={"hsl(var(--primary-foreground))"} />} {/* Icon color white */}
+              <span className="text-xs text-primary-foreground">{template.name}</span> {/* Text color white */}
             </Button>
             );
           })}
@@ -64,4 +65,3 @@ export default function TokenPlacerPanel({
     </div>
   );
 }
-
