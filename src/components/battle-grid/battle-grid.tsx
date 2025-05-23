@@ -99,9 +99,17 @@ export default function BattleGrid({
             }
             return;
         }
-        setIsPanning(true);
-        setPanStart({ x: event.clientX, y: event.clientY });
-        return; 
+        // For left click on grid (not on a token), initiate panning
+        if (event.button === 0 && !event.ctrlKey && !event.metaKey) {
+             setIsPanning(true);
+             setPanStart({ x: event.clientX, y: event.clientY });
+        }
+        // For middle click or ctrl/meta + left click, also initiate panning
+        else if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
+             setIsPanning(true);
+             setPanStart({ x: event.clientX, y: event.clientY });
+        }
+        return;
     }
 
 
@@ -110,7 +118,7 @@ export default function BattleGrid({
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
-      return; 
+      return;
     }
 
 
@@ -167,7 +175,7 @@ export default function BattleGrid({
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
     if (activeTool !== 'select') return;
-    event.stopPropagation(); 
+    event.stopPropagation();
     setDraggingToken(token);
     const pos = getMousePosition(event);
     setDragOffset({
@@ -194,7 +202,7 @@ export default function BattleGrid({
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingToken && dragOffset && activeTool === 'select') {
-      setHoveredCellWhilePaintingOrErasing(null); 
+      setHoveredCellWhilePaintingOrErasing(null);
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
@@ -321,16 +329,16 @@ export default function BattleGrid({
     }
 
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; 
-    const maxAllowedVw = baseContentWidth * 5;  
+    const minAllowedVw = baseContentWidth / 10;
+    const maxAllowedVw = baseContentWidth * 5;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; 
+    newVh = (newVw / vw) * vh;
 
     const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
     const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
 
-    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
+    setViewBox(`${newVx} ${newVy} ${newVw} ${vh}`);
   };
 
   const gridContentWidth = GRID_SIZE * cellSize;
@@ -349,7 +357,7 @@ export default function BattleGrid({
         className={cn(
           "w-full h-full",
           (isPanning || draggingToken) ? 'cursor-grabbing' :
-          (activeTool === 'select' && !isPanning && !draggingToken) ? 'cursor-default' :
+          activeTool === 'select' ? 'cursor-default' : // Default for select, tokens/grid can override
           (activeTool === 'paint_cell' || activeTool === 'place_token' || activeTool === 'measure_distance' || activeTool === 'measure_radius' || activeTool === 'eraser_tool') ? 'cursor-crosshair' :
           'cursor-default'
         )}
@@ -393,7 +401,7 @@ export default function BattleGrid({
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
               />
@@ -424,6 +432,7 @@ export default function BattleGrid({
                 cy={measurement.startPoint.y * cellSize + cellSize/2}
                 r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize}
                 strokeDasharray="5 3"
+                fill="hsla(30, 80%, 85%, 0.3)" 
               />
             )}
           </g>
@@ -449,20 +458,20 @@ export default function BattleGrid({
          {measurement.startPoint && (
            <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
          )}
-         {measurement.endPoint && measurement.result && ( 
+         {measurement.endPoint && measurement.result && (
            <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" />
          )}
 
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
-          
+
           const currentX = token.x;
           const currentY = token.y;
 
           const iconDisplaySize = cellSize * 0.8;
           const iconOffset = (cellSize - iconDisplaySize) / 2;
 
-          let backgroundFill = 'black'; // Default background
+          let backgroundFill = 'black';
           switch (token.type) {
             case 'player':
               backgroundFill = 'hsl(120, 40%, 25%)'; // Dark Green
@@ -474,9 +483,9 @@ export default function BattleGrid({
               backgroundFill = 'hsl(270, 40%, 30%)'; // Dark Purple
               break;
             case 'terrain':
-              backgroundFill = 'hsl(var(--muted))'; // Dark Gray (from theme)
+              backgroundFill = 'hsl(var(--muted))';
               break;
-            case 'generic': // Assuming 'generic' is a valid type; was item previously for color
+            case 'generic':
               backgroundFill = 'hsl(30, 70%, 40%)'; // Orange
               break;
             default:
@@ -510,7 +519,7 @@ export default function BattleGrid({
                   y={iconOffset}
                   width={iconDisplaySize}
                   height={iconDisplaySize}
-                  color={'hsl(var(--primary-foreground))'} 
+                  color={'hsl(var(--primary-foreground))'}
                   strokeWidth={1.5}
                 />
               )}
@@ -521,4 +530,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
