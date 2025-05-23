@@ -2,13 +2,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement } from '@/types';
+import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Play, SkipForward, Square } from 'lucide-react';
+import { LandPlot, Play, SkipForward, Square, ListOrdered } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
 const GRID_ROWS = 30;
@@ -27,7 +28,7 @@ export default function BattleBoardPage() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
-  const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1); // New state for zoom
+  const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
@@ -40,10 +41,13 @@ export default function BattleBoardPage() {
   const [selectedTokenTemplate, setSelectedTokenTemplate] = useState<Omit<Token, 'id' | 'x' | 'y'> | null>(null);
 
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
+  const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
+  const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
+
 
   const { toast } = useToast();
 
-  useEffect(() => {
+ useEffect(() => {
     if (activeTool === 'measure_distance' || activeTool === 'measure_radius') {
       setMeasurement({
         type: activeTool === 'measure_distance' ? 'distance' : 'radius',
@@ -52,15 +56,18 @@ export default function BattleBoardPage() {
         result: undefined
       });
     } else if (measurement.type !== null && activeTool !== 'measure_distance' && activeTool !== 'measure_radius') {
-      setMeasurement({
-        type: null,
-        startPoint: undefined,
-        endPoint: undefined,
-        result: undefined
-      });
+       // Clear measurement if switching away from a measurement tool
+       if (measurement.startPoint || measurement.endPoint || measurement.result) {
+        setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
+      }
+    }
+    // Clear current drawing shape if tool changes away from drawing
+    if (currentDrawingShape && !['draw_line', 'draw_circle', 'draw_square'].includes(activeTool)) {
+      setCurrentDrawingShape(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool]);
+
 
   useEffect(() => {
     if (participants.length === 0) {
@@ -164,13 +171,18 @@ export default function BattleBoardPage() {
       if (filteredList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else if (isRemovingCurrentTurn) {
+        // If removing current, advance to next (or 0 if current was last)
+        // The modulo handles wrapping around
         setCurrentParticipantIndex(currentParticipantIndex % filteredList.length);
       } else {
+        // If removing someone else, find the current active participant's new index
         const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
         const newActiveIndex = filteredList.findIndex(p => p.id === oldActiveParticipantId);
         if (newActiveIndex !== -1) {
           setCurrentParticipantIndex(newActiveIndex);
         } else {
+          // This case should ideally not happen if logic is correct,
+          // but as a fallback, reset to 0 or maintain if still valid.
           setCurrentParticipantIndex(currentParticipantIndex >= filteredList.length ? 0 : currentParticipantIndex);
         }
       }
@@ -178,6 +190,7 @@ export default function BattleBoardPage() {
     });
     toast({ title: "Participant Removed" });
   };
+  
 
   const handleResetInitiativeAndCombat = () => {
     setParticipants([]);
@@ -207,10 +220,15 @@ export default function BattleBoardPage() {
             setGridCells={setGridCells}
             tokens={tokens}
             setTokens={setTokens}
+            drawnShapes={drawnShapes}
+            setDrawnShapes={setDrawnShapes}
+            currentDrawingShape={currentDrawingShape}
+            setCurrentDrawingShape={setCurrentDrawingShape}
             showGridLines={showGridLines}
             backgroundImageUrl={backgroundImageUrl}
             backgroundZoomLevel={backgroundZoomLevel} 
             activeTool={activeTool}
+            setActiveTool={setActiveTool}
             selectedColor={selectedColor}
             selectedTokenTemplate={selectedTokenTemplate}
             onTokenMove={handleTokenMove}
@@ -277,3 +295,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+

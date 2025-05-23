@@ -16,7 +16,7 @@ export interface Token {
   id: string;
   x: number; // grid column index
   y: number; // grid row index
-  color: string; // Token's primary color (e.g., for its circle or icon fill)
+  color: string; // Token's primary color (e.g., for its icon fill)
   label?: string; // Optional label for the token
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
   type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
@@ -42,7 +42,10 @@ export type ActiveTool =
   | 'map_tool'
   | 'token_placer_tool'
   | 'eraser_tool'
-  | 'shapes_tool';
+  | 'shapes_tool' // Parent tool for shapes popover
+  | 'draw_line'
+  | 'draw_circle'
+  | 'draw_square';
 
 
 export interface TokenTemplate {
@@ -59,18 +62,34 @@ export interface Measurement {
   result?: string;
 }
 
+export interface DrawnShape {
+  id: string;
+  type: 'line' | 'circle' | 'square';
+  startPoint: Point; // For line: start; for circle: center; for square: top-left
+  endPoint: Point;   // For line: end; for circle: point on circumference; for square: bottom-right
+  color: string; // Stroke color for line, border color for circle/square
+  fillColor?: string; // Fill color for circle/square
+  strokeWidth: number;
+}
+
 export interface BattleGridProps {
   gridCells: GridCellData[][];
   setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
   tokens: Token[];
   setTokens: React.Dispatch<React.SetStateAction<Token[]>>;
+  drawnShapes: DrawnShape[];
+  setDrawnShapes: React.Dispatch<React.SetStateAction<DrawnShape[]>>;
+  currentDrawingShape: DrawnShape | null;
+  setCurrentDrawingShape: React.Dispatch<React.SetStateAction<DrawnShape | null>>;
   showGridLines: boolean;
   backgroundImageUrl: string | null;
-  backgroundZoomLevel?: number; // Added for background image zoom
+  backgroundZoomLevel?: number;
   activeTool: ActiveTool;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
   selectedColor: string;
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   onTokenMove: (tokenId: string, newX: number, newY: number) => void;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
 }
+

@@ -1,11 +1,11 @@
 
 'use client';
 
-import type { ActiveTool, Token, Measurement } from '@/types';
+import type { ActiveTool, Token, Measurement, DrawnShape } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,7 @@ import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
 import MeasurementToolPanel from '@/components/controls/measurement-tool-panel';
 import TokenPlacerPanel from '@/components/controls/token-placer-panel';
+import ShapeToolPanel from '@/components/controls/shape-tool-panel';
 
 
 interface FloatingToolbarProps {
@@ -33,23 +34,24 @@ interface FloatingToolbarProps {
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
+  // Props for Shape Tools will be managed internally or via BattleBoardPage if shapes are persisted
 }
 
 interface ToolButtonProps {
   label: string;
   icon: React.ElementType;
-  tool?: ActiveTool | ActiveTool[]; // Can be a single tool or an array for popover triggers
+  tool?: ActiveTool | ActiveTool[]; 
   currentActiveTool?: ActiveTool;
   onClick?: () => void;
   children?: React.ReactNode;
   asChild?: boolean;
   variantOverride?: "default" | "outline";
-  isActive?: boolean; // Explicit active state for popover triggers
+  isActive?: boolean; 
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive }) => {
-  let isButtonActive = isActive; // Use explicit isActive if provided
-  if (isButtonActive === undefined && tool && currentActiveTool) { // Fallback to tool matching
+  let isButtonActive = isActive; 
+  if (isButtonActive === undefined && tool && currentActiveTool) { 
     isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
   }
   
@@ -92,24 +94,31 @@ export default function FloatingToolbar({
   const [isMeasurementPopoverOpen, setIsMeasurementPopoverOpen] = useState(false);
   const [isTokenPlacerPopoverOpen, setIsTokenPlacerPopoverOpen] = useState(false);
   const [isColorPainterPopoverOpen, setIsColorPainterPopoverOpen] = useState(false);
+  const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
+
 
   const handleToolClick = (tool: ActiveTool) => {
     if (setActiveTool) {
       setActiveTool(tool);
     }
-    // Close other popovers when a direct tool or another popover trigger is clicked
+    // Close other popovers
     if (tool !== 'map_tool') setIsMapSettingsPopoverOpen(false);
-    if (tool !== 'measure_distance' && tool !== 'measure_radius') setIsMeasurementPopoverOpen(false);
-    if (tool !== 'token_placer_tool' && tool !== 'place_token') setIsTokenPlacerPopoverOpen(false);
+    if (!['measure_distance', 'measure_radius'].includes(tool)) setIsMeasurementPopoverOpen(false);
+    if (!['token_placer_tool', 'place_token'].includes(tool)) setIsTokenPlacerPopoverOpen(false);
     if (tool !== 'paint_cell') setIsColorPainterPopoverOpen(false);
+    if (!['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) setIsShapeToolPopoverOpen(false);
   };
 
   const handleTokenTemplateSelected = () => {
-    setIsTokenPlacerPopoverOpen(false); // Close popover when a token is selected
+    setIsTokenPlacerPopoverOpen(false); 
   };
 
   const handleColorSelected = () => {
-    setIsColorPainterPopoverOpen(false); // Close popover when a color is selected
+    setIsColorPainterPopoverOpen(false);
+  };
+  
+  const handleShapeToolSelected = () => {
+    setIsShapeToolPopoverOpen(false);
   };
 
   return (
@@ -173,7 +182,7 @@ export default function FloatingToolbar({
             label="Measurement Tools"
             icon={DraftingCompass}
             onClick={() => {
-                handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance');
+                handleToolClick(activeTool === 'measure_radius' ? 'measure_radius' : 'measure_distance'); 
                 setIsMeasurementPopoverOpen(prev => !prev);
             }}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
@@ -264,13 +273,35 @@ export default function FloatingToolbar({
           </PopoverContent>
         </Popover>
 
-        <ToolButton
-          label="Shape Tools"
-          icon={Shapes}
-          tool="shapes_tool"
-          currentActiveTool={activeTool}
-          onClick={() => handleToolClick('shapes_tool')}
-        />
+        <Popover open={isShapeToolPopoverOpen} onOpenChange={setIsShapeToolPopoverOpen}>
+          <ToolButton
+            label="Shape Tools"
+            icon={Shapes}
+            onClick={() => {
+              handleToolClick('shapes_tool');
+              setIsShapeToolPopoverOpen(prev => !prev);
+            }}
+            isActive={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square'}
+            asChild
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
+                size="icon"
+                className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                aria-label="Shape Tools"
+              >
+                <Shapes className="h-5 w-5 text-accent-foreground" />
+              </Button>
+            </PopoverTrigger>
+          </ToolButton>
+          <PopoverContent className="w-80" side="bottom" align="start">
+            <ShapeToolPanel
+              setActiveTool={setActiveTool}
+              onToolSelect={handleShapeToolSelected}
+            />
+          </PopoverContent>
+        </Popover>
 
         <ToolButton
           label="Eraser"
@@ -283,3 +314,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
