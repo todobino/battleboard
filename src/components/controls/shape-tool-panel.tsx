@@ -4,7 +4,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool } from '@/types';
 import { Button } from '@/components/ui/button';
-import { LineChart, Circle, Square, Shapes } from 'lucide-react'; // Using LineChart for line icon
+import { LineChart, Circle, Square } from 'lucide-react'; // Shapes icon removed
 
 interface ShapeToolPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
@@ -21,10 +21,8 @@ export default function ShapeToolPanel({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Shapes className="mr-2 h-5 w-5" /> Shape Tools
-      </div>
+    <div className="space-y-2"> {/* Padding removed, mb-3 removed from header which is now gone */}
+      {/* Header div containing "Shape Tools" text and icon removed */}
       <div className="grid grid-cols-3 gap-2">
         <Button
           variant="outline"
@@ -54,7 +52,7 @@ export default function ShapeToolPanel({
           <span className="text-xs">Square</span>
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">Click and drag on the grid to draw a shape.</p>
+      {/* "Click and drag on the grid to draw a shape." paragraph removed */}
     </div>
   );
 }
