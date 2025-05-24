@@ -47,8 +47,8 @@ export default function InitiativeTrackerPanel({
 
   return (
     <div className="space-y-4">
-      <div className="text-lg font-semibold flex justify-between items-center text-foreground">
-        <span>Turn Order</span>
+      <div className="text-lg flex justify-between items-center text-foreground">
+        <span className="font-semibold">Turn Order</span>
         <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
       </div>
 

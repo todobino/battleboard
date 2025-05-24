@@ -94,7 +94,7 @@ export default function GridSettingsPanel({
 
   return (
     <div className="space-y-4 p-4">
-      {/* Header */}
+      {/* Header: Title and Grid Lines Toggle */}
       <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
         <div className="flex items-center">
           <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
@@ -112,7 +112,7 @@ export default function GridSettingsPanel({
         </div>
       </div>
 
-      {/* Main content row: Default Maps & Upload or Zoom */}
+      {/* Main content row: Left Col (Default Maps), Right Col (Uploader) */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Default Maps */}
         <div className="lg:w-3/5 space-y-4">
@@ -162,7 +162,7 @@ export default function GridSettingsPanel({
           </div>
         </div>
 
-        {/* Right Column: Image Uploader & Zoom */}
+        {/* Right Column: Image Uploader */}
         <div className="lg:w-2/5 space-y-4">
           <div>
             <Label
@@ -174,7 +174,7 @@ export default function GridSettingsPanel({
             <Label
               htmlFor="background-image-upload-popover-main"
               className={cn(
-                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer',
+                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer mt-2', // Changed mt-1 to mt-2
                 'bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors'
               )}
             >
@@ -203,29 +203,30 @@ export default function GridSettingsPanel({
                 </Button>
               )}
           </div>
-          
-          {backgroundImageUrl && (
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="background-zoom-slider" className="text-popover-foreground flex items-center">
-                  <ZoomIn className="mr-2 h-4 w-4" /> Background Zoom
-                </Label>
-                <span className="text-sm text-muted-foreground">
-                  {(backgroundZoomLevel * 100).toFixed(0)}%
-                </span>
-              </div>
-              <Slider
-                id="background-zoom-slider"
-                min={0.2}
-                max={3}
-                step={0.05}
-                value={[backgroundZoomLevel]}
-                onValueChange={(val) => setBackgroundZoomLevel(val[0])}
-              />
-            </div>
-          )}
         </div>
       </div>
+      
+      {/* Background Zoom Section - Moved to span full width below the two columns */}
+      {backgroundImageUrl && (
+        <div className="space-y-2 pt-4 border-t border-border mt-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="background-zoom-slider" className="text-popover-foreground flex items-center">
+              <ZoomIn className="mr-2 h-4 w-4" /> Background Zoom
+            </Label>
+            <span className="text-sm text-muted-foreground">
+              {(backgroundZoomLevel * 100).toFixed(0)}%
+            </span>
+          </div>
+          <Slider
+            id="background-zoom-slider"
+            min={0.2}
+            max={3}
+            step={0.05}
+            value={[backgroundZoomLevel]}
+            onValueChange={(val) => setBackgroundZoomLevel(val[0])}
+          />
+        </div>
+      )}
 
       {uncroppedImageSrc && (
         <ImageCropDialog
