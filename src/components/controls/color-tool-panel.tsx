@@ -4,11 +4,11 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+// Input import removed
+// Label import removed
 // Palette icon import removed
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+// Tooltip imports removed as the custom color input it was for is removed
 
 interface ColorToolPanelProps {
   activeTool: ActiveTool;
@@ -31,12 +31,12 @@ export default function ColorToolPanel({
 }: ColorToolPanelProps) {
   
   return (
-    <div className="space-y-4"> {/* Removed p-4 */}
+    <div className="space-y-2"> {/* Adjusted spacing since elements were removed */}
       {/* Removed header section */}
       
-      <div className="mt-1"> {/* Adjusted margin since header is removed */}
-        <Label className="text-popover-foreground text-sm">Default Colors</Label>
-        <div className="grid grid-cols-8 gap-1 mt-1">
+      <div className="mt-1"> {/* Margin might need adjustment or can be removed if space-y-2 is enough */}
+        {/* "Default Colors" Label removed */}
+        <div className="grid grid-cols-8 gap-1 mt-1"> {/* mt-1 might be redundant if space-y on parent is sufficient */}
           {defaultColors.map(color => (
             <Button
               key={color}
@@ -58,27 +58,7 @@ export default function ColorToolPanel({
         </div>
       </div>
 
-      <div className="mt-4">
-        <Label htmlFor="color-picker-input-custom" className="text-popover-foreground text-sm">Custom Color</Label>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Input
-                id="color-picker-input-custom"
-                type="color"
-                value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="w-full h-10 p-1 border mt-1" // Changed w-10 to w-full
-                onFocus={() => setActiveTool('paint_cell')}
-                aria-label="Custom color picker"
-              />
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Choose a custom color</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* Custom Color Selector section removed */}
     </div>
   );
 }
