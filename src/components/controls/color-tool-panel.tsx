@@ -6,7 +6,7 @@ import type { ActiveTool } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Palette } from 'lucide-react';
+// Palette icon import removed
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -32,31 +32,9 @@ export default function ColorToolPanel({
   
   return (
     <div className="space-y-4 p-4">
-      <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
-        <div className="flex items-center">
-          <Palette className="mr-2 h-5 w-5" /> Color Painter
-        </div>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Input
-                id="color-picker-input-header"
-                type="color"
-                value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="w-10 h-10 p-1 border-none"
-                onFocus={() => setActiveTool('paint_cell')}
-                aria-label="Custom color picker"
-              />
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Custom Color</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* Removed header section */}
       
-      <div className="mt-3">
+      <div className="mt-1"> {/* Adjusted margin since header is removed */}
         <Label className="text-popover-foreground text-sm">Default Colors</Label>
         <div className="grid grid-cols-8 gap-1 mt-1">
           {defaultColors.map(color => (
@@ -78,6 +56,28 @@ export default function ColorToolPanel({
             />
           ))}
         </div>
+      </div>
+
+      <div className="mt-4">
+        <Label htmlFor="color-picker-input-custom" className="text-popover-foreground text-sm">Custom Color</Label>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Input
+                id="color-picker-input-custom"
+                type="color"
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+                className="w-full h-10 p-1 border mt-1" // Changed w-10 to w-full
+                onFocus={() => setActiveTool('paint_cell')}
+                aria-label="Custom color picker"
+              />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Choose a custom color</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
