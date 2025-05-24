@@ -31,7 +31,7 @@ export default function ColorToolPanel({
 }: ColorToolPanelProps) {
   
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4"> {/* Removed p-4 */}
       {/* Removed header section */}
       
       <div className="mt-1"> {/* Adjusted margin since header is removed */}
