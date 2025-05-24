@@ -6,11 +6,15 @@ import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Plus, Minus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const GRID_SIZE = 30;
 const DEFAULT_CELL_SIZE = 30;
 const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
+const ZOOM_AMOUNT = 1.1; // For button zoom
 
 // Helper to snap to grid cell centers (for circles)
 const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
@@ -415,37 +419,48 @@ export default function BattleGrid({
     }
   };
 
-  const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
-    event.preventDefault();
-    if(!svgRef.current) return;
-
-    const scaleAmount = 1.1;
+  const applyZoom = (zoomIn: boolean, customScaleAmount?: number) => {
+    if (!svgRef.current) return;
+    const scaleAmount = customScaleAmount || ZOOM_AMOUNT;
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
-    const mousePos = getMousePosition(event);
+
+    const svgRect = svgRef.current.getBoundingClientRect();
+    const clientCenterX = svgRect.left + svgRect.width / 2;
+    const clientCenterY = svgRect.top + svgRect.height / 2;
+
+    const centerPos = getMousePosition({ clientX: clientCenterX, clientY: clientCenterY } as MouseEvent);
 
     let newVw, newVh;
-
-    if (event.deltaY < 0) { // Zoom in
+    if (zoomIn) {
       newVw = vw / scaleAmount;
       newVh = vh / scaleAmount;
-    } else { // Zoom out
+    } else {
       newVw = vw * scaleAmount;
       newVh = vh * scaleAmount;
     }
-    
+
     const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10; 
-    const maxAllowedVw = baseContentWidth * 5;  
+    const minAllowedVw = baseContentWidth / 10;
+    const maxAllowedVw = baseContentWidth * 5;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; 
+    newVh = (newVw / vw) * vh; // Maintain aspect ratio
 
+    const newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
+    const newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
 
-    const newVx = mousePos.x - (mousePos.x - vx) * (newVw / vw);
-    const newVy = mousePos.y - (mousePos.y - vy) * (newVh / vh);
-
-    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`); 
+    setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
   };
+
+  const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    applyZoom(event.deltaY < 0, ZOOM_AMOUNT);
+  };
+
+  const handleZoomButtonClick = (zoomIn: boolean) => {
+    applyZoom(zoomIn, ZOOM_AMOUNT);
+  };
+
 
   const gridContentWidth = GRID_SIZE * cellSize;
   const gridContentHeight = GRID_SIZE * cellSize;
@@ -747,7 +762,42 @@ export default function BattleGrid({
           );
         })}
       </svg>
+      <TooltipProvider delayDuration={0}>
+        <div className="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleZoomButtonClick(true)}
+                className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted"
+                aria-label="Zoom In"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>Zoom In</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleZoomButtonClick(false)}
+                className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted"
+                aria-label="Zoom Out"
+              >
+                <Minus className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>Zoom Out</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
-
