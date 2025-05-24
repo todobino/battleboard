@@ -45,7 +45,8 @@ export type ActiveTool =
   | 'shapes_tool' // Parent tool for shapes popover
   | 'draw_line'
   | 'draw_circle'
-  | 'draw_square';
+  | 'draw_square'
+  | 'type_tool'; // Added new type tool
 
 
 export interface TokenTemplate {
@@ -63,7 +64,7 @@ export interface Measurement {
 }
 
 export interface DrawnShape {
-  id: string;
+  id:string;
   type: 'line' | 'circle' | 'square';
   startPoint: Point; // For line: start; for circle: center; for square: top-left
   endPoint: Point;   // For line: end; for circle: point on circumference; for square: bottom-right

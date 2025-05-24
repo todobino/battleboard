@@ -5,7 +5,7 @@ import type { ActiveTool, Token, Measurement, DrawnShape } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type } from 'lucide-react'; // Added Type icon
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -101,7 +101,7 @@ export default function FloatingToolbar({
       setActiveTool(tool);
     }
     // Close other popovers if they are not the one being interacted with
-    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool)) {
+    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool) && tool !== 'type_tool') {
         setIsMapSettingsPopoverOpen(false);
         setIsMeasurementPopoverOpen(false);
         setIsTokenPlacerPopoverOpen(false);
@@ -315,7 +315,16 @@ export default function FloatingToolbar({
           currentActiveTool={activeTool}
           onClick={() => handleToolClick('eraser_tool')}
         />
+
+        <ToolButton
+          label="Type Tool"
+          icon={Type}
+          tool="type_tool"
+          currentActiveTool={activeTool}
+          onClick={() => handleToolClick('type_tool')}
+        />
       </div>
     </TooltipProvider>
   );
 }
+
