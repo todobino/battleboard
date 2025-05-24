@@ -67,8 +67,11 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const padding = BORDER_WIDTH_WHEN_VISIBLE / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + padding * 2} ${initialContentHeight + padding * 2}`;
+    // Assume showGridLines is true for the very first render's default.
+    // The useEffect will correct this if showGridLines is false.
+    const currentBorderWidth = BORDER_WIDTH_WHEN_VISIBLE; 
+    const padding = currentBorderWidth / 2;
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + currentBorderWidth} ${initialContentHeight + currentBorderWidth}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
@@ -88,8 +91,8 @@ export default function BattleGrid({
   const cellSize = DEFAULT_CELL_SIZE;
 
    useEffect(() => {
-    const contentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const contentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
+    const contentWidth = GRID_SIZE * cellSize;
+    const contentHeight = GRID_SIZE * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const svgPadding = currentBorderWidth / 2;
 
@@ -105,8 +108,12 @@ export default function BattleGrid({
                             Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                             Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
 
-      const currentZoomLevel = contentWidth / currentVbParts[2];
-      if (needsRecenter && Math.abs(currentZoomLevel - 1) < 1e-3) { // Only recenter if at base zoom
+      // currentZoomLevel represents how much the viewBox width (currentVbParts[2])
+      // differs from the base content width. A zoom level of 1 means currentVbParts[2] is contentWidth.
+      const currentZoomRatio = contentWidth !== 0 ? currentVbParts[2] / contentWidth : 1;
+      
+      // Only recenter if at base zoom (viewBox width matches content width) and position is off
+      if (needsRecenter && Math.abs(currentZoomRatio - (expectedVw / contentWidth)) < 1e-3 ) {
            return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
       }
       return currentVbString;
@@ -188,14 +195,9 @@ export default function BattleGrid({
             }
             return;
         }
-        if (event.button === 0 && !event.ctrlKey && !event.metaKey) {
-             setIsPanning(true);
-             setPanStart({ x: event.clientX, y: event.clientY });
-        }
-        else if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
-             setIsPanning(true);
-             setPanStart({ x: event.clientX, y: event.clientY });
-        }
+        // Allow panning with primary button (no ctrl/meta) or middle mouse / ctrl+primary on the grid itself
+        setIsPanning(true);
+        setPanStart({ x: event.clientX, y: event.clientY });
         return;
     }
 
@@ -286,19 +288,54 @@ export default function BattleGrid({
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
       const currentVbParts = viewBox.split(' ').map(Number);
-      const svgWidth = svgRef.current.clientWidth;
-      const svgHeight = svgRef.current.clientHeight;
-      if (svgWidth === 0 || svgHeight === 0) return;
+      const svgContainerWidth = svgRef.current.clientWidth;
+      const svgContainerHeight = svgRef.current.clientHeight;
+      if (svgContainerWidth === 0 || svgContainerHeight === 0) return;
+      
+      const currentVbX = currentVbParts[0];
+      const currentVbY = currentVbParts[1];
       const currentVbWidth = currentVbParts[2];
       const currentVbHeight = currentVbParts[3];
-      const zoomFactorX = currentVbWidth / svgWidth;
-      const zoomFactorY = currentVbHeight / svgHeight;
-      const dx = (panStart.x - event.clientX) * zoomFactorX;
-      const dy = (panStart.y - event.clientY) * zoomFactorY;
-      const [vx, vy, vw, vh] = currentVbParts;
-      setViewBox(`${vx + dx} ${vy + dy} ${vw} ${vh}`);
+
+      const zoomFactorX = currentVbWidth / svgContainerWidth;
+      const zoomFactorY = currentVbHeight / svgContainerHeight;
+      
+      const dxPan = (panStart.x - event.clientX) * zoomFactorX;
+      const dyPan = (panStart.y - event.clientY) * zoomFactorY;
+
+      let newVx = currentVbX + dxPan;
+      let newVy = currentVbY + dyPan;
+
+      const contentTotalWidth = GRID_SIZE * cellSize;
+      const contentTotalHeight = GRID_SIZE * cellSize;
+      const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+      const svgPadding = currentBorderWidth / 2;
+
+      const minContentVx = 0 - svgPadding;
+      const maxPossibleVx = (contentTotalWidth + currentBorderWidth) - currentVbWidth - svgPadding;
+      
+      // If viewBox width is greater than or equal to the content width (fully zoomed out for width)
+      // then lock horizontal panning by setting newVx to minContentVx.
+      // A small tolerance (e.g., 1 pixel in content coordinates) for floating point comparisons.
+      if (currentVbWidth >= (contentTotalWidth + currentBorderWidth - 1)) {
+        newVx = minContentVx;
+      } else {
+        newVx = Math.max(minContentVx, newVx); // Don't pan left of content start
+        newVx = Math.min(newVx, maxPossibleVx); // Don't pan right of content end (maxPossibleVx is minContentVx + contentTotalWidthWithBorder - currentVbWidth)
+                                                // simplified: maxPossibleVx = (contentTotalWidth + svgPadding) - currentVbWidth;
+      }
+      
+      const minContentVy = 0 - svgPadding;
+      const maxPossibleVy = (contentTotalHeight + currentBorderWidth) - currentVbHeight - svgPadding;
+      // Allow vertical panning but clamp within content boundaries
+      newVy = Math.max(minContentVy, newVy);
+      newVy = Math.min(newVy, maxPossibleVy);
+
+
+      setViewBox(`${newVx} ${newVy} ${currentVbWidth} ${currentVbHeight}`);
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
+
     } else if (draggingToken && dragOffset && activeTool === 'select') {
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
@@ -439,12 +476,21 @@ export default function BattleGrid({
       newVh = vh * scaleAmount;
     }
 
-    const baseContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const minAllowedVw = baseContentWidth / 10;
-    const maxAllowedVw = baseContentWidth * 5;
+    const baseContentWidth = GRID_SIZE * cellSize;
+    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+    
+    const minAllowedVw = baseContentWidth / 10; // Max zoom IN (viewBox is 1/10th of content width)
+    const maxAllowedVw = baseContentWidth + currentBorderWidth; // Max zoom OUT (viewBox width equals content width)
+
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    newVh = (newVw / vw) * vh; // Maintain aspect ratio
+    // Maintain aspect ratio based on the (potentially clamped) newVw
+    if (vw !== 0) { // prevent division by zero if vw was somehow 0
+        newVh = (newVw / vw) * vh;
+    } else { // Should not happen with proper initialization
+        newVh = newVw; // Assume square content if vw is 0
+    }
+
 
     const newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
     const newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
@@ -472,8 +518,8 @@ export default function BattleGrid({
 
  const getCursorStyle = () => {
     if (isPanning || (draggingToken && activeTool === 'select')) return 'cursor-grabbing';
-    if (activeTool === 'select' && !draggingToken) return 'cursor-default'; // Default for select unless dragging a token
-    if (activeTool === 'select' && draggingToken) return 'cursor-grabbing'; // Ensure grabbing for token drag
+    if (activeTool === 'select' && !draggingToken) return 'cursor-default'; 
+    if (activeTool === 'select' && draggingToken) return 'cursor-grabbing'; 
     if ([
       'paint_cell', 
       'place_token', 
@@ -801,3 +847,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
