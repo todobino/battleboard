@@ -544,7 +544,7 @@ export default function BattleGrid({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMidYMid slice"
         data-ai-hint="battle grid tactical map"
       >
         {backgroundImageUrl && (
