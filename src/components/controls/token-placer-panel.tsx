@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Token, TokenTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Users } from 'lucide-react';
+// Users icon import removed as header is removed
 import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
@@ -42,10 +42,8 @@ export default function TokenPlacerPanel({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Users className="mr-2 h-5 w-5" /> Tokens & Terrain
-      </div>
+    <div> {/* Removed space-y-4 and p-4 */}
+      {/* Header div removed */}
       <Card className="bg-popover-foreground/5 border-border/50">
         <CardContent className="p-2 grid grid-cols-3 gap-2">
           {tokenTemplates.map(template => {
@@ -72,4 +70,3 @@ export default function TokenPlacerPanel({
     </div>
   );
 }
-
