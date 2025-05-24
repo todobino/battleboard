@@ -23,8 +23,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const GRID_ROWS = 30;
-const GRID_COLS = 30;
+const GRID_ROWS = 40;
+const GRID_COLS = 40;
 
 const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
