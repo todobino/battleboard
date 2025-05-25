@@ -149,27 +149,27 @@ export default function BattleBoardPage() {
 
   const handleUndo = useCallback(() => {
     if (historyPointer <= 0) {
-      toast({ title: "Nothing to undo" });
+      // toast({ title: "Nothing to undo" });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer - 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-    toast({ title: "Action Undone" });
-  }, [history, historyPointer, toast]);
+    // toast({ title: "Action Undone" });
+  }, [history, historyPointer]);
 
   const handleRedo = useCallback(() => {
     if (historyPointer >= history.length - 1 || historyPointer < 0) {
-      toast({ title: "Nothing to redo" });
+      // toast({ title: "Nothing to redo" });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer + 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-    toast({ title: "Action Redone" });
-  }, [history, historyPointer, toast]);
+    // toast({ title: "Action Redone" });
+  }, [history, historyPointer]);
 
   // Keyboard shortcuts for Undo/Redo
   useEffect(() => {
@@ -242,22 +242,22 @@ export default function BattleBoardPage() {
     setRoundCounter(1);
     if (participants.length > 0) {
       setCurrentParticipantIndex(0);
-      toast({ title: "Combat Started!", description: `Round 1. ${participants[0]?.name}'s turn.`});
+      // toast({ title: "Combat Started!", description: `Round 1. ${participants[0]?.name}'s turn.`});
     } else {
       setCurrentParticipantIndex(-1);
-      toast({ title: "Combat Started!", description: "Round 1. Add participants to the turn order."});
+      // toast({ title: "Combat Started!", description: "Round 1. Add participants to the turn order."});
     }
   };
 
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    toast({ title: "Combat Ended."});
+    // toast({ title: "Combat Ended."});
   };
 
   const handleAdvanceTurn = () => {
     if (!isCombatActive || participants.length === 0) {
-      toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
+      // toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
       return;
     }
     let nextIndex = currentParticipantIndex + 1;
@@ -266,12 +266,12 @@ export default function BattleBoardPage() {
       nextIndex = 0;
       currentRound = roundCounter + 1;
       setRoundCounter(currentRound);
-      toast({ title: `Round ${currentRound} Starting!` });
+      // toast({ title: `Round ${currentRound} Starting!` });
     }
     setCurrentParticipantIndex(nextIndex);
-    if (participants[nextIndex]) {
-       toast({ title: "Next Turn", description: `${participants[nextIndex].name}'s turn.`});
-    }
+    // if (participants[nextIndex]) {
+    //    toast({ title: "Next Turn", description: `${participants[nextIndex].name}'s turn.`});
+    // }
   };
 
   const handleAddParticipantToList = (participantData: Omit<Participant, 'id' | 'tokenId'> & { tokenId?: string}) => {
@@ -322,7 +322,7 @@ export default function BattleBoardPage() {
       }
       return newList;
     });
-    toast({ title: "Participant Added", description: `${newParticipant.name} added to turn order. ${newToken ? `Their token has been placed at (${newToken.x},${newToken.y}).` : ''}` });
+    // toast({ title: "Participant Added", description: `${newParticipant.name} added to turn order. ${newToken ? `Their token has been placed at (${newToken.x},${newToken.y}).` : ''}` });
   };
 
   const handleRemoveParticipantFromList = (idToRemove: string) => {
@@ -349,9 +349,9 @@ export default function BattleBoardPage() {
 
     if (participantToRemove?.tokenId) {
       setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
-      toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order and grid.` });
+      // toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order and grid.` });
     } else {
-      toast({ title: "Participant Removed", description: `${participantToRemove?.name || 'Participant'} removed from turn order.` });
+      // toast({ title: "Participant Removed", description: `${participantToRemove?.name || 'Participant'} removed from turn order.` });
     }
   };
   
@@ -553,3 +553,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+

@@ -5,7 +5,7 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Toast import removed
 import { Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -100,7 +100,7 @@ export default function BattleGrid({
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
 
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toast import and usage removed
   const cellSize = DEFAULT_CELL_SIZE;
 
    useEffect(() => {
@@ -602,9 +602,9 @@ export default function BattleGrid({
     }
     if (isMeasuring) {
       setIsMeasuring(false);
-      if (measurement.result) {
-        toast({ title: "Measurement Complete", description: measurement.result });
-      }
+      // if (measurement.result) { // Toast removed
+      //   toast({ title: "Measurement Complete", description: measurement.result });
+      // }
     }
     if (isErasing) {
         setIsErasing(false);

@@ -78,7 +78,7 @@ export default function GridSettingsPanel({
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
     setBackgroundZoomLevel(1); // Reset zoom when new image is set
-    toast({ title: 'Background Image Updated' });
+    // toast({ title: 'Background Image Updated' });
   };
 
   const handleCropCancel = () => {
@@ -89,7 +89,7 @@ export default function GridSettingsPanel({
   const handleSelectDefaultMap = (url: string) => {
     setBackgroundImageUrl(url);
     setBackgroundZoomLevel(1); // Reset zoom for default maps
-    toast({ title: 'Default Battlemap Selected' });
+    // toast({ title: 'Default Battlemap Selected' });
   };
 
   return (
