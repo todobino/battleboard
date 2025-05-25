@@ -72,6 +72,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isEditingHp, setIsEditingHp] = useState(false);
   const [newParticipantAc, setNewParticipantAc] = useState('10');
   const [isEditingAc, setIsEditingAc] = useState(false);
+  const [newParticipantQuantity, setNewParticipantQuantity] = useState('1');
+  const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
 
 
@@ -270,18 +272,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 color: 'hsl(var(--muted))', // Default for custom
                 customImageUrl: newImageUrl,
                 icon: undefined,
-                type: 'generic', // Or derive from participant type if needed
+                type: 'generic', 
                 label: 'Custom',
                 instanceName: participant.name,
                 size: 1,
             };
             setTokens(prevTokens => [...prevTokens, newToken]);
-            // Update participant with new tokenId
+            
             return prevParticipants.map(p =>
                 p.id === participantId ? { ...p, tokenId: newToken.id } : p
             );
         }
-        return prevParticipants; // No change to participants array if token already existed
+        return prevParticipants; 
     });
   }, []);
 
@@ -411,32 +413,40 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newParticipantName.trim() || !newParticipantInitiative.trim()) {
+    const participantNameInput = newParticipantName.trim();
+    if (!participantNameInput || !newParticipantInitiative.trim()) {
       return;
     }
     const initiativeValue = parseInt(newParticipantInitiative, 10);
     if (isNaN(initiativeValue)) {
       return;
     }
+
     const hpString = newParticipantHp.trim();
     const acString = newParticipantAc.trim();
     const hpValue = hpString === '' ? undefined : parseInt(hpString, 10);
     const acValue = acString === '' ? undefined : parseInt(acString, 10);
-    if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
-      return;
-    }
-    if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
-      return;
+
+    if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) return;
+    if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) return;
+
+    const quantity = parseInt(newParticipantQuantity, 10) || 1;
+    if (quantity < 1) {
+        return;
     }
 
-    const newParticipantData: Omit<Participant, 'id' | 'tokenId'> = {
-      name: newParticipantName.trim(),
-      initiative: initiativeValue,
-      type: newParticipantType,
-      hp: hpValue,
-      ac: acValue,
-    };
-    handleAddParticipantToList(newParticipantData);
+    for (let i = 0; i < quantity; i++) {
+      const finalName = quantity > 1 ? `${participantNameInput} ${i + 1}` : participantNameInput;
+      const newParticipantData: Omit<Participant, 'id' | 'tokenId'> = {
+        name: finalName,
+        initiative: initiativeValue,
+        type: newParticipantType,
+        hp: hpValue,
+        ac: acValue,
+      };
+      handleAddParticipantToList(newParticipantData);
+    }
+
     setNewParticipantName('');
     setNewParticipantInitiative('10');
     setIsEditingInitiative(false);
@@ -444,6 +454,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setIsEditingHp(false);
     setNewParticipantAc('10');
     setIsEditingAc(false);
+    setNewParticipantQuantity('1');
+    setIsEditingQuantity(false);
     setNewParticipantType('player');
     setDialogOpen(false);
   };
@@ -464,11 +476,21 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           id={`${idPrefix}-input`} type="number" value={value}
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
-            if (optional && value.trim() === '') { /* Keep empty if optional */ }
-            else {
+            const isQuantityField = idPrefix === 'participant-quantity-dialog';
+            if (isQuantityField) {
               const num = parseInt(value, 10);
-              if (isNaN(num) || (!optional && num < 0) || (optional && num <0 && value.trim() !== '')) setValue('10');
-              else if (optional && num < 0 && value.trim() !== '') setValue('0');
+              if (isNaN(num) || num < 1) setValue('1');
+            } else {
+              if (optional && value.trim() === '') { /* Keep empty if optional */ }
+              else {
+                const num = parseInt(value, 10);
+                // Default to 10 for non-optional invalid, 0 for optional invalid negatives
+                if (isNaN(num) || (!optional && num < 0) || (optional && num < 0 && value.trim() !== '')) {
+                    setValue('10'); 
+                } else if (optional && num < 0 && value.trim() !== '') {
+                    setValue('0');
+                }
+              }
             }
             setIsEditing(false);
           }}
@@ -477,14 +499,22 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       ) : (
         <div className="flex items-center gap-1 mt-1">
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => { const cv = parseInt(value,10) || (optional && value === '' ? 0 : 0); setValue(String(Math.max((optional?-Infinity:0), cv - 1))); }}>
+            onClick={() => { 
+                const currentValue = parseInt(value, 10) || 0;
+                const isQuantityField = idPrefix === 'participant-quantity-dialog';
+                const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0);
+                setValue(String(Math.max(minValue, currentValue - 1)));
+            }}>
             <Minus className="h-4 w-4" />
           </Button>
           <Button type="button" variant="ghost" id={`${idPrefix}-display`} onClick={() => setIsEditing(true)} className="h-8 px-2 text-base w-full justify-center" >
-            {value || (optional ? 'N/A' : '10')}
+            {value || (idPrefix === 'participant-quantity-dialog' ? '1' : (optional ? 'N/A' : '10'))}
           </Button>
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => { const cv = parseInt(value,10) || (optional && value === '' ? 0 : 0); setValue(String(cv + 1)); }}>
+            onClick={() => { 
+                const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? 0 : 0)); 
+                setValue(String(currentValue + 1)); 
+            }}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -536,7 +566,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-4 flex flex-col flex-grow">
+          <SidebarContent className="p-0 flex flex-col flex-grow"> {/* Changed p-4 to p-0 */}
             <InitiativeTrackerPanel
               participantsProp={participants}
               tokens={tokens}
@@ -565,8 +595,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3">
                     {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog")}
-                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health Points", "participant-hp-dialog", true)}
-                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor Class", "participant-ac-dialog", true)}
+                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "HP", "participant-hp-dialog", true)}
+                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true)}
+                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Qty*", "participant-quantity-dialog")}
                   </div>
                   <div>
                     <Label>Type</Label>
@@ -604,5 +635,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+
+    
 
     
