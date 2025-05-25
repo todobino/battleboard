@@ -176,5 +176,6 @@ export interface InitiativeTrackerPanelProps {
   roundCounter: number;
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
-  // onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void; // Placeholder for now
+  onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
 }
+

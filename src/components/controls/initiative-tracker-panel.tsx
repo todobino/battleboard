@@ -3,12 +3,12 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { Participant, InitiativeTrackerPanelProps as InitiativeTrackerPanelPropsType } from '@/types';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, MoreVertical } from 'lucide-react';
+import { Trash2, MoreVertical, UploadCloud } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -35,6 +34,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
+import ImageCropDialog from '@/components/image-crop-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 // Using the imported type for props
 interface InitiativeTrackerPanelProps extends InitiativeTrackerPanelPropsType {}
@@ -45,13 +46,21 @@ export default function InitiativeTrackerPanel({
   roundCounter,
   onRemoveParticipant,
   onRenameParticipant,
-  // onChangeParticipantTokenImage,
+  onChangeParticipantTokenImage,
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp;
+  const { toast } = useToast();
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [participantToRename, setParticipantToRename] = useState<Participant | null>(null);
   const [newNameInput, setNewNameInput] = useState('');
+
+  const [isChangeTokenDialogOpen, setIsChangeTokenDialogOpen] = useState(false);
+  const [participantToChangeTokenFor, setParticipantToChangeTokenFor] = useState<Participant | null>(null);
+  const [uncroppedTokenImageSrc, setUncroppedTokenImageSrc] = useState<string | null>(null);
+  const [isTokenCropDialogOpen, setIsTokenCropDialogOpen] = useState(false);
+  const tokenFileInputRef = useRef<HTMLInputElement>(null);
+
 
   const handleRenameClick = (participant: Participant) => {
     setParticipantToRename(participant);
@@ -66,6 +75,54 @@ export default function InitiativeTrackerPanel({
     setIsRenameDialogOpen(false);
     setParticipantToRename(null);
   };
+
+  const handleChangeTokenClick = (participant: Participant) => {
+    setParticipantToChangeTokenFor(participant);
+    setUncroppedTokenImageSrc(null); // Reset previous image
+    setIsChangeTokenDialogOpen(true);
+  };
+
+  const handleTokenImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: 'Upload Error',
+          description: 'Token image file size exceeds 2MB limit.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUncroppedTokenImageSrc(reader.result as string);
+        setIsTokenCropDialogOpen(true);
+        if (event.target) event.target.value = ''; // Reset file input
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTokenCropConfirm = (croppedDataUrl: string) => {
+    if (participantToChangeTokenFor) {
+      onChangeParticipantTokenImage(participantToChangeTokenFor.id, croppedDataUrl);
+      toast({
+        title: 'Token Image Updated',
+        description: `${participantToChangeTokenFor.name}'s token image has been changed.`,
+      });
+    }
+    setIsTokenCropDialogOpen(false);
+    setUncroppedTokenImageSrc(null);
+    setIsChangeTokenDialogOpen(false); // Close the parent dialog as well
+    setParticipantToChangeTokenFor(null);
+  };
+
+  const handleTokenCropCancel = () => {
+    setIsTokenCropDialogOpen(false);
+    setUncroppedTokenImageSrc(null);
+    // Keep the change token dialog open if user just cancels crop
+  };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -133,8 +190,8 @@ export default function InitiativeTrackerPanel({
                           "px-1.5 py-0.5 rounded-md text-white whitespace-nowrap",
                           p.type === 'player' ? 'bg-green-500' :
                           p.type === 'enemy' ? 'bg-red-500' :
-                          p.type === 'ally' ? 'bg-blue-500' : // Ally color
-                          'bg-gray-500' // Default fallback
+                          p.type === 'ally' ? 'bg-blue-500' : 
+                          'bg-gray-500' 
                         )}>
                           {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
                         </span>
@@ -155,7 +212,7 @@ export default function InitiativeTrackerPanel({
                           <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm" onClick={() => handleRenameClick(p)}>
                             Rename
                           </Button>
-                          <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm" onClick={() => {/* TODO: Implement Change Token */}}>
+                          <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm" onClick={() => handleChangeTokenClick(p)}>
                             Change Token
                           </Button>
                         </PopoverContent>
@@ -203,6 +260,53 @@ export default function InitiativeTrackerPanel({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {participantToChangeTokenFor && (
+        <Dialog open={isChangeTokenDialogOpen} onOpenChange={(isOpen) => {
+          setIsChangeTokenDialogOpen(isOpen);
+          if (!isOpen) setParticipantToChangeTokenFor(null);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Token for {participantToChangeTokenFor.name}</DialogTitle>
+              <DialogDescription>
+                Upload a new image to use as the token for this combatant.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => tokenFileInputRef.current?.click()}
+              >
+                <UploadCloud className="mr-2 h-4 w-4" /> Upload New Image
+              </Button>
+              <Input
+                ref={tokenFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleTokenImageUploadChange}
+                className="hidden"
+              />
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {uncroppedTokenImageSrc && (
+        <ImageCropDialog
+          isOpen={isTokenCropDialogOpen}
+          onOpenChange={setIsTokenCropDialogOpen}
+          imageSrc={uncroppedTokenImageSrc}
+          onCropConfirm={handleTokenCropConfirm}
+          onCropCancel={handleTokenCropCancel}
+        />
       )}
     </div>
   );

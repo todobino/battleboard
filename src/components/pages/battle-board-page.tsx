@@ -160,6 +160,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return; 
+      }
+      
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
@@ -237,7 +242,47 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         )
       );
     }
-  }, [participants]); // Added participants to dependency array
+  }, [participants]);
+
+  const handleChangeParticipantTokenImage = useCallback((participantId: string, newImageUrl: string) => {
+    setParticipants(prevParticipants => {
+        const participant = prevParticipants.find(p => p.id === participantId);
+        if (!participant) return prevParticipants;
+
+        if (participant.tokenId) {
+            setTokens(prevTokens =>
+                prevTokens.map(token =>
+                    token.id === participant.tokenId
+                        ? { ...token, customImageUrl: newImageUrl, icon: undefined, label: 'Custom' }
+                        : token
+                )
+            );
+        } else {
+            // Create a new token if one doesn't exist
+            const middleX = Math.floor(GRID_COLS / 2);
+            const middleY = Math.floor(GRID_ROWS / 2);
+            const newToken: Token = {
+                id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                x: middleX,
+                y: middleY,
+                color: 'hsl(var(--muted))', // Default for custom
+                customImageUrl: newImageUrl,
+                icon: undefined,
+                type: 'generic', // Or derive from participant type if needed
+                label: 'Custom',
+                instanceName: participant.name,
+                size: 1,
+            };
+            setTokens(prevTokens => [...prevTokens, newToken]);
+            // Update participant with new tokenId
+            return prevParticipants.map(p =>
+                p.id === participantId ? { ...p, tokenId: newToken.id } : p
+            );
+        }
+        return prevParticipants; // No change to participants array if token already existed
+    });
+  }, []);
+
 
   const handleStartCombat = () => {
     setIsCombatActive(true);
@@ -357,12 +402,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newParticipantName.trim() || !newParticipantInitiative.trim()) {
-      // No toast, just return
       return;
     }
     const initiativeValue = parseInt(newParticipantInitiative, 10);
     if (isNaN(initiativeValue)) {
-       // No toast, just return
       return;
     }
     const hpString = newParticipantHp.trim();
@@ -370,11 +413,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const hpValue = hpString === '' ? undefined : parseInt(hpString, 10);
     const acValue = acString === '' ? undefined : parseInt(acString, 10);
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
-       // No toast, just return
       return;
     }
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
-       // No toast, just return
       return;
     }
 
@@ -492,6 +533,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               roundCounter={roundCounter}
               onRemoveParticipant={handleRemoveParticipantFromList}
               onRenameParticipant={handleRenameParticipant}
+              onChangeParticipantTokenImage={handleChangeParticipantTokenImage}
             />
           </SidebarContent>
 
