@@ -46,18 +46,20 @@ export default function InitiativeTrackerPanel({
   const participants = participantsProp; // Use the prop directly or its default
 
   return (
-    <div className="flex flex-col h-full space-y-4"> {/* Modified className */}
-      <div className="text-lg flex justify-between items-center text-foreground">
-        <span className="font-semibold">Turn Order</span>
-        <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
+    <div className="flex flex-col h-full">
+      <div className="pb-3 mb-3 border-b border-sidebar-border"> {/* Header section */}
+        <div className="text-lg flex justify-between items-center text-foreground">
+          <span className="font-semibold">Turn Order</span>
+          <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
+        </div>
       </div>
 
-      <div className="flex flex-col flex-grow"> {/* Added flex flex-col flex-grow */}
+      <div className="flex flex-col flex-grow overflow-hidden"> {/* Added overflow-hidden */}
         {participants.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No participants in turn order.</p>
+          <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
         ) : (
-          <ScrollArea className="flex-grow"> {/* Modified className */}
-            <ul className="space-y-2">
+          <ScrollArea className="flex-grow"> 
+            <ul className="space-y-2 pr-1"> {/* Added pr-1 to avoid scrollbar overlap */}
               {participants.map((p, index) => {
                 const itemIsActive = index === currentParticipantIndex;
                 return (
@@ -68,7 +70,7 @@ export default function InitiativeTrackerPanel({
                       itemIsActive ? "bg-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
                     )}
                   >
-                    <div className="flex-grow flex flex-col mr-2">
+                    <div className="flex-grow flex flex-col mr-2 overflow-hidden"> {/* Added overflow-hidden */}
                       <div className="flex items-baseline">
                         <span className="font-semibold mr-2 text-lg">{p.initiative}</span>
                         <span className="text-base truncate" title={p.name}>{p.name}</span>
