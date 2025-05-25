@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Toast removed
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { Slider } from '@/components/ui/slider';
@@ -31,26 +31,28 @@ const formatMapName = (filename: string): string => {
   return filename
     .split('.')[0] // Remove extension
     .replace(/-/g, ' ') // Replace hyphens with spaces
+    .replace(/_/g, ' ') // Replace underscores with spaces
     .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize each word
 };
 
+// Ensure these filenames exist in your public/default-maps/ folder
 const defaultMapFiles = [
-  'ancient-library.jpg',
-  'cobblestone-town-square.png',
-  'dark-forest-path.webp',
-  'dungeon-hallway.jpg',
-  'mountain-shrine.png',
-  'ship-deck-storm.webp',
-  'swamp-village.jpg',
-  'tavern-common-room.png',
-  'temple-ruins.webp',
-  'volcanic-cavern.jpg',
+  'bridge.png',
+  'forest_path.png', // Example with underscore
+  'town-square.jpg',
+  'dungeon_room.webp',
+  'cave_entrance.png',
+  'ship-deck.jpg',
+  'temple_hall.webp',
+  'mountain_trail.png',
+  'swamp_clearing.jpg',
+  'desert_ruins.png',
 ];
 
 const defaultBattlemaps = defaultMapFiles.map(filename => ({
   name: formatMapName(filename),
   url: `/default-maps/${filename}`,
-  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '), // e.g., "ancient library"
+  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '), 
 }));
 
 
@@ -63,7 +65,7 @@ export default function GridSettingsPanel({
   backgroundZoomLevel,
   setBackgroundZoomLevel,
 }: GridSettingsPanelProps) {
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Toast removed
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
 
@@ -151,7 +153,7 @@ export default function GridSettingsPanel({
                       layout="fill"
                       objectFit="cover"
                       data-ai-hint={map.hint}
-                      unoptimized={map.url.endsWith('.webp')} // Add this if you have WEBP and don't want Next.js to re-optimize them
+                      unoptimized={map.url.endsWith('.webp')} 
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
                       <span className="text-xs text-white truncate">{map.name}</span>
@@ -190,7 +192,7 @@ export default function GridSettingsPanel({
             <Label
               htmlFor="background-image-upload-popover-main"
               className={cn(
-                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer mt-2', // Changed mt-1 to mt-2
+                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer mt-2', 
                 'bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors'
               )}
             >
