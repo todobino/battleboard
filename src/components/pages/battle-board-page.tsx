@@ -10,6 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { LandPlot, Play, SkipForward, Square, PlusCircle, Plus, Minus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 import {
   Dialog,
@@ -39,6 +40,7 @@ const initialGridCells = (): GridCellData[][] =>
   );
 
 export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPageProps) {
+  const { toast } = useToast();
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
   const [tokens, setTokens] = useState<Token[]>([]);
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
@@ -285,6 +287,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
 
   const handleStartCombat = () => {
+    if (participants.length === 0) {
+      toast({
+        title: 'Cannot Start Combat',
+        description: 'Add combatants to the turn order first.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsCombatActive(true);
     setRoundCounter(1);
     if (participants.length > 0) {
@@ -594,3 +604,5 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+
+    
