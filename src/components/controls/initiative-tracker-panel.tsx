@@ -67,24 +67,24 @@ export default function InitiativeTrackerPanel({
                     key={p.id}
                     className={cn(
                       "flex items-center justify-between p-2 rounded-md transition-colors",
-                      itemIsActive ? "bg-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
+                      itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
                     )}
                   >
                     <div className="flex-grow flex flex-col mr-2 overflow-hidden"> {/* Added overflow-hidden */}
                       <div className="flex items-baseline">
                         <span className="font-semibold mr-2 text-lg">{p.initiative}</span>
-                        <span className="text-base truncate" title={p.name}>{p.name}</span>
+                        <span className="text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
                       <div className="flex items-center text-xs text-muted-foreground mt-1">
                         {p.hp !== undefined && <span className="mr-2 whitespace-nowrap">(HP: {p.hp})</span>}
                         {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
                         <span className={cn(
-                          "px-1.5 py-0.5 rounded-full text-white whitespace-nowrap",
-                          p.type === 'player' ? 'bg-blue-500' :
-                          p.type === 'enemy' ? 'bg-red-500' :
-                          'bg-green-500' // Ally
+                          "px-1.5 py-0.5 rounded-md text-white whitespace-nowrap", // Changed rounded-full to rounded-md
+                          p.type === 'player' ? 'bg-green-500' : // Player to green
+                          p.type === 'enemy' ? 'bg-red-500' :    // Enemy remains red
+                          'bg-blue-500' // Ally to blue
                         )}>
-                          {p.type}
+                          {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
                         </span>
                       </div>
                     </div>
