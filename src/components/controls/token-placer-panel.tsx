@@ -45,7 +45,7 @@ export default function TokenPlacerPanel({
     <div> {/* Removed space-y-4 and p-4 */}
       {/* Header div removed */}
       <Card className="bg-popover-foreground/5 border-border/50">
-        <CardContent className="p-2 grid grid-cols-3 gap-2">
+        <CardContent className="p-2 grid grid-cols-5 gap-2">
           {tokenTemplates.map(template => {
             const Icon = template.icon;
             return (
@@ -53,15 +53,15 @@ export default function TokenPlacerPanel({
               key={template.name}
               variant="outline"
               className={cn(
-                "h-auto flex flex-col items-center p-2 space-y-1",
-                "hover:border-accent" // Add orange border on hover
+                "aspect-square h-auto flex flex-col items-center justify-center p-2 space-y-1", // Added aspect-square, justify-center
+                "hover:border-accent"
               )}
               style={{ backgroundColor: template.color }}
               onClick={() => handleSelectTokenTemplate(template)}
               aria-label={`Place ${template.name} token`}
             >
               {Icon && <Icon className="h-6 w-6" color={"hsl(var(--primary-foreground))"} />}
-              <span className="text-xs text-primary-foreground">{template.name}</span>
+              <span className="text-xs text-primary-foreground text-center leading-tight">{template.name}</span>
             </Button>
             );
           })}
