@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
+  // DialogDescription, // Removed
   DialogClose,
 } from '@/components/ui/dialog';
 import { Crop, Grid } from 'lucide-react';
@@ -264,14 +264,11 @@ export default function ImageCropDialog({
       }}
     >
       <DialogContent className="sm:max-w-[450px] p-0" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className="p-6 pb-4"> {/* Adjusted pb */}
           <DialogTitle className="flex items-center">
-            <Crop className="mr-2 h-5 w-5"/> Crop Background Image
+            <Crop className="mr-2 h-5 w-5"/> Crop Image
           </DialogTitle>
-          <DialogDescription>
-            Click and drag on the image to select a square area for your battle map background.
-            Or, click "Use Image" to use the original uploaded image without cropping.
-          </DialogDescription>
+          {/* DialogDescription removed */}
         </DialogHeader>
         <div className="p-6 pt-0 flex justify-center items-center" data-ai-hint="image crop tool">
           {imageSrc && (
@@ -302,3 +299,4 @@ export default function ImageCropDialog({
     </Dialog>
   );
 }
+
