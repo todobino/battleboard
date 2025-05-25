@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TokenTemplate } from '@/types';
+import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { tokenTemplates } from '@/config/token-templates'; // Import shared token templates
+import { tokenTemplates } from '@/config/token-templates'; 
 
 const GRID_ROWS = 40;
 const GRID_COLS = 40;
+const DEFAULT_TEXT_FONT_SIZE = 16;
 
 const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
@@ -55,6 +56,9 @@ export default function BattleBoardPage() {
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
   const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
+  const [textObjects, setTextObjects] = useState<TextObjectType[]>([]);
+  const [currentTextFontSize, setCurrentTextFontSize] = useState<number>(DEFAULT_TEXT_FONT_SIZE);
+
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newParticipantName, setNewParticipantName] = useState('');
@@ -166,7 +170,7 @@ export default function BattleBoardPage() {
         icon: template.icon,
         type: template.type,
         label: template.name,
-        instanceName: participantName, // Use participant's name for the token
+        instanceName: participantName, 
         size: 1,
       };
       setTokens(prev => [...prev, newToken!]);
@@ -223,7 +227,6 @@ export default function BattleBoardPage() {
       return newList;
     });
 
-    // Optionally remove linked token from grid
     if (participantToRemove?.tokenId) {
       setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
       toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order and grid.` });
@@ -339,6 +342,7 @@ export default function BattleBoardPage() {
             tokens={tokens} setTokens={setTokens}
             drawnShapes={drawnShapes} setDrawnShapes={setDrawnShapes}
             currentDrawingShape={currentDrawingShape} setCurrentDrawingShape={setCurrentDrawingShape}
+            textObjects={textObjects} setTextObjects={setTextObjects}
             showGridLines={showGridLines}
             backgroundImageUrl={backgroundImageUrl}
             backgroundZoomLevel={backgroundZoomLevel} 
@@ -349,6 +353,7 @@ export default function BattleBoardPage() {
             onTokenInstanceNameChange={handleTokenInstanceNameChange}
             measurement={measurement} setMeasurement={setMeasurement}
             activeTokenId={activeTokenId}
+            currentTextFontSize={currentTextFontSize}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -364,7 +369,7 @@ export default function BattleBoardPage() {
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-4 flex flex-col flex-grow">
+          <SidebarContent className="p-4 flex flex-col flex-grow"> {/* Ensure this allows InitiativeTrackerPanel to grow */}
             <InitiativeTrackerPanel
               participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}

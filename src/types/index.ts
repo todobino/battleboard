@@ -74,6 +74,16 @@ export interface DrawnShape {
   strokeWidth: number;
 }
 
+export interface TextObjectType {
+  id: string;
+  x: number;
+  y: number;
+  content: string;
+  fontSize: number;
+  width: number; // Calculated width for the background bubble
+  height: number; // Calculated height for the background bubble
+}
+
 export interface BattleGridProps {
   gridCells: GridCellData[][];
   setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
@@ -83,6 +93,8 @@ export interface BattleGridProps {
   setDrawnShapes: React.Dispatch<React.SetStateAction<DrawnShape[]>>;
   currentDrawingShape: DrawnShape | null;
   setCurrentDrawingShape: React.Dispatch<React.SetStateAction<DrawnShape | null>>;
+  textObjects: TextObjectType[];
+  setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
   backgroundImageUrl: string | null;
   backgroundZoomLevel?: number;
@@ -94,6 +106,7 @@ export interface BattleGridProps {
   onTokenInstanceNameChange: (tokenId: string, newName: string) => void;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
-  activeTokenId?: string | null; // Added prop for active token highlighting
+  activeTokenId?: string | null;
+  currentTextFontSize: number; // Font size for new text objects
 }
 
