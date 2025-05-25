@@ -94,9 +94,9 @@ export default function InitiativeTrackerPanel({
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="group h-7 w-7 shrink-0 hover:bg-destructive hover:text-destructive-foreground"
+                          className="group h-7 w-7 shrink-0 hover:bg-destructive"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive-foreground" />
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
