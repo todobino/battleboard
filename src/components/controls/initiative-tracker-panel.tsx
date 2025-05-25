@@ -215,11 +215,11 @@ export default function InitiativeTrackerPanel({
                           </div>
                         )}
                         <span className={cn(
-                          "px-1.5 py-0.5 rounded-md text-xs text-white whitespace-nowrap", // text-xs for badge
-                          p.type === 'player' ? 'bg-green-500' :
-                          p.type === 'enemy' ? 'bg-red-500' :
-                          p.type === 'ally' ? 'bg-blue-500' : 
-                          'bg-gray-500' 
+                          "px-1.5 py-0.5 rounded-md text-xs whitespace-nowrap",
+                          p.type === 'player' ? 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))]' :
+                          p.type === 'enemy' ? 'bg-red-500 text-white' :
+                          p.type === 'ally' ? 'bg-blue-500 text-white' : 
+                          'bg-gray-500 text-white' 
                         )}>
                           {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
                         </span>

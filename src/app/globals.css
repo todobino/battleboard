@@ -58,6 +58,11 @@
 
     /* Battle Grid Background Color */
     --battle-grid-bg: hsl(60, 50%, 85%);
+
+    /* Player Green Theme */
+    --player-green-bg: 130 50% 30%;
+    --player-green-hover-bg: 130 50% 25%;
+    --player-green-foreground: 130 20% 90%;
   }
 }
 

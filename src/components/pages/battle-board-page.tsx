@@ -576,7 +576,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
-              <Button onClick={handleStartCombat} className="w-full bg-green-600 hover:bg-green-700 text-primary-foreground"> <Play className="mr-2 h-4 w-4" /> Start Combat </Button>
+              <Button 
+                onClick={handleStartCombat} 
+                className="w-full bg-[hsl(var(--player-green-bg))] hover:bg-[hsl(var(--player-green-hover-bg))] text-[hsl(var(--player-green-foreground))]"
+              > 
+                <Play className="mr-2 h-4 w-4" /> Start Combat 
+              </Button>
             ) : (
               <div className="flex gap-2">
                 <Button onClick={handleAdvanceTurn} className="flex-1 bg-blue-600 hover:bg-blue-700 text-primary-foreground"> <SkipForward className="mr-2 h-4 w-4" /> Next Turn </Button>
