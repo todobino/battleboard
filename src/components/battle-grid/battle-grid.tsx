@@ -14,7 +14,7 @@ const GRID_SIZE = 30;
 const DEFAULT_CELL_SIZE = 30;
 const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
-const ZOOM_AMOUNT = 1.1; 
+const ZOOM_AMOUNT = 1.1;
 const TEXT_PADDING = { x: 8, y: 4 }; // Padding for text bubbles
 
 // Helper to snap to grid cell centers (for circles)
@@ -71,17 +71,17 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = GRID_SIZE * DEFAULT_CELL_SIZE;
     const initialContentHeight = GRID_SIZE * DEFAULT_CELL_SIZE;
-    const currentBorderWidth = BORDER_WIDTH_WHEN_VISIBLE; 
+    const currentBorderWidth = BORDER_WIDTH_WHEN_VISIBLE;
     const padding = currentBorderWidth / 2;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + currentBorderWidth} ${initialContentHeight + currentBorderWidth}`;
   });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
-  
+
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
-  
+
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
@@ -113,7 +113,7 @@ export default function BattleGrid({
     const expectedMinY = 0 - svgPadding;
     const expectedVw = contentWidth + currentBorderWidth;
     const expectedVh = contentHeight + currentBorderWidth;
-    
+
     setViewBox(currentVbString => {
       const currentVbParts = currentVbString.split(' ').map(Number);
       const needsRecenter = Math.abs(currentVbParts[0] - expectedMinX) > 1e-3 ||
@@ -121,7 +121,7 @@ export default function BattleGrid({
                             Math.abs(currentVbParts[2] - expectedVw) > 1e-3 ||
                             Math.abs(currentVbParts[3] - expectedVh) > 1e-3;
       const currentZoomRatio = contentWidth !== 0 ? currentVbParts[2] / contentWidth : 1;
-      
+
       if (needsRecenter && Math.abs(currentZoomRatio - (expectedVw / contentWidth)) < 1e-3 ) {
            return `${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`;
       }
@@ -145,7 +145,7 @@ export default function BattleGrid({
   const measureText = useCallback((text: string, fontSize: number) => {
     const tempSpan = document.createElement('span');
     document.body.appendChild(tempSpan);
-    tempSpan.style.font = `${fontSize}px sans-serif`; 
+    tempSpan.style.font = `${fontSize}px sans-serif`;
     tempSpan.style.whiteSpace = 'nowrap';
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
@@ -165,7 +165,7 @@ export default function BattleGrid({
       const newTextObject: TextObjectType = {
         id: isCreatingText.id,
         x: isCreatingText.x,
-        y: isCreatingText.y - bubbleHeight / 2, 
+        y: isCreatingText.y - bubbleHeight / 2,
         content: isCreatingText.currentText,
         fontSize: isCreatingText.fontSize,
         width: bubbleWidth,
@@ -178,13 +178,13 @@ export default function BattleGrid({
 
   useEffect(() => {
     if (activeTool !== 'select') {
-      if (editingTokenId) { 
+      if (editingTokenId) {
         setEditingTokenId(null);
         setEditingText('');
       }
     }
     if (activeTool !== 'type_tool') {
-      if (isCreatingText) { 
+      if (isCreatingText) {
         finalizeTextCreation();
       }
     }
@@ -227,7 +227,7 @@ export default function BattleGrid({
             shape.startPoint.x, shape.startPoint.y,
             shape.endPoint.x, shape.endPoint.y
           );
-          return distToLine > (shape.strokeWidth / 2 + 2); 
+          return distToLine > (shape.strokeWidth / 2 + 2);
         } else if (shape.type === 'circle') {
           const distToCircleCenter = Math.sqrt(
             Math.pow(cellCenterX - shape.startPoint.x, 2) +
@@ -260,7 +260,7 @@ export default function BattleGrid({
   };
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (editingTokenId) return; 
+    if (editingTokenId) return;
 
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
@@ -272,7 +272,7 @@ export default function BattleGrid({
                 pos.y >= textObj.y && pos.y <= textObj.y + textObj.height) {
                 setDraggingTextObjectId(textObj.id);
                 setTextObjectDragOffset({ x: pos.x - textObj.x, y: pos.y - textObj.y });
-                return; 
+                return;
             }
         }
         if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
@@ -288,17 +288,24 @@ export default function BattleGrid({
     }
 
     if (activeTool === 'type_tool') {
-        if (isCreatingText) { 
+        event.stopPropagation(); // Prevent event from bubbling up further
+
+        if (isCreatingText) {
             finalizeTextCreation();
         }
-        setIsCreatingText({
-            id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            x: pos.x,
-            y: pos.y,
-            currentText: '',
-            fontSize: currentTextFontSize,
-            inputWidth: 150, 
-        });
+        // Use setTimeout to defer the state update, allowing React to process
+        // the previous state update from finalizeTextCreation if it occurred.
+        setTimeout(() => {
+            const newPos = getMousePosition(event); // Re-fetch position, event might be stale in timeout
+            setIsCreatingText({
+                id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                x: newPos.x,
+                y: newPos.y,
+                currentText: '',
+                fontSize: currentTextFontSize,
+                inputWidth: 150,
+            });
+        }, 0);
         return;
     }
 
@@ -325,11 +332,10 @@ export default function BattleGrid({
       case 'place_token':
         if (selectedTokenTemplate) {
           const baseLabel = selectedTokenTemplate.label || selectedTokenTemplate.type;
-          // Ensure instanceName generation is robust even if label is short
           const instanceNamePrefix = baseLabel || 'Token';
-          const existingTokensOfTypeAndLabel = tokens.filter(t => 
-            (t.type === selectedTokenTemplate.type && t.label === baseLabel) || 
-            (t.customImageUrl && t.label === baseLabel) // Account for custom tokens
+          const existingTokensOfTypeAndLabel = tokens.filter(t =>
+            (t.type === selectedTokenTemplate.type && t.label === baseLabel) ||
+            (t.customImageUrl && t.label === baseLabel)
           );
           const count = existingTokensOfTypeAndLabel.length + 1;
           const instanceName = `${instanceNamePrefix} ${count}`;
@@ -339,7 +345,6 @@ export default function BattleGrid({
              x: gridX,
              y: gridY,
              instanceName: instanceName,
-             // Ensure customImageUrl and icon are correctly passed from selectedTokenTemplate
              customImageUrl: selectedTokenTemplate.customImageUrl,
              icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon,
           };
@@ -377,9 +382,9 @@ export default function BattleGrid({
             id: `shape-${Date.now()}`,
             type: activeTool === 'draw_line' ? 'line' : activeTool === 'draw_circle' ? 'circle' : 'square',
             startPoint: startP,
-            endPoint: startP, 
+            endPoint: startP,
             color: activeTool === 'draw_line' ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-            fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined, 
+            fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined,
             strokeWidth: activeTool === 'draw_line' ? 2 : 1,
           });
         }
@@ -388,25 +393,25 @@ export default function BattleGrid({
   };
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
-    if (editingTokenId === token.id || activeTool !== 'select') return; 
-    event.stopPropagation(); 
+    if (editingTokenId === token.id || activeTool !== 'select') return;
+    event.stopPropagation();
     setDraggingToken(token);
     const pos = getMousePosition(event);
     setDragOffset({
       x: pos.x - token.x * cellSize,
       y: pos.y - token.y * cellSize
     });
-    setDraggingTokenPosition(null); 
+    setDraggingTokenPosition(null);
   };
 
   const handleTokenLabelClick = (event: React.MouseEvent, token: TokenType) => {
-    event.stopPropagation(); 
-    if (activeTool === 'select' && !draggingToken) { 
+    event.stopPropagation();
+    if (activeTool === 'select' && !draggingToken) {
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
     }
   };
-  
+
   const handleSaveTokenName = () => {
     if (editingTokenId) {
       setTokens(prevTokens =>
@@ -445,11 +450,11 @@ export default function BattleGrid({
       tempSpan.style.font = `${isCreatingText.fontSize}px sans-serif`;
       tempSpan.style.visibility = 'hidden';
       tempSpan.style.position = 'absolute';
-      tempSpan.textContent = newText || " "; 
+      tempSpan.textContent = newText || " ";
       document.body.appendChild(tempSpan);
       const textMetricsWidth = tempSpan.offsetWidth;
       document.body.removeChild(tempSpan);
-      
+
       setIsCreatingText(prev => prev ? { ...prev, currentText: newText, inputWidth: textMetricsWidth + TEXT_PADDING.x * 2 + 5 } : null);
     }
   };
@@ -462,7 +467,7 @@ export default function BattleGrid({
       const svgContainerWidth = svgRef.current.clientWidth;
       const svgContainerHeight = svgRef.current.clientHeight;
       if (svgContainerWidth === 0 || svgContainerHeight === 0) return;
-      
+
       const currentVbX = currentVbParts[0];
       const currentVbY = currentVbParts[1];
       const currentVbWidth = currentVbParts[2];
@@ -470,7 +475,7 @@ export default function BattleGrid({
 
       const zoomFactorX = currentVbWidth / svgContainerWidth;
       const zoomFactorY = currentVbHeight / svgContainerHeight;
-      
+
       const dxPan = (panStart.x - event.clientX) * zoomFactorX;
       const dyPan = (panStart.y - event.clientY) * zoomFactorY;
 
@@ -484,14 +489,14 @@ export default function BattleGrid({
 
       const minContentVx = 0 - svgPadding;
       const maxPossibleVx = (contentTotalWidth + currentBorderWidth) - currentVbWidth - svgPadding;
-      
+
       if (currentVbWidth >= (contentTotalWidth + currentBorderWidth - 1)) {
         newVx = minContentVx;
       } else {
-        newVx = Math.max(minContentVx, newVx); 
-        newVx = Math.min(newVx, maxPossibleVx); 
+        newVx = Math.max(minContentVx, newVx);
+        newVx = Math.min(newVx, maxPossibleVx);
       }
-      
+
       const minContentVy = 0 - svgPadding;
       const maxPossibleVy = (contentTotalHeight + currentBorderWidth) - currentVbHeight - svgPadding;
       newVy = Math.max(minContentVy, newVy);
@@ -512,11 +517,11 @@ export default function BattleGrid({
       if (!draggingTokenPosition || draggingTokenPosition.x !== clampedGridX || draggingTokenPosition.y !== clampedGridY) {
         setDraggingTokenPosition({ x: clampedGridX, y: clampedGridY });
       }
-      setHoveredCellWhilePaintingOrErasing(null); 
+      setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingTextObjectId && textObjectDragOffset && activeTool === 'select') {
         const newX = pos.x - textObjectDragOffset.x;
         const newY = pos.y - textObjectDragOffset.y;
-        setTextObjects(prev => prev.map(obj => 
+        setTextObjects(prev => prev.map(obj =>
             obj.id === draggingTextObjectId ? { ...obj, x: newX, y: newY } : obj
         ));
     } else if (isMeasuring && measurement.startPoint && (activeTool === 'measure_distance' || activeTool === 'measure_radius')) {
@@ -582,7 +587,7 @@ export default function BattleGrid({
       setIsPanning(false);
       setPanStart(null);
     }
-    if (draggingToken && activeTool === 'select' && !editingTokenId) { 
+    if (draggingToken && activeTool === 'select' && !editingTokenId) {
       if (draggingTokenPosition) {
         const finalX = Math.max(0, Math.min(draggingTokenPosition.x, GRID_SIZE - 1));
         const finalY = Math.max(0, Math.min(draggingTokenPosition.y, GRID_SIZE - 1));
@@ -635,7 +640,7 @@ export default function BattleGrid({
     if (activeTool === 'place_token') {
       setHoveredCellWhilePaintingOrErasing(null);
     }
-    if (draggingTextObjectId) { 
+    if (draggingTextObjectId) {
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
     }
@@ -663,12 +668,12 @@ export default function BattleGrid({
 
     const baseContentWidth = GRID_SIZE * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    
-    const minAllowedVw = baseContentWidth / 10; 
-    const maxAllowedVw = baseContentWidth + currentBorderWidth; 
+
+    const minAllowedVw = baseContentWidth / 10;
+    const maxAllowedVw = baseContentWidth + currentBorderWidth;
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
-    if (vw !== 0) { newVh = (newVw / vw) * vh; } 
+    if (vw !== 0) { newVh = (newVw / vw) * vh; }
     else { newVh = newVw; }
 
     const newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
@@ -678,7 +683,7 @@ export default function BattleGrid({
   };
 
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
-    if (editingTokenId || isCreatingText) return; 
+    if (editingTokenId || isCreatingText) return;
     event.preventDefault();
     applyZoom(event.deltaY < 0, ZOOM_AMOUNT);
   };
@@ -698,10 +703,10 @@ export default function BattleGrid({
  const getCursorStyle = () => {
     if (editingTokenId || isCreatingText) return 'cursor-text';
     if (isPanning || (draggingToken && activeTool === 'select') || draggingTextObjectId) return 'cursor-grabbing';
-    if (activeTool === 'select' && !draggingToken && !draggingTextObjectId) return 'cursor-default'; 
+    if (activeTool === 'select' && !draggingToken && !draggingTextObjectId) return 'cursor-default';
     if (activeTool === 'type_tool') return 'cursor-text';
     if ([
-      'paint_cell', 'place_token', 'measure_distance', 'measure_radius', 
+      'paint_cell', 'place_token', 'measure_distance', 'measure_radius',
       'eraser_tool', 'draw_line', 'draw_circle', 'draw_square'
     ].includes(activeTool)) return 'cursor-crosshair';
     return 'cursor-default';
@@ -722,7 +727,7 @@ export default function BattleGrid({
         data-ai-hint="battle grid tactical map"
       >
         <defs>
-          {tokens.map(token => 
+          {tokens.map(token =>
             token.customImageUrl ? (
               <clipPath key={`clip-${token.id}`} id={`clip-${token.id}`}>
                 <circle cx={cellSize / 2} cy={cellSize / 2} r={cellSize / 2 * 0.95} />
@@ -747,7 +752,7 @@ export default function BattleGrid({
         <g shapeRendering="crispEdges">
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => {
-              const isHighlightActive = (isPainting && activeTool === 'paint_cell') || 
+              const isHighlightActive = (isPainting && activeTool === 'paint_cell') ||
                                       (isErasing && activeTool === 'eraser_tool') ||
                                       (activeTool === 'place_token');
               const isHighlighted = isHighlightActive &&
@@ -769,7 +774,7 @@ export default function BattleGrid({
                 }
                 strokeWidth={
                   isHighlighted
-                    ? BORDER_WIDTH_WHEN_VISIBLE + 1 
+                    ? BORDER_WIDTH_WHEN_VISIBLE + 1
                     : showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0
                 }
               />
@@ -817,22 +822,21 @@ export default function BattleGrid({
 
           const iconDisplaySize = cellSize * 0.8;
           const iconOffset = (cellSize - iconDisplaySize) / 2;
-          
-          // For custom images
-          const imageDisplaySize = cellSize * 0.95; // Slightly smaller than cell for border
+
+          const imageDisplaySize = cellSize * 0.95;
           const imageOffset = (cellSize - imageDisplaySize) / 2;
 
 
-          let backgroundFill = token.color; // Use token's color by default for custom images too
-            if (!token.customImageUrl) { // Only set default type colors if not a custom image (or rely on token.color)
+          let backgroundFill = token.color;
+            if (!token.customImageUrl) {
                 switch (token.type) {
                     case 'player': backgroundFill = 'hsl(120, 40%, 25%)'; break;
                     case 'enemy': backgroundFill = 'hsl(0, 60%, 30%)'; break;
-                    case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break; 
+                    case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break;
                     case 'item': backgroundFill = 'hsl(270, 40%, 30%)'; break;
                     case 'terrain': backgroundFill = 'hsl(var(--muted))'; break;
                     case 'generic': backgroundFill = 'hsl(var(--accent))'; break;
-                    default: backgroundFill = token.color || 'black'; // Fallback to token.color or black
+                    default: backgroundFill = token.color || 'black';
                 }
             }
 
@@ -851,10 +855,10 @@ export default function BattleGrid({
                 activeTool === 'select' && !isCurrentlyEditing && 'cursor-grab',
                 draggingToken?.id === token.id && !isCurrentlyEditing && 'cursor-grabbing',
                 isCurrentlyEditing && 'cursor-text',
-                'drop-shadow-md' 
+                'drop-shadow-md'
               )}
             >
-              <circle // Background circle, always drawn
+              <circle
                 cx={cellSize / 2}
                 cy={cellSize / 2}
                 r={cellSize / 2}
@@ -864,7 +868,7 @@ export default function BattleGrid({
                     ? 'hsl(var(--ring))'
                     : hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing
                       ? 'hsl(var(--accent))'
-                      : 'hsl(var(--primary-foreground))' 
+                      : 'hsl(var(--primary-foreground))'
                 }
                 strokeWidth={isTokenActiveTurn ? 3 : 1}
                 onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
@@ -881,15 +885,14 @@ export default function BattleGrid({
                     onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
                     className={!isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"}
                   />
-                  {/* White border for custom image, rendered on top of the background circle but under text */}
                    <circle
                     cx={cellSize / 2}
                     cy={cellSize / 2}
-                    r={cellSize / 2 * 0.95} // Matches clipPath radius
+                    r={cellSize / 2 * 0.95}
                     fill="none"
-                    strokeWidth="1.5" // Adjust for desired border thickness
+                    strokeWidth="1.5"
                     stroke={'hsl(var(--primary-foreground))'}
-                    className="pointer-events-none" // So it doesn't interfere with clicks on the image
+                    className="pointer-events-none"
                   />
                 </>
               ) : IconComponent ? (
@@ -908,7 +911,7 @@ export default function BattleGrid({
               {token.instanceName && !isCurrentlyEditing && (
                 <text
                   x={cellSize / 2}
-                  y={cellSize + 10} 
+                  y={cellSize + 10}
                   textAnchor="middle"
                   fontSize="10"
                   fontFamily="sans-serif"
@@ -927,11 +930,11 @@ export default function BattleGrid({
                 </text>
               )}
               {isCurrentlyEditing && (
-                <foreignObject 
-                  x={-cellSize / 2} 
-                  y={cellSize + 2} 
-                  width={cellSize * 2} 
-                  height={20} 
+                <foreignObject
+                  x={-cellSize / 2}
+                  y={cellSize + 2}
+                  width={cellSize * 2}
+                  height={20}
                 >
                   <input
                     ref={foreignObjectInputRef}
@@ -951,14 +954,14 @@ export default function BattleGrid({
                       textAlign: 'center',
                       outline: 'none',
                     }}
-                    onWheelCapture={(e) => e.stopPropagation()} 
+                    onWheelCapture={(e) => e.stopPropagation()}
                   />
                 </foreignObject>
               )}
             </g>
           );
         })}
-        
+
         {textObjects.map(obj => (
           <foreignObject
             key={obj.id}
@@ -969,7 +972,7 @@ export default function BattleGrid({
             className={cn(activeTool === 'select' ? 'cursor-grab' : 'cursor-default', draggingTextObjectId === obj.id ? 'cursor-grabbing' : '')}
             onMouseDown={(e) => {
               if (activeTool === 'select') {
-                e.stopPropagation(); 
+                e.stopPropagation();
                 setDraggingTextObjectId(obj.id);
                 const pos = getMousePosition(e);
                 setTextObjectDragOffset({ x: pos.x - obj.x, y: pos.y - obj.y });
@@ -990,7 +993,7 @@ export default function BattleGrid({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                whiteSpace: 'nowrap', 
+                whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
               }}
@@ -1001,11 +1004,11 @@ export default function BattleGrid({
         ))}
 
         {isCreatingText && (
-          <foreignObject 
-            x={isCreatingText.x} 
-            y={isCreatingText.y - (isCreatingText.fontSize + TEXT_PADDING.y * 2) / 2} 
-            width={isCreatingText.inputWidth} 
-            height={isCreatingText.fontSize + TEXT_PADDING.y * 2 + 2} 
+          <foreignObject
+            x={isCreatingText.x}
+            y={isCreatingText.y - (isCreatingText.fontSize + TEXT_PADDING.y * 2) / 2}
+            width={isCreatingText.inputWidth}
+            height={isCreatingText.fontSize + TEXT_PADDING.y * 2 + 2}
           >
             <input
               ref={textInputRef}
