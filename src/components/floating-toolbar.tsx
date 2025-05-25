@@ -309,20 +309,21 @@ export default function FloatingToolbar({
         </Popover>
 
         <ToolButton
-          label="Eraser"
-          icon={Eraser}
-          tool="eraser_tool"
-          currentActiveTool={activeTool}
-          onClick={() => handleToolClick('eraser_tool')}
-        />
-
-        <ToolButton
           label="Type Tool"
           icon={Type}
           tool="type_tool"
           currentActiveTool={activeTool}
           onClick={() => handleToolClick('type_tool')}
         />
+
+        <ToolButton
+          label="Eraser"
+          icon={Eraser}
+          tool="eraser_tool"
+          currentActiveTool={activeTool}
+          onClick={() => handleToolClick('eraser_tool')}
+        />
+        
       </div>
     </TooltipProvider>
   );
