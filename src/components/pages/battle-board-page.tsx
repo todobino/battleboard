@@ -156,10 +156,12 @@ export default function BattleBoardPage() {
 
     let newToken: Token | undefined = undefined;
     if (template) {
+      const middleX = Math.floor(GRID_COLS / 2);
+      const middleY = Math.floor(GRID_ROWS / 2);
       newToken = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        x: 0, // Default position, user can move it
-        y: 0,
+        x: middleX, 
+        y: middleY,
         color: template.color,
         icon: template.icon,
         type: template.type,
@@ -196,7 +198,7 @@ export default function BattleBoardPage() {
       }
       return newList;
     });
-    toast({ title: "Participant Added", description: `${newParticipant.name} added to turn order. ${newToken ? 'Their token has been placed at (0,0).' : ''}` });
+    toast({ title: "Participant Added", description: `${newParticipant.name} added to turn order. ${newToken ? `Their token has been placed at (${newToken.x},${newToken.y}).` : ''}` });
   };
 
   const handleRemoveParticipantFromList = (idToRemove: string) => {
@@ -418,3 +420,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
