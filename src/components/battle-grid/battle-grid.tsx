@@ -649,22 +649,6 @@ export default function BattleGrid({
           </marker>
         </defs>
 
-        {measurement.startPoint && measurement.endPoint && (
-          <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
-            {measurement.type === 'distance' ? ( <line x1={measurement.startPoint.x * cellSize + cellSize/2} y1={measurement.startPoint.y * cellSize + cellSize/2} x2={measurement.endPoint.x * cellSize + cellSize/2} y2={measurement.endPoint.y * cellSize + cellSize/2} markerEnd="url(#arrowhead)" />
-            ) : ( <circle cx={measurement.startPoint.x * cellSize + cellSize/2} cy={measurement.startPoint.y * cellSize + cellSize/2} r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize} strokeDasharray="5 3" fill="hsla(30, 80%, 85%, 0.3)" /> )}
-          </g>
-        )}
-
-        {isMeasuring && measurement.endPoint && measurement.result && (
-          <text x={measurement.endPoint.x * cellSize + cellSize / 2 + 20} y={measurement.endPoint.y * cellSize + cellSize / 2 + 20} fill="hsl(var(--accent))" fontSize="20" paintOrder="stroke" stroke="hsl(var(--background))" strokeWidth="4px" strokeLinecap="butt" strokeLinejoin="miter" className="pointer-events-none select-none font-bold" >
-            {measurement.result.replace("Distance: ", "").replace("Radius: ", "")}
-          </text>
-        )}
-
-         {measurement.startPoint && ( <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" /> )}
-         {measurement.endPoint && measurement.result && ( <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" /> )}
-
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
 
@@ -787,6 +771,22 @@ export default function BattleGrid({
             </g>
           );
         })}
+
+        {measurement.startPoint && measurement.endPoint && (
+          <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
+            {measurement.type === 'distance' ? ( <line x1={measurement.startPoint.x * cellSize + cellSize/2} y1={measurement.startPoint.y * cellSize + cellSize/2} x2={measurement.endPoint.x * cellSize + cellSize/2} y2={measurement.endPoint.y * cellSize + cellSize/2} markerEnd="url(#arrowhead)" />
+            ) : ( <circle cx={measurement.startPoint.x * cellSize + cellSize/2} cy={measurement.startPoint.y * cellSize + cellSize/2} r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize} strokeDasharray="5 3" fill="hsla(30, 80%, 85%, 0.3)" /> )}
+          </g>
+        )}
+
+        {isMeasuring && measurement.endPoint && measurement.result && (
+          <text x={measurement.endPoint.x * cellSize + cellSize / 2 + 20} y={measurement.endPoint.y * cellSize + cellSize / 2 + 20} fill="hsl(var(--accent))" fontSize="20" paintOrder="stroke" stroke="hsl(var(--background))" strokeWidth="4px" strokeLinecap="butt" strokeLinejoin="miter" className="pointer-events-none select-none font-bold" >
+            {measurement.result.replace("Distance: ", "").replace("Radius: ", "")}
+          </text>
+        )}
+
+         {measurement.startPoint && ( <circle cx={measurement.startPoint.x * cellSize + cellSize / 2} cy={measurement.startPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" /> )}
+         {measurement.endPoint && measurement.result && ( <circle cx={measurement.endPoint.x * cellSize + cellSize / 2} cy={measurement.endPoint.y * cellSize + cellSize / 2} r="4" fill="hsl(var(--accent))" /> )}
       </svg>
       <TooltipProvider delayDuration={0}>
         <div className="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
