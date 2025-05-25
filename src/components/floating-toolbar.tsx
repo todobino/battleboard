@@ -236,7 +236,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-96" side="bottom" align="start"> {/* Changed w-80 to w-96 */}
+          <PopoverContent className="w-52" side="bottom" align="start"> {/* Changed w-96 to w-52 */}
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}

@@ -35,7 +35,7 @@ export default function TokenPlacerPanel({
   return (
     <div>
       <Card className="border-none shadow-none bg-transparent">
-        <CardContent className="grid grid-cols-3 gap-2 p-0"> {/* Changed to grid-cols-3 */}
+        <CardContent className="grid grid-cols-3 gap-2 p-0"> {/* Changed from grid-cols-6 */}
           {tokenTemplates.map(template => {
             const Icon = template.icon;
             return (
@@ -50,7 +50,7 @@ export default function TokenPlacerPanel({
               onClick={() => handleSelectTokenTemplate(template)}
               aria-label={`Place ${template.name} token`}
             >
-              {Icon && <Icon className="h-6 w-6" color={"hsl(var(--primary-foreground))"} />}
+              {Icon && <Icon className="h-5 w-5" color={"hsl(var(--primary-foreground))"} />} {/* Icon size changed to h-5 w-5 */}
               <span className="text-xs text-primary-foreground text-center leading-tight">{template.name}</span>
             </Button>
             );
@@ -60,4 +60,3 @@ export default function TokenPlacerPanel({
     </div>
   );
 }
-
