@@ -63,6 +63,11 @@
     --player-green-bg: 130 50% 30%;
     --player-green-hover-bg: 130 50% 25%;
     --player-green-foreground: 130 20% 90%;
+
+    /* App Blue Theme */
+    --app-blue-bg: 210 70% 45%;
+    --app-blue-hover-bg: 210 70% 40%;
+    --app-blue-foreground: 210 20% 95%;
   }
 }
 

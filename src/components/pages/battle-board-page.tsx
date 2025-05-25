@@ -584,7 +584,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button onClick={handleAdvanceTurn} className="flex-1 bg-blue-600 hover:bg-blue-700 text-primary-foreground"> <SkipForward className="mr-2 h-4 w-4" /> Next Turn </Button>
+                <Button onClick={handleAdvanceTurn} className="flex-1 bg-[hsl(var(--app-blue-bg))] hover:bg-[hsl(var(--app-blue-hover-bg))] text-[hsl(var(--app-blue-foreground))]"> <SkipForward className="mr-2 h-4 w-4" /> Next Turn </Button>
                 <Button onClick={handleEndCombat} variant="destructive" className="flex-1"> <Square className="mr-2 h-4 w-4" /> End Combat </Button>
               </div>
             )}

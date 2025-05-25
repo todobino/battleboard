@@ -210,7 +210,7 @@ export default function InitiativeTrackerPanel({
                         )}
                         {p.ac !== undefined && (
                           <div className="flex items-center" title={`AC: ${p.ac}`}>
-                            <ShieldIcon className="h-3.5 w-3.5 mr-0.5 text-blue-400" />
+                            <ShieldIcon className="h-3.5 w-3.5 mr-0.5 text-[hsl(var(--app-blue-bg))]" />
                            <span>{p.ac}</span>
                           </div>
                         )}
@@ -218,7 +218,7 @@ export default function InitiativeTrackerPanel({
                           "px-1.5 py-0.5 rounded-md text-xs whitespace-nowrap",
                           p.type === 'player' ? 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))]' :
                           p.type === 'enemy' ? 'bg-red-500 text-white' :
-                          p.type === 'ally' ? 'bg-blue-500 text-white' : 
+                          p.type === 'ally' ? 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))]' : 
                           'bg-gray-500 text-white' 
                         )}>
                           {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
@@ -339,4 +339,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
