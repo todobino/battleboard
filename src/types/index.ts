@@ -91,7 +91,9 @@ export interface BattleGridProps {
   selectedColor: string;
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   onTokenMove: (tokenId: string, newX: number, newY: number) => void;
-  onTokenInstanceNameChange: (tokenId: string, newName: string) => void; // Added prop
+  onTokenInstanceNameChange: (tokenId: string, newName: string) => void;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
+  activeTokenId?: string | null; // Added prop for active token highlighting
 }
+

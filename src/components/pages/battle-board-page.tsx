@@ -328,6 +328,9 @@ export default function BattleBoardPage() {
     </div>
   );
 
+  const activeParticipant = participants[currentParticipantIndex];
+  const activeTokenId = activeParticipant?.tokenId || null;
+
   return (
     <div className="flex h-screen">
       <div className="flex-1 relative">
@@ -345,6 +348,7 @@ export default function BattleBoardPage() {
             onTokenMove={handleTokenMove}
             onTokenInstanceNameChange={handleTokenInstanceNameChange}
             measurement={measurement} setMeasurement={setMeasurement}
+            activeTokenId={activeTokenId}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}

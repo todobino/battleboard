@@ -63,6 +63,7 @@ export default function BattleGrid({
   selectedTokenTemplate,
   measurement,
   setMeasurement,
+  activeTokenId,
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewBox, setViewBox] = useState(() => {
@@ -682,7 +683,7 @@ export default function BattleGrid({
             switch (token.type) {
                 case 'player': backgroundFill = 'hsl(120, 40%, 25%)'; break;
                 case 'enemy': backgroundFill = 'hsl(0, 60%, 30%)'; break;
-                case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break; // Ally color
+                case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break; 
                 case 'item': backgroundFill = 'hsl(270, 40%, 30%)'; break;
                 case 'terrain': backgroundFill = 'hsl(var(--muted))'; break;
                 case 'generic': backgroundFill = 'hsl(var(--accent))'; break;
@@ -690,6 +691,7 @@ export default function BattleGrid({
             }
 
           const isCurrentlyEditing = editingTokenId === token.id;
+          const isTokenActiveTurn = token.id === activeTokenId;
 
           return (
             <g
@@ -710,8 +712,14 @@ export default function BattleGrid({
                 cy={cellSize / 2}
                 r={cellSize / 2}
                 fill={backgroundFill}
-                stroke={hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing ? 'hsl(var(--accent))' : 'hsl(var(--primary-foreground))'}
-                strokeWidth="1"
+                stroke={
+                  isTokenActiveTurn
+                    ? 'hsl(var(--ring))'
+                    : hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing
+                      ? 'hsl(var(--accent))'
+                      : 'hsl(var(--primary-foreground))'
+                }
+                strokeWidth={isTokenActiveTurn ? 3 : 1}
                 onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
               />
               {IconComponent && (
@@ -803,3 +811,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
