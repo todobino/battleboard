@@ -912,9 +912,10 @@ export default function BattleGrid({
                   textAnchor="middle"
                   fontSize="10"
                   fontFamily="sans-serif"
+                  fontWeight="bold"
                   fill="hsl(var(--foreground))"
                   stroke="hsl(var(--background))"
-                  strokeWidth="0.4px"
+                  strokeWidth="0.6px"
                   paintOrder="stroke"
                   className={cn(
                     activeTool === 'select' ? "cursor-text" : "cursor-default",
