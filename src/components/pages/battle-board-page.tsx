@@ -566,7 +566,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-0 flex flex-col flex-grow"> {/* Changed p-4 to p-0 */}
+          <SidebarContent className="p-3 flex flex-col flex-grow">
             <InitiativeTrackerPanel
               participantsProp={participants}
               tokens={tokens}
@@ -635,6 +635,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+
+    
 
     
 
