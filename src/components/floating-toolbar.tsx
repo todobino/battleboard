@@ -1,11 +1,11 @@
 
 'use client';
 
-import type { ActiveTool, Token, Measurement, DrawnShape } from '@/types';
+import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types'; // Added DefaultBattleMap and imported existing props type
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type, Undo2, Redo2 } from 'lucide-react'; // Added Type, Undo2, Redo2 icons
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type, Undo2, Redo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -16,29 +16,10 @@ import MeasurementToolPanel from '@/components/controls/measurement-tool-panel';
 import TokenPlacerPanel from '@/components/controls/token-placer-panel';
 import ShapeToolPanel from '@/components/controls/shape-tool-panel';
 
+// Re-define props here if not using the imported type directly, or ensure the imported one is correctly structured
+// For clarity, using the imported type:
+interface FloatingToolbarProps extends FloatingToolbarPropsType {}
 
-interface FloatingToolbarProps {
-  activeTool: ActiveTool;
-  setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
-  title: string;
-  Icon: React.ElementType;
-  selectedColor: string;
-  setSelectedColor: Dispatch<SetStateAction<string>>;
-  selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
-  setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
-  backgroundImageUrl: string | null;
-  setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
-  showGridLines: boolean;
-  setShowGridLines: Dispatch<SetStateAction<boolean>>;
-  measurement: Measurement;
-  setMeasurement: Dispatch<SetStateAction<Measurement>>;
-  backgroundZoomLevel: number;
-  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
-  onUndo: () => void;
-  onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-}
 
 interface ToolButtonProps {
   label: string;
@@ -94,6 +75,7 @@ export default function FloatingToolbar({
   measurement, setMeasurement,
   backgroundZoomLevel, setBackgroundZoomLevel,
   onUndo, onRedo, canUndo, canRedo,
+  defaultBattlemaps, // Destructure defaultBattlemaps
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -185,6 +167,7 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
+              defaultBattlemaps={defaultBattlemaps} // Pass prop
             />
           </PopoverContent>
         </Popover>

@@ -2,7 +2,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool } from '@/types';
+import type { ActiveTool, GridSettingsPanelProps as GridSettingsPanelPropsType, DefaultBattleMap } from '@/types'; // Updated imports
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,39 +15,8 @@ import { Slider } from '@/components/ui/slider';
 import NextImage from 'next/image';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
-interface GridSettingsPanelProps {
-  showGridLines: boolean;
-  setShowGridLines: Dispatch<SetStateAction<boolean>>;
-  backgroundImageUrl: string | null;
-  setBackgroundImageUrl: Dispatch<SetStateAction<string | null>>;
-  setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
-  backgroundZoomLevel: number;
-  setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
-}
-
-// Helper to generate display name from filename
-const formatMapName = (filename: string): string => {
-  return filename
-    .split('.')[0] // Remove extension
-    .replace(/-/g, ' ') // Replace hyphens with spaces
-    .replace(/_/g, ' ') // Replace underscores with spaces
-    .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize each word
-};
-
-// IMPORTANT: Manually list all image filenames from your public/default-maps/ folder here.
-// For example, if you have 'bridge.png' and 'glade.png' in public/default-maps/, list them as shown.
-// Add any other maps you have in that folder to this array.
-const defaultMapFiles = [
-  'bridge.png',
-  'glade.png',
-  // Add other filenames from public/default-maps/ here, e.g., 'forest_path.png', 'town_square.jpg'
-];
-
-const defaultBattlemaps = defaultMapFiles.map(filename => ({
-  name: formatMapName(filename),
-  url: `/default-maps/${filename}`,
-  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '),
-}));
+// Using the imported GridSettingsPanelPropsType
+interface GridSettingsPanelProps extends GridSettingsPanelPropsType {}
 
 
 export default function GridSettingsPanel({
@@ -58,6 +27,7 @@ export default function GridSettingsPanel({
   setActiveTool,
   backgroundZoomLevel,
   setBackgroundZoomLevel,
+  defaultBattlemaps, // Added prop
 }: GridSettingsPanelProps) {
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
@@ -121,34 +91,40 @@ export default function GridSettingsPanel({
         <div className="lg:w-3/5 space-y-4">
           <div>
             <Label className="text-popover-foreground flex items-center">Default Battlemaps</Label>
-            <ScrollArea className="w-full h-28 rounded-md border border-border mt-1">
-              <div className="flex space-x-2 p-2">
-                {defaultBattlemaps.map((map) => (
-                  <button
-                    key={map.name}
-                    onClick={() => handleSelectDefaultMap(map.url)}
-                    className={cn(
-                      'relative aspect-square w-24 h-24 shrink-0 rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all',
-                      backgroundImageUrl === map.url ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-border'
-                    )}
-                    title={`Select ${map.name}`}
-                  >
-                    <NextImage
-                      src={map.url}
-                      alt={map.name}
-                      layout="fill"
-                      objectFit="cover"
-                      data-ai-hint={map.hint}
-                      unoptimized={map.url.endsWith('.webp')}
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
-                      <span className="text-xs text-white truncate">{map.name}</span>
-                    </div>
-                  </button>
-                ))}
+            {defaultBattlemaps && defaultBattlemaps.length > 0 ? (
+              <ScrollArea className="w-full h-28 rounded-md border border-border mt-1">
+                <div className="flex space-x-2 p-2">
+                  {defaultBattlemaps.map((map) => (
+                    <button
+                      key={map.name}
+                      onClick={() => handleSelectDefaultMap(map.url)}
+                      className={cn(
+                        'relative aspect-square w-24 h-24 shrink-0 rounded-md overflow-hidden border-2 hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all',
+                        backgroundImageUrl === map.url ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-border'
+                      )}
+                      title={`Select ${map.name}`}
+                    >
+                      <NextImage
+                        src={map.url}
+                        alt={map.name}
+                        layout="fill"
+                        objectFit="cover"
+                        data-ai-hint={map.hint}
+                        unoptimized={map.url.endsWith('.webp')}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
+                        <span className="text-xs text-white truncate">{map.name}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            ) : (
+              <div className="w-full h-28 rounded-md border border-border mt-1 flex items-center justify-center text-sm text-muted-foreground">
+                No default maps found.
               </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            )}
             {backgroundImageUrl &&
               defaultBattlemaps.some((m) => m.url === backgroundImageUrl) && (
                 <Button

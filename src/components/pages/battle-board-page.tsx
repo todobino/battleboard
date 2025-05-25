@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState } from '@/types';
+import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types'; // Added BattleBoardPageProps, DefaultBattleMap
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
@@ -38,7 +38,7 @@ const initialGridCells = (): GridCellData[][] =>
     }))
   );
 
-export default function BattleBoardPage() {
+export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPageProps) { // Accept defaultBattlemaps prop
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
   const [tokens, setTokens] = useState<Token[]>([]);
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
@@ -118,7 +118,6 @@ export default function BattleBoardPage() {
     const newSnapshot = getCurrentUndoableState();
     
     // Avoid re-adding if the state is identical to the current one in history
-    // This is a shallow check for now; a deep check could be added but is more complex
     if (history[historyPointer] && JSON.stringify(newSnapshot) === JSON.stringify(history[historyPointer])) {
         return;
     }
@@ -136,7 +135,7 @@ export default function BattleBoardPage() {
     setGridCells(snapshot.gridCells);
     // Re-construct tokens to attempt to re-assign icons if they were stripped by JSON.stringify
     setTokens(snapshot.tokens.map(tokenFromFile => {
-        const template = tokenTemplates.find(t => t.type === tokenFromFile.type);
+        const template = tokenTemplates.find(t => t.type === tokenFromFile.type && t.name === tokenFromFile.label) || tokenTemplates.find(t => t.type === tokenFromFile.type);
         return {
             ...tokenFromFile,
             icon: tokenFromFile.customImageUrl ? undefined : template?.icon,
@@ -149,26 +148,22 @@ export default function BattleBoardPage() {
 
   const handleUndo = useCallback(() => {
     if (historyPointer <= 0) {
-      // toast({ title: "Nothing to undo" });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer - 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-    // toast({ title: "Action Undone" });
   }, [history, historyPointer]);
 
   const handleRedo = useCallback(() => {
     if (historyPointer >= history.length - 1 || historyPointer < 0) {
-      // toast({ title: "Nothing to redo" });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer + 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-    // toast({ title: "Action Redone" });
   }, [history, historyPointer]);
 
   // Keyboard shortcuts for Undo/Redo
@@ -242,22 +237,18 @@ export default function BattleBoardPage() {
     setRoundCounter(1);
     if (participants.length > 0) {
       setCurrentParticipantIndex(0);
-      // toast({ title: "Combat Started!", description: `Round 1. ${participants[0]?.name}'s turn.`});
     } else {
       setCurrentParticipantIndex(-1);
-      // toast({ title: "Combat Started!", description: "Round 1. Add participants to the turn order."});
     }
   };
 
   const handleEndCombat = () => {
     setIsCombatActive(false);
     setRoundCounter(1);
-    // toast({ title: "Combat Ended."});
   };
 
   const handleAdvanceTurn = () => {
     if (!isCombatActive || participants.length === 0) {
-      // toast({ title: "Cannot Advance Turn", description: "No participants in combat or combat not started."});
       return;
     }
     let nextIndex = currentParticipantIndex + 1;
@@ -266,12 +257,8 @@ export default function BattleBoardPage() {
       nextIndex = 0;
       currentRound = roundCounter + 1;
       setRoundCounter(currentRound);
-      // toast({ title: `Round ${currentRound} Starting!` });
     }
     setCurrentParticipantIndex(nextIndex);
-    // if (participants[nextIndex]) {
-    //    toast({ title: "Next Turn", description: `${participants[nextIndex].name}'s turn.`});
-    // }
   };
 
   const handleAddParticipantToList = (participantData: Omit<Participant, 'id' | 'tokenId'> & { tokenId?: string}) => {
@@ -322,7 +309,6 @@ export default function BattleBoardPage() {
       }
       return newList;
     });
-    // toast({ title: "Participant Added", description: `${newParticipant.name} added to turn order. ${newToken ? `Their token has been placed at (${newToken.x},${newToken.y}).` : ''}` });
   };
 
   const handleRemoveParticipantFromList = (idToRemove: string) => {
@@ -349,9 +335,6 @@ export default function BattleBoardPage() {
 
     if (participantToRemove?.tokenId) {
       setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
-      // toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order and grid.` });
-    } else {
-      // toast({ title: "Participant Removed", description: `${participantToRemove?.name || 'Participant'} removed from turn order.` });
     }
   };
   
@@ -488,6 +471,7 @@ export default function BattleBoardPage() {
             onRedo={handleRedo}
             canUndo={historyPointer > 0}
             canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
+            defaultBattlemaps={defaultBattlemaps} // Pass prop
           />
       </div>
 
@@ -553,4 +537,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-

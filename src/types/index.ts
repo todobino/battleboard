@@ -85,6 +85,12 @@ export interface TextObjectType {
   height: number; // Calculated height for the background bubble
 }
 
+export interface DefaultBattleMap {
+  name: string;
+  url: string;
+  hint: string;
+}
+
 export interface BattleGridProps {
   gridCells: GridCellData[][];
   setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
@@ -118,4 +124,46 @@ export interface UndoableState {
   drawnShapes: DrawnShape[];
   textObjects: TextObjectType[];
   participants: Participant[];
+}
+
+// Props for BattleBoardPage
+export interface BattleBoardPageProps {
+  defaultBattlemaps: DefaultBattleMap[];
+}
+
+// Props for FloatingToolbar (add defaultBattlemaps)
+export interface FloatingToolbarProps {
+  activeTool: ActiveTool;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  title: string;
+  Icon: React.ElementType;
+  selectedColor: string;
+  setSelectedColor: React.Dispatch<React.SetStateAction<string>>;
+  selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
+  setSelectedTokenTemplate: React.Dispatch<React.SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  backgroundImageUrl: string | null;
+  setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  showGridLines: boolean;
+  setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
+  measurement: Measurement;
+  setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
+  backgroundZoomLevel: number;
+  setBackgroundZoomLevel: React.Dispatch<React.SetStateAction<number>>;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  defaultBattlemaps: DefaultBattleMap[]; // Added prop
+}
+
+// Props for GridSettingsPanel (add defaultBattlemaps)
+export interface GridSettingsPanelProps {
+  showGridLines: boolean;
+  setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
+  backgroundImageUrl: string | null;
+  setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  backgroundZoomLevel: number;
+  setBackgroundZoomLevel: React.Dispatch<React.SetStateAction<number>>;
+  defaultBattlemaps: DefaultBattleMap[]; // Added prop
 }
