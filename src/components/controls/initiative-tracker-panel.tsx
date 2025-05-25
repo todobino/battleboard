@@ -80,9 +80,9 @@ export default function InitiativeTrackerPanel({
                         {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
                         <span className={cn(
                           "px-1.5 py-0.5 rounded-md text-white whitespace-nowrap", // Changed rounded-full to rounded-md
-                          p.type === 'player' ? 'bg-green-500' : // Player to green
-                          p.type === 'enemy' ? 'bg-red-500' :    // Enemy remains red
-                          'bg-blue-500' // Ally to blue
+                          p.type === 'player' ? 'bg-green-500' : 
+                          p.type === 'enemy' ? 'bg-red-500' :    
+                          'bg-blue-500' 
                         )}>
                           {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
                         </span>
@@ -91,8 +91,12 @@ export default function InitiativeTrackerPanel({
 
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="group h-7 w-7 shrink-0 hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive group-hover:text-destructive-foreground" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
