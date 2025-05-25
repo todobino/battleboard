@@ -7,8 +7,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
+// Switch import removed as toggle is removed
+import { ImageUp, Trash2, ZoomIn } from 'lucide-react'; // Grid icon removed
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { Slider } from '@/components/ui/slider';
@@ -20,8 +20,8 @@ interface GridSettingsPanelProps extends GridSettingsPanelPropsType {}
 
 
 export default function GridSettingsPanel({
-  showGridLines,
-  setShowGridLines,
+  showGridLines, // Prop kept for now, but UI element removed
+  setShowGridLines, // Prop kept for now, but UI element removed
   backgroundImageUrl,
   setBackgroundImageUrl,
   setActiveTool,
@@ -67,7 +67,8 @@ export default function GridSettingsPanel({
 
   return (
     <div className="space-y-4 p-4">
-      {/* Header: Title and Grid Lines Toggle */}
+      {/* Header: Title and Grid Lines Toggle REMOVED */}
+      {/* 
       <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
         <div className="flex items-center">
           <Grid className="mr-2 h-5 w-5" /> Map & Grid Settings
@@ -83,10 +84,11 @@ export default function GridSettingsPanel({
             aria-label="Toggle grid lines"
           />
         </div>
-      </div>
+      </div> 
+      */}
 
       {/* Main content row: Left Col (Default Maps), Right Col (Uploader) */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 items-start pt-2"> {/* Added pt-2 to compensate for removed header */}
         {/* Left Column: Default Maps */}
         <div className="lg:w-3/5 space-y-4">
           <div>
