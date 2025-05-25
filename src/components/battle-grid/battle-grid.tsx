@@ -179,8 +179,8 @@ export default function BattleGrid({
   useEffect(() => {
     if (activeTool !== 'select') {
       if (editingTokenId) {
-        setEditingTokenId(null);
-        setEditingText('');
+        // Attempt to save before clearing, or just clear
+        handleSaveTokenName(); // This will clear editingTokenId and editingText
       }
     }
     if (activeTool !== 'type_tool') {
@@ -188,6 +188,7 @@ export default function BattleGrid({
         finalizeTextCreation();
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTool, editingTokenId, isCreatingText, finalizeTextCreation]);
 
 
@@ -288,15 +289,13 @@ export default function BattleGrid({
     }
 
     if (activeTool === 'type_tool') {
-        event.stopPropagation(); // Prevent event from bubbling up further
+        event.stopPropagation(); 
 
         if (isCreatingText) {
             finalizeTextCreation();
         }
-        // Use setTimeout to defer the state update, allowing React to process
-        // the previous state update from finalizeTextCreation if it occurred.
         setTimeout(() => {
-            const newPos = getMousePosition(event); // Re-fetch position, event might be stale in timeout
+            const newPos = getMousePosition(event); 
             setIsCreatingText({
                 id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                 x: newPos.x,
@@ -904,10 +903,28 @@ export default function BattleGrid({
                   color={'hsl(var(--primary-foreground))'}
                   strokeWidth={1.5}
                   onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
-                  className={!isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"}
+                  className={cn(
+                    !isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"
+                  )}
                 />
               ) : null}
 
+              {/* Shadow text for token label */}
+              {token.instanceName && !isCurrentlyEditing && (
+                <text
+                  x={cellSize / 2 + 0.75} 
+                  y={cellSize + 10 + 0.75} 
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontFamily="sans-serif"
+                  fontWeight="bold"
+                  fill="rgba(0,0,0,0.4)" 
+                  className="select-none"
+                >
+                  {token.instanceName}
+                </text>
+              )}
+              {/* Main token label text */}
               {token.instanceName && !isCurrentlyEditing && (
                 <text
                   x={cellSize / 2}
@@ -918,7 +935,7 @@ export default function BattleGrid({
                   fontWeight="bold"
                   fill="hsl(var(--foreground))"
                   stroke="hsl(var(--background))"
-                  strokeWidth="0.6px"
+                  strokeWidth="1px" 
                   paintOrder="stroke"
                   className={cn(
                     activeTool === 'select' ? "cursor-text" : "cursor-default",
