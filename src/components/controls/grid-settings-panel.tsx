@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Grid, ImageUp, Trash2, ZoomIn } from 'lucide-react';
-// import { useToast } from '@/hooks/use-toast'; // Toast removed
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { Slider } from '@/components/ui/slider';
@@ -35,24 +34,19 @@ const formatMapName = (filename: string): string => {
     .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize each word
 };
 
-// Ensure these filenames exist in your public/default-maps/ folder
+// IMPORTANT: Manually list all image filenames from your public/default-maps/ folder here.
+// For example, if you have 'bridge.png' and 'glade.png' in public/default-maps/, list them as shown.
+// Add any other maps you have in that folder to this array.
 const defaultMapFiles = [
   'bridge.png',
-  'forest_path.png', // Example with underscore
-  'town-square.jpg',
-  'dungeon_room.webp',
-  'cave_entrance.png',
-  'ship-deck.jpg',
-  'temple_hall.webp',
-  'mountain_trail.png',
-  'swamp_clearing.jpg',
-  'desert_ruins.png',
+  'glade.png',
+  // Add other filenames from public/default-maps/ here, e.g., 'forest_path.png', 'town_square.jpg'
 ];
 
 const defaultBattlemaps = defaultMapFiles.map(filename => ({
   name: formatMapName(filename),
   url: `/default-maps/${filename}`,
-  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '), 
+  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '),
 }));
 
 
@@ -65,7 +59,6 @@ export default function GridSettingsPanel({
   backgroundZoomLevel,
   setBackgroundZoomLevel,
 }: GridSettingsPanelProps) {
-  // const { toast } = useToast(); // Toast removed
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
 
@@ -73,11 +66,6 @@ export default function GridSettingsPanel({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        // toast({ // Toast removed
-        //   title: 'Upload Error',
-        //   description: 'File size exceeds 5MB limit.',
-        //   variant: 'destructive',
-        // });
         return;
       }
       const reader = new FileReader();
@@ -95,7 +83,6 @@ export default function GridSettingsPanel({
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
     setBackgroundZoomLevel(1); // Reset zoom when new image is set
-    // toast({ title: 'Background Image Updated' }); // Toast removed
   };
 
   const handleCropCancel = () => {
@@ -106,7 +93,6 @@ export default function GridSettingsPanel({
   const handleSelectDefaultMap = (url: string) => {
     setBackgroundImageUrl(url);
     setBackgroundZoomLevel(1); // Reset zoom for default maps
-    // toast({ title: 'Default Battlemap Selected' }); // Toast removed
   };
 
   return (
@@ -153,7 +139,7 @@ export default function GridSettingsPanel({
                       layout="fill"
                       objectFit="cover"
                       data-ai-hint={map.hint}
-                      unoptimized={map.url.endsWith('.webp')} 
+                      unoptimized={map.url.endsWith('.webp')}
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
                       <span className="text-xs text-white truncate">{map.name}</span>
@@ -192,7 +178,7 @@ export default function GridSettingsPanel({
             <Label
               htmlFor="background-image-upload-popover-main"
               className={cn(
-                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer mt-2', 
+                'flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-md cursor-pointer mt-2',
                 'bg-muted hover:bg-muted/80 border-border hover:border-primary text-muted-foreground transition-colors'
               )}
             >
@@ -223,7 +209,7 @@ export default function GridSettingsPanel({
           </div>
         </div>
       </div>
-      
+
       {/* Background Zoom Section - Moved to span full width below the two columns */}
       {backgroundImageUrl && (
         <div className="space-y-2 pt-4 border-t border-border mt-4">
