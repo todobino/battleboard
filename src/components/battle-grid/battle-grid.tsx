@@ -142,22 +142,10 @@ export default function BattleGrid({
     }
   }, [isCreatingText]);
 
-
-  const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
-    if (!svgRef.current) return { x: 0, y: 0 };
-    const svg = svgRef.current;
-    const CTM = svg.getScreenCTM();
-    if (!CTM) return { x: 0, y: 0 };
-    return {
-      x: (event.clientX - CTM.e) / CTM.a,
-      y: (event.clientY - CTM.f) / CTM.d,
-    };
-  };
-
   const measureText = useCallback((text: string, fontSize: number) => {
     const tempSpan = document.createElement('span');
     document.body.appendChild(tempSpan);
-    tempSpan.style.font = `${fontSize}px sans-serif`; // Use a generic font family consistent with SVG text
+    tempSpan.style.font = `${fontSize}px sans-serif`; 
     tempSpan.style.whiteSpace = 'nowrap';
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
@@ -177,7 +165,7 @@ export default function BattleGrid({
       const newTextObject: TextObjectType = {
         id: isCreatingText.id,
         x: isCreatingText.x,
-        y: isCreatingText.y - bubbleHeight / 2, // Adjust y to center input vertically
+        y: isCreatingText.y - bubbleHeight / 2, 
         content: isCreatingText.currentText,
         fontSize: isCreatingText.fontSize,
         width: bubbleWidth,
@@ -188,6 +176,32 @@ export default function BattleGrid({
     setIsCreatingText(null);
   }, [isCreatingText, setTextObjects, measureText]);
 
+  useEffect(() => {
+    // When the active tool changes, reset states from other tools that might conflict.
+    if (activeTool !== 'select') {
+      if (editingTokenId) { 
+        setEditingTokenId(null);
+        setEditingText('');
+      }
+    }
+    if (activeTool !== 'type_tool') {
+      if (isCreatingText) { 
+        finalizeTextCreation();
+      }
+    }
+  }, [activeTool, editingTokenId, isCreatingText, finalizeTextCreation]);
+
+
+  const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const svg = svgRef.current;
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return { x: 0, y: 0 };
+    return {
+      x: (event.clientX - CTM.e) / CTM.a,
+      y: (event.clientY - CTM.f) / CTM.d,
+    };
+  };
 
   const eraseContentAtCell = (gridX: number, gridY: number) => {
     setGridCells(prev => {
@@ -254,13 +268,12 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (activeTool === 'select' && (event.button === 0 || event.button === 1)) {
-        // Check if clicking on a text object first for select tool
         for (const textObj of textObjects) {
             if (pos.x >= textObj.x && pos.x <= textObj.x + textObj.width &&
                 pos.y >= textObj.y && pos.y <= textObj.y + textObj.height) {
                 setDraggingTextObjectId(textObj.id);
                 setTextObjectDragOffset({ x: pos.x - textObj.x, y: pos.y - textObj.y });
-                return; // Do not pan if dragging a text object
+                return; 
             }
         }
         if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE) {
@@ -276,17 +289,16 @@ export default function BattleGrid({
     }
 
     if (activeTool === 'type_tool') {
-        if (isCreatingText) { // If already typing, finalize current text
+        if (isCreatingText) { 
             finalizeTextCreation();
         }
-        // Then start new text creation
         setIsCreatingText({
             id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             x: pos.x,
             y: pos.y,
             currentText: '',
             fontSize: currentTextFontSize,
-            inputWidth: 150, // Initial width for input
+            inputWidth: 150, 
         });
         return;
     }
@@ -369,7 +381,7 @@ export default function BattleGrid({
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
     if (editingTokenId === token.id || activeTool !== 'select') return; 
-    event.stopPropagation(); // Prevent grid pan/text creation
+    event.stopPropagation(); 
     setDraggingToken(token);
     const pos = getMousePosition(event);
     setDragOffset({
@@ -421,12 +433,11 @@ export default function BattleGrid({
   const handleTextInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (isCreatingText) {
       const newText = event.target.value;
-      // Dynamically adjust input width based on text length
       const tempSpan = document.createElement('span');
       tempSpan.style.font = `${isCreatingText.fontSize}px sans-serif`;
       tempSpan.style.visibility = 'hidden';
       tempSpan.style.position = 'absolute';
-      tempSpan.textContent = newText || " "; // Use a space for empty to get some width
+      tempSpan.textContent = newText || " "; 
       document.body.appendChild(tempSpan);
       const textMetricsWidth = tempSpan.offsetWidth;
       document.body.removeChild(tempSpan);
@@ -568,7 +579,6 @@ export default function BattleGrid({
     if (draggingTextObjectId) {
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
-        // The textObjects state is already updated during mouseMove for immediate feedback
     }
     if (isMeasuring) {
       setIsMeasuring(false);
@@ -606,7 +616,7 @@ export default function BattleGrid({
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
     }
-    if (draggingTextObjectId) { // Finalize drag if mouse leaves SVG
+    if (draggingTextObjectId) { 
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
     }
@@ -882,7 +892,6 @@ export default function BattleGrid({
           );
         })}
         
-        {/* Render Text Objects */}
         {textObjects.map(obj => (
           <foreignObject
             key={obj.id}
@@ -893,7 +902,7 @@ export default function BattleGrid({
             className={cn(activeTool === 'select' ? 'cursor-grab' : 'cursor-default', draggingTextObjectId === obj.id ? 'cursor-grabbing' : '')}
             onMouseDown={(e) => {
               if (activeTool === 'select') {
-                e.stopPropagation(); // Prevent grid pan
+                e.stopPropagation(); 
                 setDraggingTextObjectId(obj.id);
                 const pos = getMousePosition(e);
                 setTextObjectDragOffset({ x: pos.x - obj.x, y: pos.y - obj.y });
@@ -914,7 +923,7 @@ export default function BattleGrid({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                whiteSpace: 'nowrap', // Assuming single line text
+                whiteSpace: 'nowrap', 
                 overflow: 'hidden',
                 boxSizing: 'border-box',
               }}
@@ -924,14 +933,12 @@ export default function BattleGrid({
           </foreignObject>
         ))}
 
-        {/* Text Input Field */}
         {isCreatingText && (
           <foreignObject 
             x={isCreatingText.x} 
-            // Adjust y to center the input field vertically around the click point
             y={isCreatingText.y - (isCreatingText.fontSize + TEXT_PADDING.y * 2) / 2} 
-            width={isCreatingText.inputWidth} // Use dynamic width
-            height={isCreatingText.fontSize + TEXT_PADDING.y * 2 + 2} // Add a bit for border
+            width={isCreatingText.inputWidth} 
+            height={isCreatingText.fontSize + TEXT_PADDING.y * 2 + 2} 
           >
             <input
               ref={textInputRef}
