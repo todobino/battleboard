@@ -5,8 +5,7 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-// import { useToast } from '@/hooks/use-toast'; // Toast import removed
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Grid2x2Check, Grid2x2X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -54,6 +53,7 @@ export default function BattleGrid({
   textObjects,
   setTextObjects,
   showGridLines,
+  setShowGridLines, // Added from props
   backgroundImageUrl,
   backgroundZoomLevel = 1,
   activeTool,
@@ -100,7 +100,6 @@ export default function BattleGrid({
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
 
-  // const { toast } = useToast(); // Toast import and usage removed
   const cellSize = DEFAULT_CELL_SIZE;
 
    useEffect(() => {
@@ -179,8 +178,7 @@ export default function BattleGrid({
   useEffect(() => {
     if (activeTool !== 'select') {
       if (editingTokenId) {
-        // Attempt to save before clearing, or just clear
-        handleSaveTokenName(); // This will clear editingTokenId and editingText
+        handleSaveTokenName(); 
       }
     }
     if (activeTool !== 'type_tool') {
@@ -602,9 +600,6 @@ export default function BattleGrid({
     }
     if (isMeasuring) {
       setIsMeasuring(false);
-      // if (measurement.result) { // Toast removed
-      //   toast({ title: "Measurement Complete", description: measurement.result });
-      // }
     }
     if (isErasing) {
         setIsErasing(false);
@@ -1058,6 +1053,27 @@ export default function BattleGrid({
       </svg>
       <TooltipProvider delayDuration={0}>
         <div className="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowGridLines(!showGridLines)}
+                className={cn(
+                  "rounded-md shadow-lg h-10 w-10 p-2",
+                  showGridLines
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-card text-card-foreground hover:bg-muted"
+                )}
+                aria-label={showGridLines ? "Hide Grid Lines" : "Show Grid Lines"}
+              >
+                {showGridLines ? <Grid2x2Check className="h-5 w-5" /> : <Grid2x2X className="h-5 w-5" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>{showGridLines ? "Hide Grid Lines" : "Show Grid Lines"}</p>
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" onClick={() => handleZoomButtonClick(true)} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Zoom In" >

@@ -447,6 +447,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             currentDrawingShape={currentDrawingShape} setCurrentDrawingShape={setCurrentDrawingShape}
             textObjects={textObjects} setTextObjects={setTextObjects}
             showGridLines={showGridLines}
+            setShowGridLines={setShowGridLines}
             backgroundImageUrl={backgroundImageUrl}
             backgroundZoomLevel={backgroundZoomLevel} 
             activeTool={activeTool} setActiveTool={setActiveTool}

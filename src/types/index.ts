@@ -103,6 +103,7 @@ export interface BattleGridProps {
   textObjects: TextObjectType[];
   setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
+  setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>; // Added this prop
   backgroundImageUrl: string | null;
   backgroundZoomLevel?: number;
   activeTool: ActiveTool;
