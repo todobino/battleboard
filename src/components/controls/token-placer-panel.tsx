@@ -53,8 +53,8 @@ export default function TokenPlacerPanel({
               key={template.name}
               variant="outline"
               className={cn(
-                "aspect-square h-auto flex flex-col items-center justify-center p-2 space-y-1"
-                // Removed hover:border-accent
+                "aspect-square h-auto flex flex-col items-center justify-center p-2 space-y-1",
+                "border-2 border-transparent hover:border-accent" // Added border and hover:border-accent
               )}
               style={{ backgroundColor: template.color }}
               onClick={() => handleSelectTokenTemplate(template)}
