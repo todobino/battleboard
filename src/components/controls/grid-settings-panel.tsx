@@ -26,18 +26,33 @@ interface GridSettingsPanelProps {
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
 }
 
-const defaultBattlemaps = [
-  { name: 'Forest Clearing', url: 'https://placehold.co/600x600.png', hint: 'forest clearing' },
-  { name: 'Dungeon Corridor', url: 'https://placehold.co/600x600.png', hint: 'dungeon corridor' },
-  { name: 'Cobblestone Street', url: 'https://placehold.co/600x600.png', hint: 'cobblestone street' },
-  { name: 'Tavern Interior', url: 'https://placehold.co/600x600.png', hint: 'tavern interior' },
-  { name: 'Cave System', url: 'https://placehold.co/600x600.png', hint: 'cave system' },
-  { name: 'Desert Oasis', url: 'https://placehold.co/600x600.png', hint: 'desert oasis' },
-  { name: 'Swamp Marsh', url: 'https://placehold.co/600x600.png', hint: 'swamp marsh' },
-  { name: 'Castle Courtyard', url: 'https://placehold.co/600x600.png', hint: 'castle courtyard' },
-  { name: 'Ship Deck', url: 'https://placehold.co/600x600.png', hint: 'ship deck' },
-  { name: 'Mountain Pass', url: 'https://placehold.co/600x600.png', hint: 'mountain pass' },
+// Helper to generate display name from filename
+const formatMapName = (filename: string): string => {
+  return filename
+    .split('.')[0] // Remove extension
+    .replace(/-/g, ' ') // Replace hyphens with spaces
+    .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize each word
+};
+
+const defaultMapFiles = [
+  'ancient-library.jpg',
+  'cobblestone-town-square.png',
+  'dark-forest-path.webp',
+  'dungeon-hallway.jpg',
+  'mountain-shrine.png',
+  'ship-deck-storm.webp',
+  'swamp-village.jpg',
+  'tavern-common-room.png',
+  'temple-ruins.webp',
+  'volcanic-cavern.jpg',
 ];
+
+const defaultBattlemaps = defaultMapFiles.map(filename => ({
+  name: formatMapName(filename),
+  url: `/default-maps/${filename}`,
+  hint: formatMapName(filename).toLowerCase().split(' ').slice(0, 2).join(' '), // e.g., "ancient library"
+}));
+
 
 export default function GridSettingsPanel({
   showGridLines,
@@ -56,11 +71,11 @@ export default function GridSettingsPanel({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: 'Upload Error',
-          description: 'File size exceeds 5MB limit.',
-          variant: 'destructive',
-        });
+        // toast({ // Toast removed
+        //   title: 'Upload Error',
+        //   description: 'File size exceeds 5MB limit.',
+        //   variant: 'destructive',
+        // });
         return;
       }
       const reader = new FileReader();
@@ -78,7 +93,7 @@ export default function GridSettingsPanel({
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
     setBackgroundZoomLevel(1); // Reset zoom when new image is set
-    // toast({ title: 'Background Image Updated' });
+    // toast({ title: 'Background Image Updated' }); // Toast removed
   };
 
   const handleCropCancel = () => {
@@ -89,7 +104,7 @@ export default function GridSettingsPanel({
   const handleSelectDefaultMap = (url: string) => {
     setBackgroundImageUrl(url);
     setBackgroundZoomLevel(1); // Reset zoom for default maps
-    // toast({ title: 'Default Battlemap Selected' });
+    // toast({ title: 'Default Battlemap Selected' }); // Toast removed
   };
 
   return (
@@ -136,6 +151,7 @@ export default function GridSettingsPanel({
                       layout="fill"
                       objectFit="cover"
                       data-ai-hint={map.hint}
+                      unoptimized={map.url.endsWith('.webp')} // Add this if you have WEBP and don't want Next.js to re-optimize them
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/50 p-1 text-center">
                       <span className="text-xs text-white truncate">{map.name}</span>
