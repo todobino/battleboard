@@ -33,7 +33,7 @@
     --accent: 30 70% 50%; /* Warmer, Richer Brown Accent */
     --accent-foreground: 30 15% 92%; /* Off-White/Cream */
 
-    --destructive: 0 60% 50%; /* Red for destructive actions */
+    --destructive: 0 65% 50%; /* Consistent Red for destructive actions */
     --destructive-foreground: 0 0% 95%; /* Light color for text on destructive */
 
     --ring: 30 70% 55%; /* Accent-related Brown for focus rings */

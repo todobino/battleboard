@@ -117,7 +117,7 @@ export default function InitiativeTrackerPanel({
   return (
     <div className="flex flex-col h-full">
       <div className="pb-3 mb-3 border-b border-sidebar-border">
-        <div className="text-lg flex justify-between items-center text-foreground">
+        <div className="text-lg flex justify-between items-center text-sidebar-foreground">
           <span className="font-semibold">Turn Order</span>
           <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
         </div>
@@ -204,7 +204,7 @@ export default function InitiativeTrackerPanel({
                         </div>
                         {p.hp !== undefined && (
                           <div className="flex items-center" title={`HP: ${p.hp}`}>
-                            <Heart className="h-3.5 w-3.5 mr-0.5 text-red-500" />
+                            <Heart className="h-3.5 w-3.5 mr-0.5 text-destructive" />
                             <span>{p.hp}</span>
                           </div>
                         )}
@@ -217,7 +217,7 @@ export default function InitiativeTrackerPanel({
                         <span className={cn(
                           "px-1.5 py-0.5 rounded-md text-xs whitespace-nowrap",
                           p.type === 'player' ? 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))]' :
-                          p.type === 'enemy' ? 'bg-red-500 text-white' :
+                          p.type === 'enemy' ? 'bg-destructive text-destructive-foreground' :
                           p.type === 'ally' ? 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))]' : 
                           'bg-gray-500 text-white' 
                         )}>
