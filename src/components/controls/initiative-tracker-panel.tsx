@@ -18,6 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger, // Added AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -49,7 +50,6 @@ export default function InitiativeTrackerPanel({
   onChangeParticipantTokenImage,
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp;
-  const { toast } = useToast();
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [participantToRename, setParticipantToRename] = useState<Participant | null>(null);
@@ -86,11 +86,7 @@ export default function InitiativeTrackerPanel({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast({
-          title: 'Upload Error',
-          description: 'Token image file size exceeds 2MB limit.',
-          variant: 'destructive',
-        });
+        // Toast removed
         return;
       }
       const reader = new FileReader();
@@ -106,10 +102,7 @@ export default function InitiativeTrackerPanel({
   const handleTokenCropConfirm = (croppedDataUrl: string) => {
     if (participantToChangeTokenFor) {
       onChangeParticipantTokenImage(participantToChangeTokenFor.id, croppedDataUrl);
-      toast({
-        title: 'Token Image Updated',
-        description: `${participantToChangeTokenFor.name}'s token image has been changed.`,
-      });
+      // Toast removed
     }
     setIsTokenCropDialogOpen(false);
     setUncroppedTokenImageSrc(null);
@@ -311,3 +304,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
