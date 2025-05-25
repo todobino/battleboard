@@ -66,7 +66,7 @@ export default function GridSettingsPanel({
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4"> {/* Removed p-4 */}
       {/* Header: Title and Grid Lines Toggle REMOVED */}
       {/* 
       <div className="flex items-center justify-between text-lg font-semibold mb-3 text-popover-foreground">
