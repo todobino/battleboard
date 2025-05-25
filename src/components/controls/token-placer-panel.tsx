@@ -35,7 +35,7 @@ export default function TokenPlacerPanel({
   return (
     <div>
       <Card className="border-none shadow-none bg-transparent">
-        <CardContent className="grid grid-cols-6 gap-2 p-0"> {/* Changed to grid-cols-6 */}
+        <CardContent className="grid grid-cols-3 gap-2 p-0"> {/* Changed to grid-cols-3 */}
           {tokenTemplates.map(template => {
             const Icon = template.icon;
             return (
@@ -60,3 +60,4 @@ export default function TokenPlacerPanel({
     </div>
   );
 }
+
