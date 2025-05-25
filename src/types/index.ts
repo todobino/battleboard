@@ -17,7 +17,8 @@ export interface Token {
   x: number; // grid column index
   y: number; // grid row index
   color: string; // Token's primary color (e.g., for its icon fill)
-  label?: string; // Optional label for the token
+  label?: string; // Optional label for the token (e.g., from template like "Player", "Enemy")
+  instanceName?: string; // Specific name for this token instance (e.g., "Player 1", "Goblin Archer")
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
   type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
   size?: number; // in grid units, default 1

@@ -140,7 +140,13 @@ export default function BattleGrid({
       }
       return newCells;
     });
-    setTokens(prev => prev.filter(token => !(token.x === gridX && token.y === gridY)));
+    // Also remove tokens that are primarily in this cell
+    setTokens(prev => prev.filter(token => {
+      const tokenCenterX = token.x + (token.size || 1) / 2;
+      const tokenCenterY = token.y + (token.size || 1) / 2;
+      return !(Math.floor(tokenCenterX) === gridX && Math.floor(tokenCenterY) === gridY);
+    }));
+
 
     const cellCenterX = gridX * cellSize + cellSize / 2;
     const cellCenterY = gridY * cellSize + cellSize / 2;
@@ -223,10 +229,15 @@ export default function BattleGrid({
         break;
       case 'place_token':
         if (selectedTokenTemplate) {
+          const baseLabel = selectedTokenTemplate.label || selectedTokenTemplate.type;
+          const count = tokens.filter(t => t.type === selectedTokenTemplate.type && t.label === baseLabel).length + 1;
+          const instanceName = `${baseLabel} ${count}`;
+
           const newTokenData: Omit<TokenType, 'id'> = {
             ...selectedTokenTemplate,
              x: gridX,
              y: gridY,
+             instanceName: instanceName,
           };
           const newToken = {
             ...newTokenData,
@@ -783,7 +794,8 @@ export default function BattleGrid({
               onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
                 activeTool === 'select' && 'cursor-grab',
-                draggingToken?.id === token.id && 'cursor-grabbing'
+                draggingToken?.id === token.id && 'cursor-grabbing',
+                'drop-shadow-md' 
               )}
             >
               <circle
@@ -803,6 +815,22 @@ export default function BattleGrid({
                   color={'hsl(var(--primary-foreground))'}
                   strokeWidth={1.5}
                 />
+              )}
+              {token.instanceName && (
+                <text
+                  x={cellSize / 2}
+                  y={cellSize + 10} 
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontFamily="sans-serif"
+                  fill="hsl(var(--foreground))"
+                  stroke="hsl(var(--background))"
+                  strokeWidth="0.4px"
+                  paintOrder="stroke"
+                  className="pointer-events-none select-none"
+                >
+                  {token.instanceName}
+                </text>
               )}
             </g>
           );
