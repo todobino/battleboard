@@ -9,7 +9,7 @@ import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Play, SkipForward, Square, PlusCircle, Plus, Minus } from 'lucide-react';
+import { LandPlot, UserPlus, CirclePlay, CircleX, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import {
@@ -581,7 +581,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           <div className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full"> <PlusCircle className="mr-2 h-4 w-4" /> Add Combatant </Button>
+                <Button className="w-full"> <UserPlus className="mr-2 h-4 w-4" /> Add Combatant </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -621,12 +621,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 onClick={handleStartCombat} 
                 className="w-full bg-[hsl(var(--player-green-bg))] hover:bg-[hsl(var(--player-green-hover-bg))] text-[hsl(var(--player-green-foreground))]"
               > 
-                <Play className="mr-2 h-4 w-4" /> Start Combat 
+                <CirclePlay className="mr-2 h-4 w-4" /> Start Combat 
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button onClick={handleAdvanceTurn} className="flex-1 bg-[hsl(var(--app-blue-bg))] hover:bg-[hsl(var(--app-blue-hover-bg))] text-[hsl(var(--app-blue-foreground))]"> <SkipForward className="mr-2 h-4 w-4" /> Next Turn </Button>
-                <Button onClick={handleEndCombat} variant="destructive" className="flex-1"> <Square className="mr-2 h-4 w-4" /> End Combat </Button>
+                <Button onClick={handleAdvanceTurn} className="flex-1 bg-[hsl(var(--app-blue-bg))] hover:bg-[hsl(var(--app-blue-hover-bg))] text-[hsl(var(--app-blue-foreground))]"> <UserPlus className="mr-2 h-4 w-4" /> Next Turn </Button>
+                <Button onClick={handleEndCombat} variant="destructive" className="flex-1"> <CircleX className="mr-2 h-4 w-4" /> End Combat </Button>
               </div>
             )}
           </SidebarFooter>
@@ -635,9 +635,4 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-
-    
-
-    
-
     
