@@ -103,7 +103,7 @@ export interface BattleGridProps {
   textObjects: TextObjectType[];
   setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
-  setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>; // Added this prop
+  setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
   backgroundImageUrl: string | null;
   backgroundZoomLevel?: number;
   activeTool: ActiveTool;
@@ -132,7 +132,7 @@ export interface BattleBoardPageProps {
   defaultBattlemaps: DefaultBattleMap[];
 }
 
-// Props for FloatingToolbar (add defaultBattlemaps)
+// Props for FloatingToolbar
 export interface FloatingToolbarProps {
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
@@ -154,10 +154,10 @@ export interface FloatingToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  defaultBattlemaps: DefaultBattleMap[]; // Added prop
+  defaultBattlemaps: DefaultBattleMap[]; 
 }
 
-// Props for GridSettingsPanel (add defaultBattlemaps)
+// Props for GridSettingsPanel
 export interface GridSettingsPanelProps {
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
@@ -166,5 +166,15 @@ export interface GridSettingsPanelProps {
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: React.Dispatch<React.SetStateAction<number>>;
-  defaultBattlemaps: DefaultBattleMap[]; // Added prop
+  defaultBattlemaps: DefaultBattleMap[];
+}
+
+// Props for InitiativeTrackerPanel
+export interface InitiativeTrackerPanelProps {
+  participantsProp?: Participant[];
+  currentParticipantIndex: number;
+  roundCounter: number;
+  onRemoveParticipant: (id: string) => void;
+  onRenameParticipant: (id: string, newName: string) => void;
+  // onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void; // Placeholder for now
 }

@@ -3,26 +3,26 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types'; // Added BattleBoardPageProps, DefaultBattleMap
+import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { LandPlot, Play, SkipForward, Square, PlusCircle, Plus, Minus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter as FormDialogFooter, 
+  DialogFooter as FormDialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { tokenTemplates } from '@/config/token-templates'; 
+import { tokenTemplates } from '@/config/token-templates';
 
 const GRID_ROWS = 40;
 const GRID_COLS = 40;
@@ -38,7 +38,7 @@ const initialGridCells = (): GridCellData[][] =>
     }))
   );
 
-export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPageProps) { // Accept defaultBattlemaps prop
+export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPageProps) {
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
   const [tokens, setTokens] = useState<Token[]>([]);
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
@@ -72,17 +72,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isEditingAc, setIsEditingAc] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
 
-  const { toast } = useToast();
 
   // Undo/Redo State
   const [history, setHistory] = useState<UndoableState[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
   const isUndoRedoOperation = useRef<boolean>(false);
 
-  // Helper to get current undoable state (with deep copies)
   const getCurrentUndoableState = useCallback((): UndoableState => {
-    // WARNING: JSON.stringify will strip function components (like Lucide icons in tokens)
-    // Custom image URLs in tokens will be preserved.
     return JSON.parse(JSON.stringify({
       gridCells,
       tokens,
@@ -91,8 +87,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       participants,
     }));
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
-  
-  // Initialize history with the very first state
+
   useEffect(() => {
     const initialSnapshot = {
       gridCells: initialGridCells(),
@@ -104,36 +99,33 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistory([initialSnapshot]);
     setHistoryPointer(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []);
 
-  // Effect to record history when relevant states change
   useEffect(() => {
     if (isUndoRedoOperation.current) {
-      isUndoRedoOperation.current = false; // Reset flag for next user action
-      return; // Don't record if change was due to undo/redo
+      isUndoRedoOperation.current = false;
+      return;
     }
 
-    if (historyPointer === -1) return; // History not initialized yet
+    if (historyPointer === -1) return;
 
     const newSnapshot = getCurrentUndoableState();
-    
-    // Avoid re-adding if the state is identical to the current one in history
+
     if (history[historyPointer] && JSON.stringify(newSnapshot) === JSON.stringify(history[historyPointer])) {
         return;
     }
 
-    const newHistoryBase = history.slice(0, historyPointer + 1); // Truncate "redo" states
+    const newHistoryBase = history.slice(0, historyPointer + 1);
     const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
-    
+
     setHistory(updatedHistory);
     setHistoryPointer(updatedHistory.length - 1);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridCells, tokens, drawnShapes, textObjects, participants]); // Dependencies are the core states
+  }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
   const restoreStateFromSnapshot = (snapshot: UndoableState) => {
     setGridCells(snapshot.gridCells);
-    // Re-construct tokens to attempt to re-assign icons if they were stripped by JSON.stringify
     setTokens(snapshot.tokens.map(tokenFromFile => {
         const template = tokenTemplates.find(t => t.type === tokenFromFile.type && t.name === tokenFromFile.label) || tokenTemplates.find(t => t.type === tokenFromFile.type);
         return {
@@ -166,7 +158,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(newPointer);
   }, [history, historyPointer]);
 
-  // Keyboard shortcuts for Undo/Redo
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -220,8 +211,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, []);
 
   const handleTokenInstanceNameChange = useCallback((tokenId: string, newName: string) => {
-    setTokens(prevTokens => 
-      prevTokens.map(token => 
+    setTokens(prevTokens =>
+      prevTokens.map(token =>
         token.id === tokenId ? { ...token, instanceName: newName } : token
       )
     );
@@ -231,6 +222,22 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       )
     );
   }, []);
+
+  const handleRenameParticipant = useCallback((participantId: string, newName: string) => {
+    setParticipants(prevParticipants =>
+      prevParticipants.map(p =>
+        p.id === participantId ? { ...p, name: newName } : p
+      )
+    );
+    const participant = participants.find(p => p.id === participantId);
+    if (participant?.tokenId) {
+      setTokens(prevTokens =>
+        prevTokens.map(token =>
+          token.id === participant.tokenId ? { ...token, instanceName: newName } : token
+        )
+      );
+    }
+  }, [participants]); // Added participants to dependency array
 
   const handleStartCombat = () => {
     setIsCombatActive(true);
@@ -271,13 +278,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const middleY = Math.floor(GRID_ROWS / 2);
       newToken = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        x: middleX, 
+        x: middleX,
         y: middleY,
         color: template.color,
         icon: template.icon,
         type: template.type,
         label: template.name,
-        instanceName: participantName, 
+        instanceName: participantName,
         size: 1,
       };
       setTokens(prev => [...prev, newToken!]);
@@ -316,7 +323,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setParticipants(prevParticipants => {
       const isRemovingCurrentTurn = prevParticipants[currentParticipantIndex]?.id === idToRemove;
       const newList = prevParticipants.filter(p => p.id !== idToRemove);
-  
+
       if (newList.length === 0) {
         setCurrentParticipantIndex(-1);
       } else if (isRemovingCurrentTurn) {
@@ -337,11 +344,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
     }
   };
-  
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
-      timer = setTimeout(() => { handleAdvanceTurn(); }, 5000); 
+      timer = setTimeout(() => { handleAdvanceTurn(); }, 5000);
     }
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -350,12 +357,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newParticipantName.trim() || !newParticipantInitiative.trim()) {
-      toast({ title: "Error", description: "Name and initiative are required.", variant: "destructive" });
+      // No toast, just return
       return;
     }
     const initiativeValue = parseInt(newParticipantInitiative, 10);
     if (isNaN(initiativeValue)) {
-      toast({ title: "Error", description: "Initiative must be a number.", variant: "destructive" });
+       // No toast, just return
       return;
     }
     const hpString = newParticipantHp.trim();
@@ -363,11 +370,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const hpValue = hpString === '' ? undefined : parseInt(hpString, 10);
     const acValue = acString === '' ? undefined : parseInt(acString, 10);
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) {
-      toast({ title: "Error", description: "Health Points must be a non-negative number or empty.", variant: "destructive" });
+       // No toast, just return
       return;
     }
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) {
-      toast({ title: "Error", description: "Armor Class must be a non-negative number or empty.", variant: "destructive" });
+       // No toast, just return
       return;
     }
 
@@ -380,16 +387,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     };
     handleAddParticipantToList(newParticipantData);
     setNewParticipantName('');
-    setNewParticipantInitiative('10'); 
-    setIsEditingInitiative(false); 
+    setNewParticipantInitiative('10');
+    setIsEditingInitiative(false);
     setNewParticipantHp('10');
     setIsEditingHp(false);
     setNewParticipantAc('10');
     setIsEditingAc(false);
-    setNewParticipantType('player'); 
+    setNewParticipantType('player');
     setDialogOpen(false);
   };
-  
+
   const renderNumericInput = (
     value: string,
     setValue: Dispatch<SetStateAction<string>>,
@@ -406,7 +413,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           id={`${idPrefix}-input`} type="number" value={value}
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
-            if (optional && value.trim() === '') { /* Keep empty if optional */ } 
+            if (optional && value.trim() === '') { /* Keep empty if optional */ }
             else {
               const num = parseInt(value, 10);
               if (isNaN(num) || (!optional && num < 0) || (optional && num <0 && value.trim() !== '')) setValue('10');
@@ -449,7 +456,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             showGridLines={showGridLines}
             setShowGridLines={setShowGridLines}
             backgroundImageUrl={backgroundImageUrl}
-            backgroundZoomLevel={backgroundZoomLevel} 
+            backgroundZoomLevel={backgroundZoomLevel}
             activeTool={activeTool} setActiveTool={setActiveTool}
             selectedColor={selectedColor}
             selectedTokenTemplate={selectedTokenTemplate}
@@ -472,21 +479,22 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             onRedo={handleRedo}
             canUndo={historyPointer > 0}
             canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
-            defaultBattlemaps={defaultBattlemaps} // Pass prop
+            defaultBattlemaps={defaultBattlemaps}
           />
       </div>
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-4 flex flex-col flex-grow"> {/* Ensure this allows InitiativeTrackerPanel to grow */}
+          <SidebarContent className="p-4 flex flex-col flex-grow">
             <InitiativeTrackerPanel
               participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}
               roundCounter={roundCounter}
               onRemoveParticipant={handleRemoveParticipantFromList}
+              onRenameParticipant={handleRenameParticipant}
             />
           </SidebarContent>
-          
+
           <div className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
