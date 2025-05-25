@@ -16,10 +16,11 @@ export interface Token {
   id: string;
   x: number; // grid column index
   y: number; // grid row index
-  color: string; // Token's primary color (e.g., for its icon fill)
+  color: string; // Token's primary color (e.g., for its icon fill or background for transparent custom image)
   label?: string; // Optional label for the token (e.g., from template like "Player", "Enemy")
   instanceName?: string; // Specific name for this token instance (e.g., "Player 1", "Goblin Archer")
-  icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
+  icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Optional if customImageUrl is used
+  customImageUrl?: string; // New field for custom images (data URI)
   type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
   size?: number; // in grid units, default 1
 }

@@ -177,7 +177,6 @@ export default function BattleGrid({
   }, [isCreatingText, setTextObjects, measureText]);
 
   useEffect(() => {
-    // When the active tool changes, reset states from other tools that might conflict.
     if (activeTool !== 'select') {
       if (editingTokenId) { 
         setEditingTokenId(null);
@@ -326,14 +325,23 @@ export default function BattleGrid({
       case 'place_token':
         if (selectedTokenTemplate) {
           const baseLabel = selectedTokenTemplate.label || selectedTokenTemplate.type;
-          const count = tokens.filter(t => t.type === selectedTokenTemplate.type && t.label === baseLabel).length + 1;
-          const instanceName = `${baseLabel} ${count}`;
+          // Ensure instanceName generation is robust even if label is short
+          const instanceNamePrefix = baseLabel || 'Token';
+          const existingTokensOfTypeAndLabel = tokens.filter(t => 
+            (t.type === selectedTokenTemplate.type && t.label === baseLabel) || 
+            (t.customImageUrl && t.label === baseLabel) // Account for custom tokens
+          );
+          const count = existingTokensOfTypeAndLabel.length + 1;
+          const instanceName = `${instanceNamePrefix} ${count}`;
 
           const newTokenData: Omit<TokenType, 'id'> = {
             ...selectedTokenTemplate,
              x: gridX,
              y: gridY,
              instanceName: instanceName,
+             // Ensure customImageUrl and icon are correctly passed from selectedTokenTemplate
+             customImageUrl: selectedTokenTemplate.customImageUrl,
+             icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon,
           };
           const newToken = {
             ...newTokenData,
@@ -713,6 +721,19 @@ export default function BattleGrid({
         preserveAspectRatio="xMidYMid slice"
         data-ai-hint="battle grid tactical map"
       >
+        <defs>
+          {tokens.map(token => 
+            token.customImageUrl ? (
+              <clipPath key={`clip-${token.id}`} id={`clip-${token.id}`}>
+                <circle cx={cellSize / 2} cy={cellSize / 2} r={cellSize / 2 * 0.95} />
+              </clipPath>
+            ) : null
+          )}
+          <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
+            <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
+          </marker>
+        </defs>
+
         {backgroundImageUrl && (
           <image
             href={backgroundImageUrl}
@@ -796,17 +817,25 @@ export default function BattleGrid({
 
           const iconDisplaySize = cellSize * 0.8;
           const iconOffset = (cellSize - iconDisplaySize) / 2;
+          
+          // For custom images
+          const imageDisplaySize = cellSize * 0.95; // Slightly smaller than cell for border
+          const imageOffset = (cellSize - imageDisplaySize) / 2;
 
-          let backgroundFill = 'black';
-            switch (token.type) {
-                case 'player': backgroundFill = 'hsl(120, 40%, 25%)'; break;
-                case 'enemy': backgroundFill = 'hsl(0, 60%, 30%)'; break;
-                case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break; 
-                case 'item': backgroundFill = 'hsl(270, 40%, 30%)'; break;
-                case 'terrain': backgroundFill = 'hsl(var(--muted))'; break;
-                case 'generic': backgroundFill = 'hsl(var(--accent))'; break;
-                default: backgroundFill = 'black';
+
+          let backgroundFill = token.color; // Use token's color by default for custom images too
+            if (!token.customImageUrl) { // Only set default type colors if not a custom image (or rely on token.color)
+                switch (token.type) {
+                    case 'player': backgroundFill = 'hsl(120, 40%, 25%)'; break;
+                    case 'enemy': backgroundFill = 'hsl(0, 60%, 30%)'; break;
+                    case 'ally': backgroundFill = 'hsl(210, 70%, 45%)'; break; 
+                    case 'item': backgroundFill = 'hsl(270, 40%, 30%)'; break;
+                    case 'terrain': backgroundFill = 'hsl(var(--muted))'; break;
+                    case 'generic': backgroundFill = 'hsl(var(--accent))'; break;
+                    default: backgroundFill = token.color || 'black'; // Fallback to token.color or black
+                }
             }
+
 
           const isCurrentlyEditing = editingTokenId === token.id;
           const isTokenActiveTurn = token.id === activeTokenId;
@@ -825,7 +854,7 @@ export default function BattleGrid({
                 'drop-shadow-md' 
               )}
             >
-              <circle
+              <circle // Background circle, always drawn
                 cx={cellSize / 2}
                 cy={cellSize / 2}
                 r={cellSize / 2}
@@ -835,12 +864,35 @@ export default function BattleGrid({
                     ? 'hsl(var(--ring))'
                     : hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing
                       ? 'hsl(var(--accent))'
-                      : 'hsl(var(--primary-foreground))'
+                      : 'hsl(var(--primary-foreground))' 
                 }
                 strokeWidth={isTokenActiveTurn ? 3 : 1}
                 onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
               />
-              {IconComponent && (
+              {token.customImageUrl ? (
+                <>
+                  <image
+                    href={token.customImageUrl}
+                    x={imageOffset}
+                    y={imageOffset}
+                    width={imageDisplaySize}
+                    height={imageDisplaySize}
+                    clipPath={`url(#clip-${token.id})`}
+                    onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
+                    className={!isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"}
+                  />
+                  {/* White border for custom image, rendered on top of the background circle but under text */}
+                   <circle
+                    cx={cellSize / 2}
+                    cy={cellSize / 2}
+                    r={cellSize / 2 * 0.95} // Matches clipPath radius
+                    fill="none"
+                    strokeWidth="1.5" // Adjust for desired border thickness
+                    stroke={'hsl(var(--primary-foreground))'}
+                    className="pointer-events-none" // So it doesn't interfere with clicks on the image
+                  />
+                </>
+              ) : IconComponent ? (
                 <IconComponent
                   x={iconOffset}
                   y={iconOffset}
@@ -851,7 +903,8 @@ export default function BattleGrid({
                   onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
                   className={!isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"}
                 />
-              )}
+              ) : null}
+
               {token.instanceName && !isCurrentlyEditing && (
                 <text
                   x={cellSize / 2}
@@ -978,11 +1031,7 @@ export default function BattleGrid({
           </foreignObject>
         )}
 
-        <defs>
-          <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
-            <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
-          </marker>
-        </defs>
+
         {measurement.startPoint && measurement.endPoint && (
           <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
             {measurement.type === 'distance' ? ( <line x1={measurement.startPoint.x * cellSize + cellSize/2} y1={measurement.startPoint.y * cellSize + cellSize/2} x2={measurement.endPoint.x * cellSize + cellSize/2} y2={measurement.endPoint.y * cellSize + cellSize/2} markerEnd="url(#arrowhead)" />
