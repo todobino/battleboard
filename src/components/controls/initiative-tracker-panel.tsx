@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, MoreVertical, UploadCloud, HelpCircle } from 'lucide-react';
+import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,7 +142,7 @@ export default function InitiativeTrackerPanel({
                       itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
                     )}
                   >
-                    {/* Top Row: Avatar, Initiative, Name, Trash Icon */}
+                    {/* Top Row: Avatar, Name, Trash Icon */}
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center flex-grow min-w-0">
                         {token ? (
@@ -167,7 +167,6 @@ export default function InitiativeTrackerPanel({
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <span className="font-semibold mr-3 text-lg">{p.initiative}</span>
                         <span className="text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
                       <AlertDialog>
@@ -196,13 +195,27 @@ export default function InitiativeTrackerPanel({
                       </AlertDialog>
                     </div>
 
-                    {/* Bottom Row: Stats, Badge, Three Dots Icon */}
+                    {/* Bottom Row: Stats with Icons, Badge, Three Dots Icon */}
                     <div className="flex items-center justify-between w-full mt-1.5">
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        {p.hp !== undefined && <span className="mr-2 whitespace-nowrap">(HP: {p.hp})</span>}
-                        {p.ac !== undefined && <span className="mr-2 whitespace-nowrap">(AC: {p.ac})</span>}
+                      <div className="flex items-center space-x-3 text-xs text-muted-foreground">
+                        <div className="flex items-center" title={`Initiative: ${p.initiative}`}>
+                          <Zap className="h-3.5 w-3.5 mr-0.5 text-yellow-500" />
+                          <span>{p.initiative}</span>
+                        </div>
+                        {p.hp !== undefined && (
+                          <div className="flex items-center" title={`HP: ${p.hp}`}>
+                            <Heart className="h-3.5 w-3.5 mr-0.5 text-red-500" />
+                            <span>{p.hp}</span>
+                          </div>
+                        )}
+                        {p.ac !== undefined && (
+                          <div className="flex items-center" title={`AC: ${p.ac}`}>
+                            <ShieldIcon className="h-3.5 w-3.5 mr-0.5 text-blue-400" />
+                           <span>{p.ac}</span>
+                          </div>
+                        )}
                         <span className={cn(
-                          "px-1.5 py-0.5 rounded-md text-white whitespace-nowrap",
+                          "px-1.5 py-0.5 rounded-md text-xs text-white whitespace-nowrap", // text-xs for badge
                           p.type === 'player' ? 'bg-green-500' :
                           p.type === 'enemy' ? 'bg-red-500' :
                           p.type === 'ally' ? 'bg-blue-500' : 
@@ -326,3 +339,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
