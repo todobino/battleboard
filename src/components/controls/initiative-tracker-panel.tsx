@@ -174,10 +174,10 @@ export default function InitiativeTrackerPanel({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="group h-7 w-7 shrink-0 hover:bg-destructive"
+                            className="group h-7 w-7 shrink-0 hover:bg-sidebar-accent"
                             aria-label={`Remove ${p.name}`}
                           >
-                            <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-muted-foreground" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-primary-foreground" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -339,3 +339,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
