@@ -736,6 +736,9 @@ export default function BattleGrid({
           <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
             <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
           </marker>
+          <filter id="blurryTextDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="1" dy="1" stdDeviation="0.75" floodColor="#000000" floodOpacity="0.6"/>
+          </filter>
         </defs>
 
         {backgroundImageUrl && (
@@ -854,7 +857,7 @@ export default function BattleGrid({
                 activeTool === 'select' && !isCurrentlyEditing && 'cursor-grab',
                 draggingToken?.id === token.id && !isCurrentlyEditing && 'cursor-grabbing',
                 isCurrentlyEditing && 'cursor-text',
-                'drop-shadow-md'
+                'drop-shadow-md' 
               )}
             >
               <circle
@@ -909,22 +912,6 @@ export default function BattleGrid({
                 />
               ) : null}
 
-              {/* Shadow text for token label */}
-              {token.instanceName && !isCurrentlyEditing && (
-                <text
-                  x={cellSize / 2 + 0.75} 
-                  y={cellSize + 10 + 0.75} 
-                  textAnchor="middle"
-                  fontSize="10"
-                  fontFamily="sans-serif"
-                  fontWeight="bold"
-                  fill="rgba(0,0,0,0.4)" 
-                  className="select-none"
-                >
-                  {token.instanceName}
-                </text>
-              )}
-              {/* Main token label text */}
               {token.instanceName && !isCurrentlyEditing && (
                 <text
                   x={cellSize / 2}
@@ -934,9 +921,10 @@ export default function BattleGrid({
                   fontFamily="sans-serif"
                   fontWeight="bold"
                   fill="hsl(var(--foreground))"
-                  stroke="hsl(var(--background))"
-                  strokeWidth="1px" 
+                  stroke="black" 
+                  strokeWidth="1.25px" 
                   paintOrder="stroke"
+                  filter="url(#blurryTextDropShadow)"
                   className={cn(
                     activeTool === 'select' ? "cursor-text" : "cursor-default",
                     "select-none"
