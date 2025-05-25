@@ -46,17 +46,17 @@ export default function InitiativeTrackerPanel({
   const participants = participantsProp; // Use the prop directly or its default
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-4"> {/* Modified className */}
       <div className="text-lg flex justify-between items-center text-foreground">
         <span className="font-semibold">Turn Order</span>
         <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
       </div>
 
-      <div>
+      <div className="flex flex-col flex-grow"> {/* Added flex flex-col flex-grow */}
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground">No participants in turn order.</p>
         ) : (
-          <ScrollArea className="h-48">
+          <ScrollArea className="flex-grow"> {/* Modified className */}
             <ul className="space-y-2">
               {participants.map((p, index) => {
                 const itemIsActive = index === currentParticipantIndex;

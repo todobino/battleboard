@@ -397,7 +397,7 @@ export default function BattleBoardPage() {
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-4 space-y-4">
+          <SidebarContent className="p-4 flex flex-col flex-grow"> {/* Modified className */}
             <InitiativeTrackerPanel
               participantsProp={participants}
               currentParticipantIndex={currentParticipantIndex}
