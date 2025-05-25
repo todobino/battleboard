@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType } from '@/types';
+import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
@@ -27,6 +27,8 @@ import { tokenTemplates } from '@/config/token-templates';
 const GRID_ROWS = 40;
 const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
+const MAX_HISTORY_LENGTH = 30;
+
 
 const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
@@ -39,11 +41,14 @@ const initialGridCells = (): GridCellData[][] =>
 export default function BattleBoardPage() {
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
+  const [textObjects, setTextObjects] = useState<TextObjectType[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
   const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1);
 
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
   const [roundCounter, setRoundCounter] = useState<number>(1);
   const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false);
@@ -54,11 +59,8 @@ export default function BattleBoardPage() {
   const [selectedTokenTemplate, setSelectedTokenTemplate] = useState<Omit<Token, 'id' | 'x' | 'y'> | null>(null);
 
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
-  const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
   const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
-  const [textObjects, setTextObjects] = useState<TextObjectType[]>([]);
   const [currentTextFontSize, setCurrentTextFontSize] = useState<number>(DEFAULT_TEXT_FONT_SIZE);
-
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newParticipantName, setNewParticipantName] = useState('');
@@ -71,6 +73,124 @@ export default function BattleBoardPage() {
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
 
   const { toast } = useToast();
+
+  // Undo/Redo State
+  const [history, setHistory] = useState<UndoableState[]>([]);
+  const [historyPointer, setHistoryPointer] = useState<number>(-1);
+  const isUndoRedoOperation = useRef<boolean>(false);
+
+  // Helper to get current undoable state (with deep copies)
+  const getCurrentUndoableState = useCallback((): UndoableState => {
+    // WARNING: JSON.stringify will strip function components (like Lucide icons in tokens)
+    // Custom image URLs in tokens will be preserved.
+    return JSON.parse(JSON.stringify({
+      gridCells,
+      tokens,
+      drawnShapes,
+      textObjects,
+      participants,
+    }));
+  }, [gridCells, tokens, drawnShapes, textObjects, participants]);
+  
+  // Initialize history with the very first state
+  useEffect(() => {
+    const initialSnapshot = {
+      gridCells: initialGridCells(),
+      tokens: [],
+      drawnShapes: [],
+      textObjects: [],
+      participants: [],
+    };
+    setHistory([initialSnapshot]);
+    setHistoryPointer(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Effect to record history when relevant states change
+  useEffect(() => {
+    if (isUndoRedoOperation.current) {
+      isUndoRedoOperation.current = false; // Reset flag for next user action
+      return; // Don't record if change was due to undo/redo
+    }
+
+    if (historyPointer === -1) return; // History not initialized yet
+
+    const newSnapshot = getCurrentUndoableState();
+    
+    // Avoid re-adding if the state is identical to the current one in history
+    // This is a shallow check for now; a deep check could be added but is more complex
+    if (history[historyPointer] && JSON.stringify(newSnapshot) === JSON.stringify(history[historyPointer])) {
+        return;
+    }
+
+    const newHistoryBase = history.slice(0, historyPointer + 1); // Truncate "redo" states
+    const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
+    
+    setHistory(updatedHistory);
+    setHistoryPointer(updatedHistory.length - 1);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gridCells, tokens, drawnShapes, textObjects, participants]); // Dependencies are the core states
+
+  const restoreStateFromSnapshot = (snapshot: UndoableState) => {
+    setGridCells(snapshot.gridCells);
+    // Re-construct tokens to attempt to re-assign icons if they were stripped by JSON.stringify
+    setTokens(snapshot.tokens.map(tokenFromFile => {
+        const template = tokenTemplates.find(t => t.type === tokenFromFile.type);
+        return {
+            ...tokenFromFile,
+            icon: tokenFromFile.customImageUrl ? undefined : template?.icon,
+        };
+    }));
+    setDrawnShapes(snapshot.drawnShapes);
+    setTextObjects(snapshot.textObjects);
+    setParticipants(snapshot.participants);
+  };
+
+  const handleUndo = useCallback(() => {
+    if (historyPointer <= 0) {
+      toast({ title: "Nothing to undo" });
+      return;
+    }
+    isUndoRedoOperation.current = true;
+    const newPointer = historyPointer - 1;
+    restoreStateFromSnapshot(history[newPointer]);
+    setHistoryPointer(newPointer);
+    toast({ title: "Action Undone" });
+  }, [history, historyPointer, toast]);
+
+  const handleRedo = useCallback(() => {
+    if (historyPointer >= history.length - 1 || historyPointer < 0) {
+      toast({ title: "Nothing to redo" });
+      return;
+    }
+    isUndoRedoOperation.current = true;
+    const newPointer = historyPointer + 1;
+    restoreStateFromSnapshot(history[newPointer]);
+    setHistoryPointer(newPointer);
+    toast({ title: "Action Redone" });
+  }, [history, historyPointer, toast]);
+
+  // Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+      if (ctrlOrCmd && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        handleUndo();
+      } else if (ctrlOrCmd && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleUndo, handleRedo]);
+
 
  useEffect(() => {
     if (activeTool === 'measure_distance' || activeTool === 'measure_radius') {
@@ -364,6 +484,10 @@ export default function BattleBoardPage() {
             showGridLines={showGridLines} setShowGridLines={setShowGridLines}
             measurement={measurement} setMeasurement={setMeasurement}
             backgroundZoomLevel={backgroundZoomLevel} setBackgroundZoomLevel={setBackgroundZoomLevel}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={historyPointer > 0}
+            canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
           />
       </div>
 
@@ -429,4 +553,3 @@ export default function BattleBoardPage() {
     </div>
   );
 }
-

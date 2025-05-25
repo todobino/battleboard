@@ -13,13 +13,13 @@ export interface GridCellData {
 }
 
 export interface Token {
-  id: string;
+  id:string;
   x: number; // grid column index
   y: number; // grid row index
   color: string; // Token's primary color (e.g., for its icon fill or background for transparent custom image)
   label?: string; // Optional label for the token (e.g., from template like "Player", "Enemy")
   instanceName?: string; // Specific name for this token instance (e.g., "Player 1", "Goblin Archer")
-  icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Optional if customImageUrl is used
+  icon?: React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>; // Optional if customImageUrl is used
   customImageUrl?: string; // New field for custom images (data URI)
   type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
   size?: number; // in grid units, default 1
@@ -111,3 +111,11 @@ export interface BattleGridProps {
   currentTextFontSize: number; // Font size for new text objects
 }
 
+// For Undo/Redo functionality
+export interface UndoableState {
+  gridCells: GridCellData[][];
+  tokens: Token[]; // Note: Icon functions won't serialize properly with JSON.stringify
+  drawnShapes: DrawnShape[];
+  textObjects: TextObjectType[];
+  participants: Participant[];
+}

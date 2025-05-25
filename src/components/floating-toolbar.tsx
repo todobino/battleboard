@@ -5,7 +5,7 @@ import type { ActiveTool, Token, Measurement, DrawnShape } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type } from 'lucide-react'; // Added Type icon
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type, Undo2, Redo2 } from 'lucide-react'; // Added Type, Undo2, Redo2 icons
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -34,6 +34,10 @@ interface FloatingToolbarProps {
   setMeasurement: Dispatch<SetStateAction<Measurement>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: Dispatch<SetStateAction<number>>;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 interface ToolButtonProps {
@@ -46,9 +50,10 @@ interface ToolButtonProps {
   asChild?: boolean;
   variantOverride?: "default" | "outline";
   isActive?: boolean;
+  disabled?: boolean;
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive }) => {
+const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled }) => {
   let isButtonActive = isActive;
   if (isButtonActive === undefined && tool && currentActiveTool) {
     isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
@@ -67,6 +72,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
           )}
           aria-label={label}
           asChild={asChild}
+          disabled={disabled}
         >
           {children || <IconComponent className="h-5 w-5 text-accent-foreground" />}
         </Button>
@@ -87,6 +93,7 @@ export default function FloatingToolbar({
   showGridLines, setShowGridLines,
   measurement, setMeasurement,
   backgroundZoomLevel, setBackgroundZoomLevel,
+  onUndo, onRedo, canUndo, canRedo,
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -315,13 +322,28 @@ export default function FloatingToolbar({
           currentActiveTool={activeTool}
           onClick={() => handleToolClick('type_tool')}
         />
-
+        
         <ToolButton
           label="Eraser"
           icon={Eraser}
           tool="eraser_tool"
           currentActiveTool={activeTool}
           onClick={() => handleToolClick('eraser_tool')}
+        />
+
+        <Separator orientation="vertical" className="h-8 bg-border mx-1" />
+
+        <ToolButton
+          label="Undo"
+          icon={Undo2}
+          onClick={onUndo}
+          disabled={!canUndo}
+        />
+        <ToolButton
+          label="Redo"
+          icon={Redo2}
+          onClick={onRedo}
+          disabled={!canRedo}
         />
         
       </div>
