@@ -550,6 +550,14 @@ export default function BattleGrid({
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
         }
+    } else if (activeTool === 'place_token') {
+      const gridX = Math.floor(pos.x / cellSize);
+      const gridY = Math.floor(pos.y / cellSize);
+      if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
+        setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
+      } else {
+        setHoveredCellWhilePaintingOrErasing(null);
+      }
     } else if (isDrawing && currentDrawingShape && drawingStartPoint) {
         const snapFn = currentDrawingShape.type === 'circle' ? snapToCellCenter : snapToVertex;
         const currentEndPoint = snapFn(pos, cellSize);
@@ -615,6 +623,9 @@ export default function BattleGrid({
     if (isPainting) {
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
+    }
+    if (activeTool === 'place_token') {
+      setHoveredCellWhilePaintingOrErasing(null);
     }
     if (draggingTextObjectId) { 
         setDraggingTextObjectId(null);
@@ -715,7 +726,9 @@ export default function BattleGrid({
         <g shapeRendering="crispEdges">
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => {
-              const isHighlightActive = (isPainting && activeTool === 'paint_cell') || (isErasing && activeTool === 'eraser_tool');
+              const isHighlightActive = (isPainting && activeTool === 'paint_cell') || 
+                                      (isErasing && activeTool === 'eraser_tool') ||
+                                      (activeTool === 'place_token');
               const isHighlighted = isHighlightActive &&
                                   hoveredCellWhilePaintingOrErasing &&
                                   hoveredCellWhilePaintingOrErasing.x === x &&
