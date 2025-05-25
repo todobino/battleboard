@@ -172,10 +172,10 @@ export interface GridSettingsPanelProps {
 // Props for InitiativeTrackerPanel
 export interface InitiativeTrackerPanelProps {
   participantsProp?: Participant[];
+  tokens: Token[]; // Added tokens prop
   currentParticipantIndex: number;
   roundCounter: number;
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
 }
-

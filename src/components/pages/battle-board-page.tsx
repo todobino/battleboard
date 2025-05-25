@@ -529,6 +529,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           <SidebarContent className="p-4 flex flex-col flex-grow">
             <InitiativeTrackerPanel
               participantsProp={participants}
+              tokens={tokens}
               currentParticipantIndex={currentParticipantIndex}
               roundCounter={roundCounter}
               onRemoveParticipant={handleRemoveParticipantFromList}

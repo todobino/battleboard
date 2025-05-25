@@ -2,13 +2,13 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { Participant, InitiativeTrackerPanelProps as InitiativeTrackerPanelPropsType } from '@/types';
+import type { Participant, InitiativeTrackerPanelProps as InitiativeTrackerPanelPropsType, Token } from '@/types';
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, MoreVertical, UploadCloud } from 'lucide-react';
+import { Trash2, MoreVertical, UploadCloud, HelpCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Added AlertDialogTrigger
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -36,13 +36,13 @@ import {
 } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
 import ImageCropDialog from '@/components/image-crop-dialog';
-import { useToast } from '@/hooks/use-toast';
 
 // Using the imported type for props
 interface InitiativeTrackerPanelProps extends InitiativeTrackerPanelPropsType {}
 
 export default function InitiativeTrackerPanel({
   participantsProp = [],
+  tokens,
   currentParticipantIndex,
   roundCounter,
   onRemoveParticipant,
@@ -86,7 +86,6 @@ export default function InitiativeTrackerPanel({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        // Toast removed
         return;
       }
       const reader = new FileReader();
@@ -102,7 +101,6 @@ export default function InitiativeTrackerPanel({
   const handleTokenCropConfirm = (croppedDataUrl: string) => {
     if (participantToChangeTokenFor) {
       onChangeParticipantTokenImage(participantToChangeTokenFor.id, croppedDataUrl);
-      // Toast removed
     }
     setIsTokenCropDialogOpen(false);
     setUncroppedTokenImageSrc(null);
@@ -113,7 +111,6 @@ export default function InitiativeTrackerPanel({
   const handleTokenCropCancel = () => {
     setIsTokenCropDialogOpen(false);
     setUncroppedTokenImageSrc(null);
-    // Keep the change token dialog open if user just cancels crop
   };
 
 
@@ -134,6 +131,9 @@ export default function InitiativeTrackerPanel({
             <ul className="space-y-2 pr-1">
               {participants.map((p, index) => {
                 const itemIsActive = index === currentParticipantIndex;
+                const token = tokens.find(t => t.id === p.tokenId);
+                const IconComponent = token?.icon;
+
                 return (
                   <li
                     key={p.id}
@@ -142,9 +142,31 @@ export default function InitiativeTrackerPanel({
                       itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
                     )}
                   >
-                    {/* Top Row: Initiative, Name, Trash Icon */}
+                    {/* Top Row: Avatar, Initiative, Name, Trash Icon */}
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center flex-grow min-w-0">
+                        {token ? (
+                          token.customImageUrl ? (
+                            <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 border border-sidebar-border">
+                              <img src={token.customImageUrl} alt={p.name} className="w-full h-full object-cover" />
+                            </div>
+                          ) : IconComponent ? (
+                            <div 
+                              className="w-6 h-6 rounded-full flex items-center justify-center mr-2 shrink-0 border border-sidebar-border" 
+                              style={{ backgroundColor: token.color }}
+                            >
+                              <IconComponent className="h-4 w-4 text-primary-foreground" />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 shrink-0 border border-sidebar-border">
+                               <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 shrink-0 border border-sidebar-border">
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
                         <span className="font-semibold mr-3 text-lg">{p.initiative}</span>
                         <span className="text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
@@ -304,4 +326,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
