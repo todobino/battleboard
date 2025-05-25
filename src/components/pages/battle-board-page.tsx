@@ -105,8 +105,8 @@ export default function BattleBoardPage() {
         token.id === tokenId ? { ...token, x: newX, y: newY } : token
       )
     );
-    toast({ title: "Token Moved", description: `Token updated to position (${newX}, ${newY}).` });
-  }, [toast]);
+    // toast({ title: "Token Moved", description: `Token updated to position (${newX}, ${newY}).` }); // Removed toast
+  }, []);
 
   const handleStartCombat = () => {
     setIsCombatActive(true);
@@ -492,3 +492,4 @@ export default function BattleBoardPage() {
     </div>
   );
 }
+
