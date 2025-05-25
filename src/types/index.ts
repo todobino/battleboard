@@ -20,7 +20,7 @@ export interface Token {
   label?: string; // Optional label for the token (e.g., from template like "Player", "Enemy")
   instanceName?: string; // Specific name for this token instance (e.g., "Player 1", "Goblin Archer")
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element); // Lucide icon or custom SVG component
-  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
+  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
   size?: number; // in grid units, default 1
 }
 
@@ -47,14 +47,14 @@ export type ActiveTool =
   | 'draw_line'
   | 'draw_circle'
   | 'draw_square'
-  | 'type_tool'; // Added new type tool
+  | 'type_tool';
 
 
 export interface TokenTemplate {
   name: string;
   color: string;
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element);
-  type: 'player' | 'enemy' | 'item' | 'terrain' | 'generic';
+  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
 }
 
 export interface Measurement {
@@ -91,7 +91,7 @@ export interface BattleGridProps {
   selectedColor: string;
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   onTokenMove: (tokenId: string, newX: number, newY: number) => void;
+  onTokenInstanceNameChange: (tokenId: string, newName: string) => void; // Added prop
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
 }
-

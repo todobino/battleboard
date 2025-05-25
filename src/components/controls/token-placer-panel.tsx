@@ -2,12 +2,11 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool, Token, TokenTemplate } from '@/types';
+import type { ActiveTool, Token } from '@/types'; // TokenTemplate removed, Token used for Omit
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-// Users icon import removed as header is removed
-import { PlayerIcon, EnemyIcon, ItemIcon, TerrainIcon, GenericTokenIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { tokenTemplates } from '@/config/token-templates'; // Import from new config file
 
 interface TokenPlacerPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
@@ -15,37 +14,28 @@ interface TokenPlacerPanelProps {
   onTokenTemplateSelect?: () => void; // Callback to close popover
 }
 
-const tokenTemplates: TokenTemplate[] = [
-  { name: 'Player', color: 'hsl(120, 40%, 25%)', icon: PlayerIcon, type: 'player' },
-  { name: 'Enemy', color: 'hsl(0, 60%, 30%)', icon: EnemyIcon, type: 'enemy' },
-  { name: 'Item', color: 'hsl(270, 40%, 30%)', icon: ItemIcon, type: 'item' },
-  { name: 'Terrain', color: 'hsl(var(--muted))', icon: TerrainIcon, type: 'terrain' },
-  { name: 'Generic', color: 'hsl(var(--accent))', icon: GenericTokenIcon, type: 'generic' },
-];
-
 export default function TokenPlacerPanel({
   setActiveTool,
   setSelectedTokenTemplate,
   onTokenTemplateSelect,
 }: TokenPlacerPanelProps) {
 
-  const handleSelectTokenTemplate = (template: TokenTemplate) => {
+  const handleSelectTokenTemplate = (template: typeof tokenTemplates[number]) => {
     setSelectedTokenTemplate({
       color: template.color,
       icon: template.icon,
       type: template.type,
-      label: template.name,
+      label: template.name, // This becomes the base for instanceName if not overridden
       size: 1,
     });
     setActiveTool('place_token');
-    onTokenTemplateSelect?.(); // Call the callback to close the popover
+    onTokenTemplateSelect?.(); 
   };
 
   return (
     <div>
-      {/* Header div removed */}
-      <Card className="border-none shadow-none bg-transparent"> {/* Removed background and border */}
-        <CardContent className="grid grid-cols-5 gap-2 p-0"> {/* Removed p-2 */}
+      <Card className="border-none shadow-none bg-transparent">
+        <CardContent className="grid grid-cols-6 gap-2 p-0"> {/* Changed to grid-cols-6 */}
           {tokenTemplates.map(template => {
             const Icon = template.icon;
             return (
@@ -54,7 +44,7 @@ export default function TokenPlacerPanel({
               variant="outline"
               className={cn(
                 "aspect-square h-auto flex flex-col items-center justify-center p-2 space-y-1",
-                "border-2 border-transparent hover:border-accent" // Added border and hover:border-accent
+                "border-2 border-transparent hover:border-accent"
               )}
               style={{ backgroundColor: template.color }}
               onClick={() => handleSelectTokenTemplate(template)}
