@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Plus, Minus, ArrowRight } from 'lucide-react';
+import { LandPlot, Plus, Minus, ArrowRight, UserPlus, Camera } from 'lucide-react'; // Added UserPlus/Camera
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon } from '@/components/icons';
@@ -82,6 +82,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
   const [selectedAssignedTokenId, setSelectedAssignedTokenId] = useState<string | undefined>(undefined);
+
+  // Avatar state for "Add Combatant" dialog
+  const [croppedAvatarDataUrl, setCroppedAvatarDataUrl] = useState<string | null>(null);
+  const [uncroppedAvatarImageSrc, setUncroppedAvatarImageSrc] = useState<string | null>(null);
+  const [isAvatarCropDialogOpen, setIsAvatarCropDialogOpen] = useState(false);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
 
   // Undo/Redo State
@@ -346,10 +352,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setTokens(prev => prev.filter(t => t.id !== tokenId));
     setParticipants(prev => {
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
+      // If the deleted token was for the current turn participant, ensure their tokenId is cleared
+      if (participants[currentParticipantIndex]?.tokenId === tokenId) {
+        const updatedCurrentParticipant = { ...participants[currentParticipantIndex], tokenId: undefined };
+        newParticipants[currentParticipantIndex] = updatedCurrentParticipant;
+      }
       return newParticipants;
     });
     toast({ title: "Token Deleted" });
-  }, [toast]);
+  }, [toast, participants, currentParticipantIndex]);
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
     setTokenToChangeImage(tokenId); 
@@ -417,7 +428,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const handleAddParticipantToList = useCallback((
     participantData: Omit<Participant, 'id' | 'tokenId'>,
-    explicitTokenId?: string 
+    explicitTokenId?: string,
+    avatarUrl?: string | null
   ) => {
     const participantName = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId;
@@ -430,8 +442,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         const newToken: Token = {
           id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           x: middleX, y: middleY,
-          color: template.color, icon: template.icon,
-          type: template.type, label: template.name,
+          customImageUrl: avatarUrl || undefined,
+          icon: avatarUrl ? undefined : template.icon,
+          color: avatarUrl ? 'hsl(var(--muted))' : template.color,
+          type: template.type, 
+          label: avatarUrl ? 'Custom Avatar' : template.name,
           instanceName: participantName, size: 1,
         };
         setTokens(prev => [...prev, newToken]);
@@ -535,24 +550,26 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       };
       
       if (selectedAssignedTokenId) {
-        handleAddParticipantToList(newParticipantData, selectedAssignedTokenId);
+        handleAddParticipantToList(newParticipantData, selectedAssignedTokenId, croppedAvatarDataUrl);
         
         const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
 
         setTokens(prevTokens => prevTokens.map(t => {
           if (t.id === selectedAssignedTokenId) {
+            const isAvatarProvided = !!croppedAvatarDataUrl;
             return {
               ...t,
               instanceName: finalName,
               type: newParticipantType,
-              ...(newTypeTemplate && { color: newTypeTemplate.color }),
-              ...(newTypeTemplate && { icon: t.customImageUrl ? undefined : newTypeTemplate.icon }),
+              color: isAvatarProvided ? 'hsl(var(--muted))' : (newTypeTemplate ? newTypeTemplate.color : t.color),
+              icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
+              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl,
             };
           }
           return t;
         }));
       } else {
-        handleAddParticipantToList(newParticipantData);
+        handleAddParticipantToList(newParticipantData, undefined, croppedAvatarDataUrl);
       }
     }
 
@@ -567,6 +584,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setIsEditingQuantity(false);
     setNewParticipantType('player');
     setSelectedAssignedTokenId(undefined);
+    setCroppedAvatarDataUrl(null); // Reset avatar after adding
     setDialogOpen(false);
   };
 
@@ -684,8 +702,44 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setIsEditingHp(false);
       setIsEditingAc(false);
       setIsEditingQuantity(false);
+      setCroppedAvatarDataUrl(null);
+      setUncroppedAvatarImageSrc(null);
+      setIsAvatarCropDialogOpen(false);
     }
   };
+
+  const handleAvatarImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: 'Upload Error',
+          description: 'Avatar image file size exceeds 2MB limit.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUncroppedAvatarImageSrc(reader.result as string);
+        setIsAvatarCropDialogOpen(true);
+        if (event.target) event.target.value = ''; // Reset file input
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAvatarCropConfirm = (croppedDataUrl: string) => {
+    setCroppedAvatarDataUrl(croppedDataUrl);
+    setIsAvatarCropDialogOpen(false);
+    setUncroppedAvatarImageSrc(null);
+  };
+
+  const handleAvatarCropCancel = () => {
+    setIsAvatarCropDialogOpen(false);
+    setUncroppedAvatarImageSrc(null);
+  };
+
 
   return (
     <div className="flex h-screen">
@@ -756,6 +810,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           }}
         />
       )}
+      
+      {uncroppedAvatarImageSrc && (
+        <ImageCropDialog
+          isOpen={isAvatarCropDialogOpen}
+          onOpenChange={setIsAvatarCropDialogOpen}
+          imageSrc={uncroppedAvatarImageSrc}
+          onCropConfirm={handleAvatarCropConfirm}
+          onCropCancel={handleAvatarCropCancel}
+        />
+      )}
+
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
@@ -778,8 +843,34 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Combatant</DialogTitle>
-                  <DialogDescription> Enter the details for the new combatant. </DialogDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-16 h-16 rounded-full p-0 relative overflow-hidden border-2 border-dashed hover:border-primary flex items-center justify-center"
+                        onClick={() => avatarFileInputRef.current?.click()}
+                        aria-label="Upload combatant avatar"
+                      >
+                        {croppedAvatarDataUrl ? (
+                          <img src={croppedAvatarDataUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-7 h-7 text-muted-foreground" />
+                        )}
+                      </Button>
+                      <Input
+                        ref={avatarFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarImageUploadChange}
+                        className="hidden"
+                      />
+                    </div>
+                    <div className="flex-grow">
+                      <DialogTitle>Add New Combatant</DialogTitle>
+                      <DialogDescription>Enter the details for the new combatant.</DialogDescription>
+                    </div>
+                  </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div>
@@ -874,6 +965,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
