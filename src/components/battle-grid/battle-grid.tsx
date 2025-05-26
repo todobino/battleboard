@@ -213,21 +213,13 @@ export default function BattleGrid({
         setEditingTokenId(null);
         setEditingText('');
       }
-      if (popoverOpen) {
-        // If a tool other than select is chosen, and the popover is open, close it.
-        // However, don't close it if the delete dialog is open, as the popover is technically "under" it.
-        if (!isDeleteAlertOpen) {
-            setPopoverOpen(false);
-            // activePopoverToken will be cleared by popover's onOpenChange
-        }
-      }
     }
     if (activeTool !== 'type_tool') {
       if (isCreatingText) {
         finalizeTextCreation();
       }
     }
-  }, [activeTool, editingTokenId, popoverOpen, isDeleteAlertOpen, isCreatingText, finalizeTextCreation]);
+  }, [activeTool, editingTokenId, isCreatingText, finalizeTextCreation]);
 
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
@@ -313,6 +305,7 @@ export default function BattleGrid({
                 setTextObjectDragOffset({ x: pos.x - textObj.x, y: pos.y - textObj.y });
                 if (popoverOpen) {
                     setPopoverOpen(false);
+                    setActivePopoverToken(null);
                 }
                 return;
             }
@@ -327,7 +320,8 @@ export default function BattleGrid({
 
         if (!clickedOnToken) { 
             if (popoverOpen) {
-                setPopoverOpen(false); 
+                setPopoverOpen(false);
+                setActivePopoverToken(null); 
             }
             setIsPanning(true);
             setPanStart({ x: event.clientX, y: event.clientY });
@@ -337,6 +331,7 @@ export default function BattleGrid({
     
     if (popoverOpen && !isDeleteAlertOpen) {
       setPopoverOpen(false);
+      setActivePopoverToken(null);
     }
 
     if (activeTool === 'type_tool') {
@@ -452,9 +447,11 @@ export default function BattleGrid({
 
         if (popoverOpen && activePopoverToken?.id !== token.id) {
             setPopoverOpen(false); 
+            setActivePopoverToken(null);
         }
     } else if (activeTool !== 'select' && popoverOpen && !isDeleteAlertOpen) {
         setPopoverOpen(false);
+        setActivePopoverToken(null);
     }
   };
 
@@ -517,8 +514,9 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
-      if (popoverOpen && !isDeleteAlertOpen) { // Close popover if panning starts AND delete dialog is NOT open
+      if (popoverOpen && !isDeleteAlertOpen) {
           setPopoverOpen(false);
+          setActivePopoverToken(null);
       }
       const [currentVbMinX, currentVbMinY, currentVbWidth, currentVbHeight] = viewBox.split(' ').map(Number);
       const svgContainerEl = svgRef.current;
@@ -575,6 +573,7 @@ export default function BattleGrid({
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       if (popoverOpen && !isDeleteAlertOpen) { 
           setPopoverOpen(false);
+          setActivePopoverToken(null);
       }
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
@@ -661,6 +660,7 @@ export default function BattleGrid({
       if (distanceSquared < CLICK_THRESHOLD_SQUARED) {
         if (activePopoverToken?.id === draggingToken.id && popoverOpen) {
             setPopoverOpen(false);
+            setActivePopoverToken(null);
         } else {
             setActivePopoverToken(draggingToken);
             if (popoverTriggerRef.current) {
@@ -1237,7 +1237,7 @@ export default function BattleGrid({
             <PopoverContent 
                 side="bottom" 
                 align="center" 
-                className="w-48 p-1 z-[60]"
+                className="w-48 p-1"
                 onOpenAutoFocus={(e) => e.preventDefault()} 
             >
                 <Button
@@ -1267,7 +1267,7 @@ export default function BattleGrid({
                 </Button>
                 <AlertDialog 
                     open={isDeleteAlertOpen} 
-                    onOpenChange={setIsDeleteAlertOpen} // AlertDialog manages its own open state
+                    onOpenChange={setIsDeleteAlertOpen}
                 >
                   <AlertDialogTrigger asChild>
                     <Button 
@@ -1276,7 +1276,6 @@ export default function BattleGrid({
                             "w-full justify-start h-8 px-2 text-sm flex items-center",
                             "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         )}
-                        // No onClick here that closes popover; trigger opens dialog, popover stays.
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
@@ -1295,8 +1294,7 @@ export default function BattleGrid({
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
-                          setPopoverOpen(false); // Close the main popover after delete confirmation
-                          // isDeleteAlertOpen will be set to false by AlertDialog's own mechanics
+                          setPopoverOpen(false); 
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1354,4 +1352,5 @@ export default function BattleGrid({
     </div>
   );
 }
+
 
