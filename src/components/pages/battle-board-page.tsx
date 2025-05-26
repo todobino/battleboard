@@ -434,7 +434,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const participantName = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId;
 
-    if (!finalTokenId) { 
+    if (!finalTokenId && !avatarUrl) { 
       const template = tokenTemplates.find(t => t.type === participantData.type);
       if (template) {
         const middleX = Math.floor(GRID_COLS / 2);
@@ -442,17 +442,33 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         const newToken: Token = {
           id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           x: middleX, y: middleY,
-          customImageUrl: avatarUrl || undefined,
-          icon: avatarUrl ? undefined : template.icon,
-          color: avatarUrl ? 'hsl(var(--muted))' : template.color,
+          customImageUrl: undefined,
+          icon: template.icon,
+          color: template.color,
           type: template.type, 
-          label: avatarUrl ? 'Custom Avatar' : template.name,
+          label: template.name,
           instanceName: participantName, size: 1,
         };
         setTokens(prev => [...prev, newToken]);
         finalTokenId = newToken.id;
       }
+    } else if (!finalTokenId && avatarUrl) { // Create new token specifically for avatar
+        const middleX = Math.floor(GRID_COLS / 2);
+        const middleY = Math.floor(GRID_ROWS / 2);
+        const newToken: Token = {
+          id: `token-avatar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          x: middleX, y: middleY,
+          customImageUrl: avatarUrl,
+          icon: undefined,
+          color: 'hsl(var(--muted))', // Default for custom avatar token
+          type: participantData.type, // Use the combatant type
+          label: 'Custom Avatar',
+          instanceName: participantName, size: 1,
+        };
+        setTokens(prev => [...prev, newToken]);
+        finalTokenId = newToken.id;
     }
+
 
     const newParticipant: Participant = {
       ...participantData,
@@ -556,14 +572,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
         setTokens(prevTokens => prevTokens.map(t => {
           if (t.id === selectedAssignedTokenId) {
-            const isAvatarProvided = !!croppedAvatarDataUrl;
+            const isAvatarProvided = !!croppedAvatarDataUrl; // Check if a new avatar was just uploaded for this combatant
             return {
               ...t,
               instanceName: finalName,
-              type: newParticipantType,
+              type: newParticipantType, // Update token type from dialog
+              // Update color and icon based on new type, unless an avatar is explicitly provided
               color: isAvatarProvided ? 'hsl(var(--muted))' : (newTypeTemplate ? newTypeTemplate.color : t.color),
               icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
-              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl,
+              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl, // Prioritize newly uploaded avatar
             };
           }
           return t;
@@ -841,7 +858,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               <DialogTrigger asChild>
                 <Button className="w-full"> Add Combatant </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
@@ -965,6 +982,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
