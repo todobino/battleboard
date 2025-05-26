@@ -3,7 +3,7 @@
 
 import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types'; // Added DefaultBattleMap and imported existing props type
 import type { Dispatch, SetStateAction } from 'react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type, Undo2, Redo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -75,6 +75,7 @@ export default function FloatingToolbar({
   backgroundZoomLevel, setBackgroundZoomLevel,
   onUndo, onRedo, canUndo, canRedo,
   defaultBattlemaps,
+  escapePressCount, // Added new prop
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -82,6 +83,16 @@ export default function FloatingToolbar({
   const [isTokenPlacerPopoverOpen, setIsTokenPlacerPopoverOpen] = useState(false);
   const [isColorPainterPopoverOpen, setIsColorPainterPopoverOpen] = useState(false);
   const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    if (escapePressCount && escapePressCount > 0) {
+      setIsMapSettingsPopoverOpen(false);
+      setIsMeasurementPopoverOpen(false);
+      setIsTokenPlacerPopoverOpen(false);
+      setIsColorPainterPopoverOpen(false);
+      setIsShapeToolPopoverOpen(false);
+    }
+  }, [escapePressCount]);
 
 
   const handleToolClick = (tool: ActiveTool) => {
@@ -131,17 +142,17 @@ export default function FloatingToolbar({
             label="Map Tool"
             icon={Map}
             onClick={() => {
-                handleToolClick('map_tool');
+                // handleToolClick('map_tool'); // Do not change active tool, just open popover
                 setIsMapSettingsPopoverOpen(prev => !prev);
             }}
-            isActive={isMapSettingsPopoverOpen || activeTool === 'map_tool'}
+            isActive={isMapSettingsPopoverOpen} // Active only if its own popover is open
             asChild
           >
             <PopoverTrigger asChild>
                 <Button
-                  variant={(isMapSettingsPopoverOpen || activeTool === 'map_tool') ? 'default' : 'outline'}
+                  variant={(isMapSettingsPopoverOpen) ? 'default' : 'outline'}
                   size="icon"
-                  className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
+                  className='rounded-md shadow-lg h-10 w-10 p-2' 
                   aria-label="Map Tool"
                 >
                   <Map className="h-5 w-5 text-accent-foreground" />
@@ -154,7 +165,7 @@ export default function FloatingToolbar({
               setShowGridLines={setShowGridLines}
               backgroundImageUrl={backgroundImageUrl}
               setBackgroundImageUrl={setBackgroundImageUrl}
-              setActiveTool={setActiveTool}
+              setActiveTool={setActiveTool} // Pass setActiveTool for internal use if needed by panel
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
               defaultBattlemaps={defaultBattlemaps}
@@ -167,6 +178,7 @@ export default function FloatingToolbar({
             label="Measurement Tools"
             icon={DraftingCompass}
             onClick={() => {
+                // Do not change active tool, just open popover
                 setIsMeasurementPopoverOpen(prev => !prev);
             }}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
@@ -176,7 +188,7 @@ export default function FloatingToolbar({
                <Button
                   variant={(isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
                   size="icon"
-                  className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
+                  className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Measurement Tools"
                 >
                   <DraftingCompass className="h-5 w-5 text-accent-foreground" />
@@ -199,17 +211,17 @@ export default function FloatingToolbar({
             label="Tokens Tool"
             icon={Users}
              onClick={() => {
-                handleToolClick('token_placer_tool');
+                // Do not change active tool, just open popover
                 setIsTokenPlacerPopoverOpen(prev => !prev);
             }}
-            isActive={isTokenPlacerPopoverOpen || activeTool === 'token_placer_tool' || activeTool === 'place_token'}
+            isActive={isTokenPlacerPopoverOpen || activeTool === 'place_token'}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={(isTokenPlacerPopoverOpen || activeTool === 'token_placer_tool' || activeTool === 'place_token') ? 'default' : 'outline'}
+                variant={(isTokenPlacerPopoverOpen || activeTool === 'place_token') ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
+                className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Tokens Tool"
               >
                 <Users className="h-5 w-5 text-accent-foreground" />
@@ -230,7 +242,7 @@ export default function FloatingToolbar({
             label="Paint Tool"
             icon={Paintbrush}
             onClick={() => {
-                handleToolClick('paint_cell');
+                // Do not change active tool, just open popover
                 setIsColorPainterPopoverOpen(prev => !prev);
             }}
             isActive={isColorPainterPopoverOpen || activeTool === 'paint_cell'}
@@ -240,7 +252,7 @@ export default function FloatingToolbar({
               <Button
                 variant={(isColorPainterPopoverOpen || activeTool === 'paint_cell') ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
+                className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Paint Tool"
               >
                 <Paintbrush className="h-5 w-5 text-accent-foreground" />
@@ -263,17 +275,17 @@ export default function FloatingToolbar({
             label="Shapes Tool"
             icon={Shapes}
             onClick={() => {
-              handleToolClick('shapes_tool');
+              // Do not change active tool, just open popover
               setIsShapeToolPopoverOpen(prev => !prev);
             }}
-            isActive={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square'}
+            isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square'}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
+                variant={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
+                className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Shapes Tool"
               >
                 <Shapes className="h-5 w-5 text-accent-foreground" />
@@ -323,4 +335,5 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
 

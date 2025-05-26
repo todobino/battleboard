@@ -82,12 +82,13 @@ export default function BattleGrid({
   currentTextFontSize,
   onTokenDelete,
   onTokenImageChangeRequest,
+  escapePressCount,
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const numRows = gridCells.length;
   const numCols = gridCells.length > 0 ? gridCells[0].length : 0;
-  const cellSize = DEFAULT_CELL_SIZE; 
+  const cellSize = DEFAULT_CELL_SIZE;
 
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = numCols * cellSize;
@@ -101,7 +102,7 @@ export default function BattleGrid({
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
-  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null); // For token click vs drag detection
+  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null);
 
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
@@ -114,16 +115,14 @@ export default function BattleGrid({
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
   const foreignObjectInputRef = useRef<HTMLInputElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null); // For new text creation
+  const textInputRef = useRef<HTMLInputElement>(null);
 
-  // Text Object interaction state
   const [isCreatingText, setIsCreatingText] = useState<{ id: string; x: number; y: number; currentText: string; fontSize: number; inputWidth: number; } | null>(null);
   const [draggingTextObjectId, setDraggingTextObjectId] = useState<string | null>(null);
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
-  const [textObjectDragStartPos, setTextObjectDragStartPos] = useState<Point | null>(null); // SVG coords for click/drag
-  const [textObjectDragStartScreenPos, setTextObjectDragStartScreenPos] = useState<Point | null>(null); // Screen coords for click/drag
+  const [textObjectDragStartPos, setTextObjectDragStartPos] = useState<Point | null>(null);
+  const [textObjectDragStartScreenPos, setTextObjectDragStartScreenPos] = useState<Point | null>(null);
 
-  // Text Object Popover State
   const textObjectPopoverTriggerRef = useRef<HTMLButtonElement>(null);
   const [textObjectPopoverOpen, setTextObjectPopoverOpen] = useState(false);
   const [activePopoverTextObject, setActivePopoverTextObject] = useState<TextObjectType | null>(null);
@@ -132,19 +131,16 @@ export default function BattleGrid({
   const [editingTextObjectContent, setEditingTextObjectContent] = useState<string>('');
   const textObjectEditInputRef = useRef<HTMLInputElement>(null);
 
-
-  // Token Popover State
   const popoverTriggerRef = useRef<HTMLButtonElement>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [activePopoverToken, setActivePopoverToken] = useState<TokenType | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
-
-   useEffect(() => {
+  useEffect(() => {
     const calculatedTotalContentWidth = numCols * cellSize;
     const calculatedTotalContentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    const svgPadding = currentBorderWidth / 2; 
+    const svgPadding = currentBorderWidth / 2;
 
     const actualTotalContentMinX = 0 - svgPadding;
     const actualTotalContentMinY = 0 - svgPadding;
@@ -170,7 +166,7 @@ export default function BattleGrid({
     } else {
       setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
     }
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); 
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -192,16 +188,22 @@ export default function BattleGrid({
     }
   }, [editingTextObjectId]);
 
+  useEffect(() => {
+    if (escapePressCount && escapePressCount > 0) {
+      setPopoverOpen(false);
+      setTextObjectPopoverOpen(false);
+    }
+  }, [escapePressCount]);
 
   const measureText = useCallback((text: string, fontSize: number) => {
-    if (typeof document === 'undefined') return { width: 0, height: 0}; // Guard for SSR or test environments
+    if (typeof document === 'undefined') return { width: 0, height: 0};
     const tempSpan = document.createElement('span');
     document.body.appendChild(tempSpan);
     tempSpan.style.font = `${fontSize}px sans-serif`;
     tempSpan.style.whiteSpace = 'nowrap';
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
-    tempSpan.textContent = text || " "; // Ensure textContent is not empty for measurement
+    tempSpan.textContent = text || " ";
     const width = tempSpan.offsetWidth;
     const height = tempSpan.offsetHeight;
     document.body.removeChild(tempSpan);
@@ -247,21 +249,32 @@ export default function BattleGrid({
                 : to
         ));
     } else if (editingTextObjectId && editingTextObjectContent.trim() === '') {
-        // If edited to be empty, delete it
         setTextObjects(prev => prev.filter(to => to.id !== editingTextObjectId));
     }
     setEditingTextObjectId(null);
     setEditingTextObjectContent('');
   }, [editingTextObjectId, editingTextObjectContent, textObjects, setTextObjects, measureText]);
 
+  const handleSaveTokenName = useCallback(() => {
+    if (editingTokenId) {
+      setTokens(prevTokens =>
+        prevTokens.map(t =>
+          t.id === editingTokenId ? { ...t, instanceName: editingText } : t
+        )
+      );
+      onTokenInstanceNameChange(editingTokenId, editingText);
+      setEditingTokenId(null);
+      setEditingText('');
+    }
+  }, [editingTokenId, editingText, setTokens, onTokenInstanceNameChange]);
 
   useEffect(() => {
     if (activeTool !== 'select') {
       if (editingTokenId) {
-        handleSaveTokenName(); // Finalize token name edit if tool changes
+        handleSaveTokenName();
       }
       if (editingTextObjectId) {
-        handleFinalizeTextEdit(); // Finalize text object edit if tool changes
+        handleFinalizeTextEdit();
       }
     }
     if (activeTool !== 'type_tool') {
@@ -269,8 +282,7 @@ export default function BattleGrid({
         finalizeTextCreation();
       }
     }
-  }, [activeTool, editingTokenId, editingTextObjectId, isCreatingText, finalizeTextCreation, handleFinalizeTextEdit]);
-
+  }, [activeTool, editingTokenId, editingTextObjectId, isCreatingText, finalizeTextCreation, handleSaveTokenName, handleFinalizeTextEdit]);
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -348,8 +360,6 @@ export default function BattleGrid({
     const gridY = Math.floor(pos.y / cellSize);
 
     if (activeTool === 'select' && (event.button === 0 || event.button === 1)) {
-        // Check for text object click handled by foreignObject's onMouseDown
-        // If not clicking a text object or token, start panning.
         const clickedOnToken = tokens.some(token => {
             const tokenLeft = token.x * cellSize;
             const tokenRight = (token.x + (token.size || 1)) * cellSize;
@@ -358,11 +368,8 @@ export default function BattleGrid({
             return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
         });
         
-        // Check if clicked on a text object (its onMouseDown will stopPropagation if so)
-        // If a text object was clicked, its own handler will deal with popovers/dragging
-        // So, if we reach here and it wasn't a token, and it's not a text object being dragged, pan.
         if (!clickedOnToken && !draggingTextObjectId) {
-            if (popoverOpen) {
+            if (popoverOpen && !isDeleteAlertOpen) {
                 setPopoverOpen(false);
                 setActivePopoverToken(null); 
             }
@@ -385,17 +392,15 @@ export default function BattleGrid({
         setActivePopoverTextObject(null);
     }
 
-
     if (activeTool === 'type_tool') {
         event.stopPropagation(); 
         if (isCreatingText) { 
             finalizeTextCreation();
         }
-        // If editing existing text, finalize that too
         if (editingTextObjectId) {
             handleFinalizeTextEdit();
         }
-        setTimeout(() => { // Timeout to ensure any blur events fire first
+        setTimeout(() => {
             const newPos = getMousePosition(event); 
             setIsCreatingText({
                 id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -494,18 +499,17 @@ export default function BattleGrid({
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
     if (activeTool === 'select' && !editingTokenId) {
-        event.stopPropagation(); // Prevent grid pan if clicking token
+        event.stopPropagation();
         setDraggingToken(token);
         const pos = getMousePosition(event);
         setMouseDownPos(pos); 
         setDragOffset({ x: pos.x - token.x * cellSize, y: pos.y - token.y * cellSize });
         setDraggingTokenPosition(null);
 
-        if (popoverOpen && activePopoverToken?.id !== token.id) {
+        if (popoverOpen && activePopoverToken?.id !== token.id && !isDeleteAlertOpen) {
             setPopoverOpen(false); 
-            setActivePopoverToken(null);
         }
-        if (textObjectPopoverOpen) { // Close text popover if interacting with token
+        if (textObjectPopoverOpen && !textObjectDeleteAlertOpen) {
             setTextObjectPopoverOpen(false);
             setActivePopoverTextObject(null);
         }
@@ -521,19 +525,6 @@ export default function BattleGrid({
     if (activeTool === 'select' && !draggingToken && !popoverOpen && !isDeleteAlertOpen) { 
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
-    }
-  };
-
-  const handleSaveTokenName = () => {
-    if (editingTokenId) {
-      setTokens(prevTokens =>
-        prevTokens.map(t =>
-          t.id === editingTokenId ? { ...t, instanceName: editingText } : t
-        )
-      );
-      onTokenInstanceNameChange(editingTokenId, editingText); 
-      setEditingTokenId(null);
-      setEditingText('');
     }
   };
 
@@ -580,7 +571,6 @@ export default function BattleGrid({
     if (isPanning && panStart && svgRef.current) {
       if (popoverOpen && !isDeleteAlertOpen) {
           setPopoverOpen(false);
-          setActivePopoverToken(null);
       }
       if (textObjectPopoverOpen && !textObjectDeleteAlertOpen) {
           setTextObjectPopoverOpen(false);
@@ -641,7 +631,6 @@ export default function BattleGrid({
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       if (popoverOpen && !isDeleteAlertOpen) { 
           setPopoverOpen(false);
-          setActivePopoverToken(null);
       }
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
@@ -725,10 +714,10 @@ export default function BattleGrid({
       const dy = currentMouseSvgPos.y - mouseDownPos.y;
       const distanceSquared = dx * dx + dy * dy;
 
-      if (distanceSquared < CLICK_THRESHOLD_SQUARED) { // It's a click
+      if (distanceSquared < CLICK_THRESHOLD_SQUARED) {
         if (activePopoverToken?.id === draggingToken.id && popoverOpen) {
-            setPopoverOpen(false);
-            // setActivePopoverToken(null); // Handled by Popover onOpenChange
+            // Toggle if clicking the same token
+             setPopoverOpen(false);
         } else {
             setActivePopoverToken(draggingToken);
             if (popoverTriggerRef.current) {
@@ -738,40 +727,34 @@ export default function BattleGrid({
             }
             setPopoverOpen(true);
         }
-      } else if (draggingTokenPosition) { // It's a drag that moved to a new cell
+      } else if (draggingTokenPosition) {
         onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
       }
-      // Always clear dragging state for token
       setDraggingToken(null); 
       setDragOffset(null);
       setDraggingTokenPosition(null);
-    } else if (draggingToken) { // Failsafe if drag started but conditions not met
+    } else if (draggingToken) {
         setDraggingToken(null);
         setDragOffset(null);
         setDraggingTokenPosition(null);
     }
     setMouseDownPos(null);
 
-    // Text Object Click vs Drag Handling
     if (draggingTextObjectId && textObjectDragStartScreenPos && textObjectDragStartPos && textObjectDragOffset) {
         const currentMouseScreenPos = { x: event.clientX, y: event.clientY };
         const dxScreen = currentMouseScreenPos.x - textObjectDragStartScreenPos.x;
         const dyScreen = currentMouseScreenPos.y - textObjectDragStartScreenPos.y;
         const distanceSquared = dxScreen * dxScreen + dyScreen * dyScreen;
-
         const textObj = textObjects.find(to => to.id === draggingTextObjectId);
 
-        if (distanceSquared < CLICK_THRESHOLD_SQUARED && textObj) { // Click on Text Object
-            // Revert any minor position change from the click-drag
+        if (distanceSquared < CLICK_THRESHOLD_SQUARED && textObj) {
             setTextObjects(prev => prev.map(obj =>
                 obj.id === draggingTextObjectId 
                     ? { ...obj, x: textObjectDragStartPos!.x - textObjectDragOffset!.x, y: textObjectDragStartPos!.y - textObjectDragOffset!.y } 
                     : obj
             ));
-
             if (activePopoverTextObject?.id === textObj.id && textObjectPopoverOpen) {
                 setTextObjectPopoverOpen(false);
-                // setActivePopoverTextObject(null); // Handled by Popover onOpenChange
             } else {
                 setActivePopoverTextObject(textObj);
                 if (textObjectPopoverTriggerRef.current) {
@@ -781,16 +764,12 @@ export default function BattleGrid({
                 }
                 setTextObjectPopoverOpen(true);
             }
-        } else { // Drag of Text Object
-            // Position is already updated by handleMouseMove. No further action needed here for position.
         }
-        // Clear dragging state for text object
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
         setTextObjectDragStartPos(null);
         setTextObjectDragStartScreenPos(null);
     }
-
 
     if (isPanning) {
       setIsPanning(false);
@@ -881,7 +860,6 @@ export default function BattleGrid({
     if (vw !== 0) { newVh = (newVw / vw) * vh; } 
     else { newVh = (numRows / numCols) * newVw; } 
 
-
     let newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
     let newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
     
@@ -922,10 +900,8 @@ export default function BattleGrid({
     if (editingTokenId || isCreatingText || editingTextObjectId) return 'cursor-text';
     if (isPanning) return 'cursor-grabbing';
     if (draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
-    // Token hover cursor is handled directly on token G element
-    if (activeTool === 'select' && !draggingToken && !isPanning && !popoverOpen && !textObjectPopoverOpen) return 'cursor-default'; // Base select cursor
+    if (activeTool === 'select' && !draggingToken && !isPanning && !popoverOpen && !textObjectPopoverOpen) return 'cursor-default';
     if (draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) return 'cursor-grabbing';
-    // Text object hover cursor is handled directly on foreignObject
     if (activeTool === 'type_tool') return 'cursor-text';
 
     if ([
@@ -1193,8 +1169,8 @@ export default function BattleGrid({
                 key={`edit-${obj.id}`}
                 x={obj.x}
                 y={obj.y}
-                width={Math.max(obj.width, 150)} // Ensure a minimum width for editing
-                height={obj.height + 2} // Add some padding for border
+                width={Math.max(obj.width, 150)}
+                height={obj.height + 2}
             >
                 <input
                     ref={textObjectEditInputRef}
@@ -1239,7 +1215,7 @@ export default function BattleGrid({
                   setDraggingTextObjectId(obj.id);
                   setTextObjectDragOffset({ x: pos.x - obj.x, y: pos.y - obj.y });
 
-                  if (popoverOpen) { // Close token popover if interacting with text
+                  if (popoverOpen && !isDeleteAlertOpen) {
                       setPopoverOpen(false);
                       setActivePopoverToken(null);
                   }
@@ -1358,7 +1334,6 @@ export default function BattleGrid({
          )}
       </svg>
 
-      {/* Token Popover */}
       <Popover 
         open={popoverOpen} 
         onOpenChange={(isOpen) => {
@@ -1416,10 +1391,8 @@ export default function BattleGrid({
                     open={isDeleteAlertOpen} 
                     onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
-                        if (!isOpen && popoverOpen) { // If dialog closes, but popover was meant to be open
-                           // Potentially re-focus popover or handle focus management
-                        } else if (!isOpen && !popoverOpen) { // If dialog closes AND popover is also closed
-                            setActivePopoverToken(null); // Clean up active token context
+                        if (!isOpen && !popoverOpen) { 
+                            setActivePopoverToken(null);
                         }
                     }}
                 >
@@ -1430,6 +1403,9 @@ export default function BattleGrid({
                             "w-full justify-start h-8 px-2 text-sm flex items-center",
                             "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         )}
+                        onClick={() => {
+                           // No longer need to manually close popover here, dialog trigger handles it
+                        }}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
@@ -1448,7 +1424,7 @@ export default function BattleGrid({
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
-                          setPopoverOpen(false); // Ensure popover closes after delete action
+                          setPopoverOpen(false);
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1461,7 +1437,6 @@ export default function BattleGrid({
         )}
       </Popover>
 
-      {/* Text Object Popover */}
         <Popover
             open={textObjectPopoverOpen}
             onOpenChange={(isOpen) => {
@@ -1487,7 +1462,7 @@ export default function BattleGrid({
                             if (activePopoverTextObject) {
                                 setEditingTextObjectId(activePopoverTextObject.id);
                                 setEditingTextObjectContent(activePopoverTextObject.content);
-                                setTextObjectPopoverOpen(false); // Close popover to start editing
+                                setTextObjectPopoverOpen(false);
                             }
                         }}
                     >
@@ -1497,9 +1472,7 @@ export default function BattleGrid({
                         open={textObjectDeleteAlertOpen}
                         onOpenChange={(isOpen) => {
                             setTextObjectDeleteAlertOpen(isOpen);
-                             if (!isOpen && textObjectPopoverOpen) {
-                                // Do nothing specific, popover should remain
-                            } else if (!isOpen && !textObjectPopoverOpen) {
+                             if (!isOpen && !textObjectPopoverOpen) { 
                                 setActivePopoverTextObject(null);
                             }
                         }}
@@ -1529,7 +1502,7 @@ export default function BattleGrid({
                                         if (activePopoverTextObject) {
                                             setTextObjects(prev => prev.filter(to => to.id !== activePopoverTextObject!.id));
                                         }
-                                        setTextObjectPopoverOpen(false); // Ensure popover closes
+                                        setTextObjectPopoverOpen(false);
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1541,7 +1514,6 @@ export default function BattleGrid({
                 </PopoverContent>
             )}
         </Popover>
-
 
       <TooltipProvider delayDuration={0}>
         <div className="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">

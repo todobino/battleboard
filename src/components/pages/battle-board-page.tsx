@@ -95,6 +95,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState<boolean>(false);
 
+  // Escape key global handler state
+  const [escapePressCount, setEscapePressCount] = useState(0);
+
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hasSeen = localStorage.getItem(WELCOME_DIALOG_STORAGE_KEY);
@@ -192,10 +196,25 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(newPointer);
   }, [history, historyPointer]);
 
+  // Global keydown listener for Undo/Redo and Escape
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      const isInputFocused = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (event.key === 'Escape') {
+        if (isInputFocused) {
+          // Allow Escape for inputs to blur or cancel their own actions
+          return;
+        }
+        event.preventDefault(); // Prevent other default Escape key behaviors
+        setActiveTool('select');
+        setEscapePressCount(prev => prev + 1);
+        return; // Return after handling escape
+      }
+      
+      // For Undo/Redo, don't act if an input is focused
+      if (isInputFocused) {
         return; 
       }
       
@@ -214,7 +233,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleUndo, handleRedo]);
+  }, [handleUndo, handleRedo, setActiveTool]);
 
 
  useEffect(() => {
@@ -637,6 +656,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             currentTextFontSize={currentTextFontSize}
             onTokenDelete={handleTokenDelete}
             onTokenImageChangeRequest={handleRequestTokenImageChange}
+            escapePressCount={escapePressCount}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -652,6 +672,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             canUndo={historyPointer > 0}
             canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
             defaultBattlemaps={defaultBattlemaps}
+            escapePressCount={escapePressCount}
           />
       </div>
 
@@ -772,5 +793,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 

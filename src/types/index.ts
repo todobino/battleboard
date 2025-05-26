@@ -118,6 +118,7 @@ export interface BattleGridProps {
   currentTextFontSize: number; // Font size for new text objects
   onTokenDelete: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
+  escapePressCount?: number;
 }
 
 // For Undo/Redo functionality
@@ -156,7 +157,8 @@ export interface FloatingToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  defaultBattlemaps: DefaultBattleMap[]; 
+  defaultBattlemaps: DefaultBattleMap[];
+  escapePressCount?: number;
 }
 
 // Props for GridSettingsPanel
