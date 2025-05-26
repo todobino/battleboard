@@ -45,6 +45,65 @@ const initialGridCells = (): GridCellData[][] =>
     }))
   );
 
+// Helper to check if a square is occupied by a token (local to BattleBoardPage)
+function isSquareOccupiedLocal(
+  x: number,
+  y: number,
+  tokens: Token[],
+  numCols: number,
+  numRows: number,
+  excludeTokenId?: string
+): boolean {
+  if (x < 0 || x >= numCols || y < 0 || y >= numRows) return true;
+  return tokens.some(
+    (token) =>
+      token.id !== excludeTokenId &&
+      Math.floor(token.x) === Math.floor(x) &&
+      Math.floor(token.y) === Math.floor(y)
+  );
+}
+
+// Helper to find an available square, spiraling outwards (local to BattleBoardPage)
+function findAvailableSquareLocal(
+  preferredX: number,
+  preferredY: number,
+  tokens: Token[],
+  numCols: number,
+  numRows: number,
+  excludeTokenId?: string
+): Point | null {
+  const checkOccupied = (cx: number, cy: number) =>
+    isSquareOccupiedLocal(cx, cy, tokens, numCols, numRows, excludeTokenId);
+
+  if (!checkOccupied(preferredX, preferredY)) {
+    return { x: preferredX, y: preferredY };
+  }
+
+  let currentX = 0;
+  let currentY = 0;
+  let dx = 0;
+  let dy = -1;
+  const maxSearchRadius = Math.max(numCols, numRows);
+
+  for (let i = 0; i < Math.pow(maxSearchRadius * 2 + 1, 2); i++) {
+    const checkGridX = preferredX + currentX;
+    const checkGridY = preferredY + currentY;
+
+    if (checkGridX >= 0 && checkGridX < numCols && checkGridY >= 0 && checkGridY < numRows) {
+      if (!checkOccupied(checkGridX, checkGridY)) {
+        return { x: checkGridX, y: checkGridY };
+      }
+    }
+    if (currentX === currentY || (currentX < 0 && currentX === -currentY) || (currentX > 0 && currentX === 1 - currentY)) {
+      [dx, dy] = [-dy, dx];
+    }
+    currentX += dx;
+    currentY += dy;
+  }
+  return null;
+}
+
+
 export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPageProps) {
   const { toast } = useToast();
   const [gridCells, setGridCells] = useState<GridCellData[][]>(initialGridCells());
@@ -83,27 +142,20 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
   const [selectedAssignedTokenId, setSelectedAssignedTokenId] = useState<string | undefined>(undefined);
 
-  // Avatar state for "Add Combatant" dialog
   const [croppedAvatarDataUrl, setCroppedAvatarDataUrl] = useState<string | null>(null);
   const [uncroppedAvatarImageSrc, setUncroppedAvatarImageSrc] = useState<string | null>(null);
   const [isAvatarCropDialogOpen, setIsAvatarCropDialogOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
-
-  // Undo/Redo State
   const [history, setHistory] = useState<UndoableState[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
   const isUndoRedoOperation = useRef<boolean>(false);
 
-  // State for changing a specific token's image
   const [tokenToChangeImage, setTokenToChangeImage] = useState<string | null>(null);
   const [uncroppedTokenImageSrc, setUncroppedTokenImageSrc] = useState<string | null>(null);
   const [isTokenCropDialogOpen, setIsTokenCropDialogOpen] = useState(false);
 
-  // Welcome Dialog State
   const [showWelcomeDialog, setShowWelcomeDialog] = useState<boolean>(false);
-
-  // Escape key global handler state
   const [escapePressCount, setEscapePressCount] = useState(0);
 
 
@@ -156,8 +208,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (historyPointer === -1) return;
 
     const newSnapshot = getCurrentUndoableState();
-
-    // Prevent adding identical state to history
     const currentHistoryState = history[historyPointer];
     if (currentHistoryState && JSON.stringify(newSnapshot) === JSON.stringify(currentHistoryState)) {
         return;
@@ -208,7 +258,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(newPointer);
   }, [history, historyPointer, toast]);
 
-  // Global keydown listener for Undo/Redo and Escape
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
@@ -216,16 +265,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       if (event.key === 'Escape') {
         if (isInputFocused) {
-          // Allow Escape for inputs to blur or cancel their own actions
           return;
         }
-        event.preventDefault(); // Prevent other default Escape key behaviors
+        event.preventDefault(); 
         setActiveTool('select');
         setEscapePressCount(prev => prev + 1);
-        return; // Return after handling escape
+        return; 
       }
       
-      // For Undo/Redo, don't act if an input is focused
       if (isInputFocused) {
         return; 
       }
@@ -323,14 +370,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 )
             );
         } else {
-            // Create a new token if one doesn't exist
             const middleX = Math.floor(GRID_COLS / 2);
             const middleY = Math.floor(GRID_ROWS / 2);
+            const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
+            if (!availableSquare) {
+                toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
+                return prevParticipants; // Don't change participants if token can't be placed
+            }
             const newToken: Token = {
                 id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                x: middleX,
-                y: middleY,
-                color: 'hsl(var(--muted))', // Default for custom
+                x: availableSquare.x,
+                y: availableSquare.y,
+                color: 'hsl(var(--muted))', 
                 customImageUrl: newImageUrl,
                 icon: undefined,
                 type: 'generic', 
@@ -346,13 +397,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         }
         return prevParticipants; 
     });
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokens]); // Added tokens to dependency array
 
   const handleTokenDelete = useCallback((tokenId: string) => {
     setTokens(prev => prev.filter(t => t.id !== tokenId));
     setParticipants(prev => {
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
-      // If the deleted token was for the current turn participant, ensure their tokenId is cleared
       if (participants[currentParticipantIndex]?.tokenId === tokenId) {
         const updatedCurrentParticipant = { ...participants[currentParticipantIndex], tokenId: undefined };
         newParticipants[currentParticipantIndex] = updatedCurrentParticipant;
@@ -433,42 +484,36 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   ) => {
     const participantName = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId;
+    let newTokensCreated: Token[] = [];
 
-    if (!finalTokenId && !avatarUrl) { 
-      const template = tokenTemplates.find(t => t.type === participantData.type);
-      if (template) {
-        const middleX = Math.floor(GRID_COLS / 2);
-        const middleY = Math.floor(GRID_ROWS / 2);
-        const newToken: Token = {
-          id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          x: middleX, y: middleY,
-          customImageUrl: undefined,
-          icon: template.icon,
-          color: template.color,
-          type: template.type, 
-          label: template.name,
-          instanceName: participantName, size: 1,
-        };
-        setTokens(prev => [...prev, newToken]);
-        finalTokenId = newToken.id;
+    if (!finalTokenId) { // No existing token assigned, need to create one
+      const middleX = Math.floor(GRID_COLS / 2);
+      const middleY = Math.floor(GRID_ROWS / 2);
+      const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
+
+      if (!availableSquare) {
+        toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
+        return false; // Indicate failure to add participant
       }
-    } else if (!finalTokenId && avatarUrl) { // Create new token specifically for avatar
-        const middleX = Math.floor(GRID_COLS / 2);
-        const middleY = Math.floor(GRID_ROWS / 2);
-        const newToken: Token = {
-          id: `token-avatar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          x: middleX, y: middleY,
-          customImageUrl: avatarUrl,
-          icon: undefined,
-          color: 'hsl(var(--muted))', // Default for custom avatar token
-          type: participantData.type, // Use the combatant type
-          label: 'Custom Avatar',
-          instanceName: participantName, size: 1,
-        };
-        setTokens(prev => [...prev, newToken]);
-        finalTokenId = newToken.id;
+      
+      const template = tokenTemplates.find(t => t.type === participantData.type);
+      const newToken: Token = {
+        id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        x: availableSquare.x, 
+        y: availableSquare.y,
+        customImageUrl: avatarUrl || undefined,
+        icon: avatarUrl ? undefined : template?.icon,
+        color: avatarUrl ? 'hsl(var(--muted))' : (template?.color || 'hsl(var(--accent))'),
+        type: participantData.type, 
+        label: avatarUrl ? 'Custom Avatar' : (template?.name || 'Generic'),
+        instanceName: participantName, 
+        size: 1,
+      };
+      newTokensCreated.push(newToken);
+      finalTokenId = newToken.id;
     }
 
+    setTokens(prev => [...prev, ...newTokensCreated]);
 
     const newParticipant: Participant = {
       ...participantData,
@@ -496,11 +541,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newList;
     });
-  }, [isCombatActive, currentParticipantIndex]);
+    return true; // Indicate success
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCombatActive, currentParticipantIndex, tokens, toast]); // Added tokens and toast to dependencies
 
 
   const handleRemoveParticipantFromList = (idToRemove: string) => {
-    const participantToRemove = participants.find(p => p.id === idToRemove);
     setParticipants(prevParticipants => {
       const isRemovingCurrentTurn = prevParticipants[currentParticipantIndex]?.id === idToRemove;
       const newList = prevParticipants.filter(p => p.id !== idToRemove);
@@ -555,6 +601,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return;
     }
 
+    let allAddedSuccessfully = true;
     for (let i = 0; i < quantity; i++) {
       const finalName = (quantity > 1 && !selectedAssignedTokenId) ? `${participantNameInput} ${i + 1}` : participantNameInput;
       const newParticipantData: Omit<Participant, 'id' | 'tokenId'> = {
@@ -565,43 +612,50 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         ac: acValue,
       };
       
+      let success;
       if (selectedAssignedTokenId) {
-        handleAddParticipantToList(newParticipantData, selectedAssignedTokenId, croppedAvatarDataUrl);
-        
-        const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
-
-        setTokens(prevTokens => prevTokens.map(t => {
-          if (t.id === selectedAssignedTokenId) {
-            const isAvatarProvided = !!croppedAvatarDataUrl; 
-            return {
-              ...t,
-              instanceName: finalName,
-              type: newParticipantType, 
-              color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
-              icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
-              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl,
-            };
-          }
-          return t;
-        }));
+        success = handleAddParticipantToList(newParticipantData, selectedAssignedTokenId, croppedAvatarDataUrl);
+        if (success) {
+            const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
+            setTokens(prevTokens => prevTokens.map(t => {
+            if (t.id === selectedAssignedTokenId) {
+                const isAvatarProvided = !!croppedAvatarDataUrl; 
+                return {
+                ...t,
+                instanceName: finalName,
+                type: newParticipantType, 
+                color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
+                icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
+                customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined), // Keep existing if no new avatar
+                };
+            }
+            return t;
+            }));
+        }
       } else {
-        handleAddParticipantToList(newParticipantData, undefined, croppedAvatarDataUrl);
+         success = handleAddParticipantToList(newParticipantData, undefined, croppedAvatarDataUrl);
+      }
+      if (!success) {
+        allAddedSuccessfully = false;
+        break; 
       }
     }
 
-    setNewParticipantName('');
-    setNewParticipantInitiative('10');
-    setIsEditingInitiative(false);
-    setNewParticipantHp('10');
-    setIsEditingHp(false);
-    setNewParticipantAc('10');
-    setIsEditingAc(false);
-    setNewParticipantQuantity('1');
-    setIsEditingQuantity(false);
-    setNewParticipantType('player');
-    setSelectedAssignedTokenId(undefined);
-    setCroppedAvatarDataUrl(null); // Reset avatar after adding
-    setDialogOpen(false);
+    if (allAddedSuccessfully) {
+        setNewParticipantName('');
+        setNewParticipantInitiative('10');
+        setIsEditingInitiative(false);
+        setNewParticipantHp('10');
+        setIsEditingHp(false);
+        setNewParticipantAc('10');
+        setIsEditingAc(false);
+        setNewParticipantQuantity('1');
+        setIsEditingQuantity(false);
+        setNewParticipantType('player');
+        setSelectedAssignedTokenId(undefined);
+        setCroppedAvatarDataUrl(null); 
+        setDialogOpen(false);
+    }
   };
 
   const renderNumericInput = (
@@ -706,7 +760,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleDialogClose = (isOpen: boolean) => {
     setDialogOpen(isOpen);
     if (!isOpen) {
-      // Reset form fields when dialog is closed
       setNewParticipantName('');
       setNewParticipantInitiative('10');
       setNewParticipantHp('10');
@@ -727,7 +780,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAvatarImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: 'Upload Error',
           description: 'Avatar image file size exceeds 2MB limit.',
@@ -739,7 +792,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       reader.onloadend = () => {
         setUncroppedAvatarImageSrc(reader.result as string);
         setIsAvatarCropDialogOpen(true);
-        if (event.target) event.target.value = ''; // Reset file input
+        if (event.target) event.target.value = ''; 
       };
       reader.readAsDataURL(file);
     }
@@ -984,6 +1037,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
