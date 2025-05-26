@@ -229,7 +229,7 @@ export default function BattleGrid({
       }
       if (popoverOpen) {
         setPopoverOpen(false);
-        setActivePopoverToken(null);
+        setActivePopoverToken(null); 
       }
     }
     if (activeTool !== 'type_tool') {
@@ -310,23 +310,30 @@ export default function BattleGrid({
   };
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (popoverOpen) setPopoverOpen(false);
-    if (editingTokenId) return;
+    // General: if popover is open and this click is not on a token, close popover
+    // This is a broad close; specific interactions might keep it open or open something else.
+
+    if (editingTokenId) return; // Don't process grid clicks if editing a token name
 
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
     const gridY = Math.floor(pos.y / cellSize);
 
     if (activeTool === 'select' && (event.button === 0 || event.button === 1)) {
+        // Check if clicking on a text object first
         for (const textObj of textObjects) {
             if (pos.x >= textObj.x && pos.x <= textObj.x + textObj.width &&
                 pos.y >= textObj.y && pos.y <= textObj.y + textObj.height) {
                 setDraggingTextObjectId(textObj.id);
                 setTextObjectDragOffset({ x: pos.x - textObj.x, y: pos.y - textObj.y });
+                if (popoverOpen) { // Close token popover if dragging text
+                    setPopoverOpen(false);
+                    setActivePopoverToken(null);
+                }
                 return;
             }
         }
-        // Check if clicking on a token (handled by token's onMouseDown, but this is a fallback or grid pan start)
+        // Check if clicking on a token (actual token click logic is in token's onMouseDown)
         const clickedOnToken = tokens.some(token => {
             const tokenLeft = token.x * cellSize;
             const tokenRight = (token.x + (token.size || 1)) * cellSize;
@@ -335,11 +342,20 @@ export default function BattleGrid({
             return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
         });
 
-        if (!clickedOnToken) {
+        if (!clickedOnToken) { // Click was on the grid, not a token or text object
+            if (popoverOpen) {
+                setPopoverOpen(false);
+                setActivePopoverToken(null); // Explicitly clear active token
+            }
             setIsPanning(true);
             setPanStart({ x: event.clientX, y: event.clientY });
         }
-        return;
+        return; // Important: return to avoid falling through to other tool logic
+    }
+     // If not select tool, but popover is open, close it.
+    if (popoverOpen) {
+      setPopoverOpen(false);
+      setActivePopoverToken(null);
     }
 
     if (activeTool === 'type_tool') {
@@ -453,9 +469,15 @@ export default function BattleGrid({
         setMouseDownPos(pos); // Record for click detection
         setDragOffset({ x: pos.x - token.x * cellSize, y: pos.y - token.y * cellSize });
         setDraggingTokenPosition(null);
-        setPopoverOpen(false); // Close any open popover
-    } else if (activeTool !== 'select') {
-        setPopoverOpen(false); // Close popover if tool changes or not select tool
+        // Do not close popover here, mouseUp will handle click vs drag.
+        // If another token is clicked, current popover should close.
+        if (popoverOpen && activePopoverToken?.id !== token.id) {
+            setPopoverOpen(false);
+            // setActivePopoverToken(null) will be handled by popover's onOpenChange if it's not being opened for this token
+        }
+    } else if (activeTool !== 'select' && popoverOpen) {
+        setPopoverOpen(false); 
+        setActivePopoverToken(null);
     }
   };
 
@@ -518,7 +540,10 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
-      if (popoverOpen) setPopoverOpen(false);
+      if (popoverOpen) {
+          setPopoverOpen(false); // Close popover if panning starts
+          setActivePopoverToken(null);
+      }
       const [currentVbMinX, currentVbMinY, currentVbWidth, currentVbHeight] = viewBox.split(' ').map(Number);
       const svgContainerEl = svgRef.current;
       const svgContainerWidth = svgContainerEl.clientWidth;
@@ -547,29 +572,23 @@ export default function BattleGrid({
       const absoluteContentMinX = 0 - paddingForOrigin;
       const absoluteContentMinY = 0 - paddingForOrigin;
       
-      // Max VB min_x is the absolute content min_x + total width - visible width
       const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
       const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
 
-      const min_vb_min_x = absoluteContentMinX; // Absolute min x of content
-      const min_vb_min_y = absoluteContentMinY; // Absolute min y of content
+      const min_vb_min_x = absoluteContentMinX; 
+      const min_vb_min_y = absoluteContentMinY; 
       
       let finalNewVx = newCandidateVx;
-      // If the content is narrower than or same as the viewBox, center it horizontally
       if (absoluteContentWidth <= currentVbWidth) { 
-         // Center content within the viewBox if content is smaller than viewBox
          finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
       } else { 
-         // Otherwise, clamp to the content boundaries
          finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
       let finalNewVy = newCandidateVy;
-      // If the content is shorter than or same as the viewBox, center it vertically
       if (absoluteContentHeight <= currentVbHeight) {
         finalNewVy = absoluteContentMinY + (absoluteContentHeight - currentVbHeight) / 2;
       } else {
-        // Otherwise, clamp to the content boundaries
         finalNewVy = Math.max(min_vb_min_y, Math.min(newCandidateVy, max_vb_min_y));
       }
       
@@ -578,7 +597,10 @@ export default function BattleGrid({
       setHoveredCellWhilePaintingOrErasing(null);
 
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
-      if (popoverOpen) setPopoverOpen(false);
+      if (popoverOpen) { // If dragging a token, ensure popover is closed.
+          setPopoverOpen(false);
+          setActivePopoverToken(null);
+      }
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
       const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
@@ -663,13 +685,20 @@ export default function BattleGrid({
 
       if (distanceSquared < CLICK_THRESHOLD_SQUARED) {
         // It's a click
-        setActivePopoverToken(draggingToken);
-        if (popoverTriggerRef.current) {
-            popoverTriggerRef.current.style.position = 'fixed';
-            popoverTriggerRef.current.style.left = `${event.clientX}px`;
-            popoverTriggerRef.current.style.top = `${event.clientY}px`;
+        if (activePopoverToken?.id === draggingToken.id && popoverOpen) {
+            // Clicking the same token that already has an open popover: close it.
+            setPopoverOpen(false);
+            setActivePopoverToken(null);
+        } else {
+            // Clicking a token (or a new token): open/switch popover.
+            setActivePopoverToken(draggingToken);
+            if (popoverTriggerRef.current) {
+                popoverTriggerRef.current.style.position = 'fixed';
+                popoverTriggerRef.current.style.left = `${event.clientX}px`;
+                popoverTriggerRef.current.style.top = `${event.clientY}px`;
+            }
+            setPopoverOpen(true);
         }
-        setPopoverOpen(true);
         setDraggingToken(null); 
         setDragOffset(null);
         setDraggingTokenPosition(null);
@@ -994,14 +1023,6 @@ export default function BattleGrid({
                       : 'hsl(var(--primary-foreground))' 
                 }
                 strokeWidth={isTokenActiveTurn ? 3 : 1} 
-                onClick={(e) => { 
-                  if (!isCurrentlyEditing && activeTool === 'select' && !draggingToken && !popoverOpen) {
-                    // Click logic is handled in handleMouseUp to distinguish from drag
-                  } else if (!isCurrentlyEditing && activeTool === 'select' && popoverOpen) {
-                     // If popover is open, clicking token might close it (handled by Popover's onOpenChange)
-                     // or interact with popover content. This specific onClick might not be needed here.
-                  }
-                }}
               />
               {token.customImageUrl ? (
                 <>
@@ -1221,10 +1242,7 @@ export default function BattleGrid({
          )}
       </svg>
 
-      <Popover open={popoverOpen} onOpenChange={(isOpen) => {
-          setPopoverOpen(isOpen);
-          if (!isOpen) setActivePopoverToken(null);
-        }}>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
             <button
                 ref={popoverTriggerRef}
@@ -1233,7 +1251,6 @@ export default function BattleGrid({
                     opacity: 0,
                     pointerEvents: 'none',
                     width: '1px', height: '1px',
-                    // Dynamic position will be applied here by handleMouseUp
                 }}
                 aria-hidden="true"
             />
@@ -1242,8 +1259,8 @@ export default function BattleGrid({
             <PopoverContent 
                 side="bottom" 
                 align="center" 
-                className="w-48 p-1 z-[60]" // Ensure popover is above other elements
-                onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing
+                className="w-48 p-1 z-[60]"
+                onOpenAutoFocus={(e) => e.preventDefault()} 
             >
                 <Button
                   variant="ghost"
@@ -1252,7 +1269,7 @@ export default function BattleGrid({
                     if (activePopoverToken) {
                         setEditingTokenId(activePopoverToken.id);
                         setEditingText(activePopoverToken.instanceName || '');
-                        setPopoverOpen(false);
+                        setPopoverOpen(false); // Close popover when rename starts
                     }
                   }}
                 >
@@ -1264,13 +1281,21 @@ export default function BattleGrid({
                   onClick={() => {
                     if (activePopoverToken) {
                         onTokenImageChangeRequest(activePopoverToken.id);
-                        setPopoverOpen(false);
+                        setPopoverOpen(false); // Close popover
                     }
                   }}
                 >
                   <ImageIcon className="mr-2 h-3.5 w-3.5" /> Change Image
                 </Button>
-                <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialog 
+                    open={isDeleteAlertOpen} 
+                    onOpenChange={(isOpen) => {
+                        setIsDeleteAlertOpen(isOpen);
+                        if (!isOpen) { // If dialog is closing for any reason
+                            setActivePopoverToken(null); // Clear active token context
+                        }
+                    }}
+                >
                   <AlertDialogTrigger asChild>
                     <Button 
                         variant="ghost"
@@ -1279,8 +1304,9 @@ export default function BattleGrid({
                             "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         )}
                         onClick={() => {
-                            setIsDeleteAlertOpen(true);
-                            setPopoverOpen(false); // Close popover when delete confirmation opens
+                            // activePopoverToken should be valid here
+                            setIsDeleteAlertOpen(true); // Request dialog open
+                            setPopoverOpen(false); // Close current popover
                         }}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
@@ -1294,14 +1320,13 @@ export default function BattleGrid({
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setIsDeleteAlertOpen(false)}>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel> {/* This will trigger AlertDialog's onOpenChange(false) */}
                       <AlertDialogAction
                         onClick={() => {
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
-                            setIsDeleteAlertOpen(false);
-                            // setActivePopoverToken(null); // Popover is already closed, token cleared by its onOpenChange
                           }
+                          // setIsDeleteAlertOpen(false) will be called by AlertDialog's onOpenChange
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
