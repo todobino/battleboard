@@ -48,7 +48,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
           size="icon"
           onClick={onClick}
           className={cn(
-            'rounded-md shadow-lg h-12 w-12 p-2.5',
+            'rounded-md shadow-lg h-10 w-10 p-2', // Changed from h-12 w-12 p-2.5
             (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
           )}
           aria-label={label}
@@ -67,7 +67,6 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
 
 export default function FloatingToolbar({
   activeTool, setActiveTool,
-  title, Icon,
   selectedColor, setSelectedColor,
   selectedTokenTemplate, setSelectedTokenTemplate,
   backgroundImageUrl, setBackgroundImageUrl,
@@ -75,7 +74,7 @@ export default function FloatingToolbar({
   measurement, setMeasurement,
   backgroundZoomLevel, setBackgroundZoomLevel,
   onUndo, onRedo, canUndo, canRedo,
-  defaultBattlemaps, // Destructure defaultBattlemaps
+  defaultBattlemaps,
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -117,17 +116,8 @@ export default function FloatingToolbar({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute top-4 left-4 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
-        {Icon && title && (
-          <>
-            <div className="flex items-center gap-2 px-2 mr-2">
-              <Icon className="h-6 w-6 text-primary" />
-              <span className="font-semibold text-foreground">{title}</span>
-            </div>
-            <Separator orientation="vertical" className="h-8 bg-border" />
-          </>
-        )}
-
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
+        {/* Title and Icon removed from here */}
         <ToolButton
           label="Select/Pan"
           icon={MousePointerSquareDashed}
@@ -151,14 +141,14 @@ export default function FloatingToolbar({
                 <Button
                   variant={(isMapSettingsPopoverOpen || activeTool === 'map_tool') ? 'default' : 'outline'}
                   size="icon"
-                  className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                  className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
                   aria-label="Map & Grid Settings"
                 >
                   <Map className="h-5 w-5 text-accent-foreground" />
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-[640px]" side="bottom" align="start">
+          <PopoverContent className="w-[640px]" side="bottom" align="center">
             <GridSettingsPanel
               showGridLines={showGridLines}
               setShowGridLines={setShowGridLines}
@@ -167,7 +157,7 @@ export default function FloatingToolbar({
               setActiveTool={setActiveTool}
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
-              defaultBattlemaps={defaultBattlemaps} // Pass prop
+              defaultBattlemaps={defaultBattlemaps}
             />
           </PopoverContent>
         </Popover>
@@ -186,14 +176,14 @@ export default function FloatingToolbar({
                <Button
                   variant={(isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
                   size="icon"
-                  className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                  className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
                   aria-label="Measurement Tools"
                 >
                   <DraftingCompass className="h-5 w-5 text-accent-foreground" />
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="start">
+          <PopoverContent className="w-80" side="bottom" align="center">
             <MeasurementToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -219,14 +209,14 @@ export default function FloatingToolbar({
               <Button
                 variant={(isTokenPlacerPopoverOpen || activeTool === 'token_placer_tool' || activeTool === 'place_token') ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
                 aria-label="Tokens & Terrain"
               >
                 <Users className="h-5 w-5 text-accent-foreground" />
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="start">
+          <PopoverContent className="w-80" side="bottom" align="center">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}
@@ -250,14 +240,14 @@ export default function FloatingToolbar({
               <Button
                 variant={(isColorPainterPopoverOpen || activeTool === 'paint_cell') ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
                 aria-label="Color Painter"
               >
                 <Paintbrush className="h-5 w-5 text-accent-foreground" />
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="start">
+          <PopoverContent className="w-80" side="bottom" align="center">
             <ColorToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -283,14 +273,14 @@ export default function FloatingToolbar({
               <Button
                 variant={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
                 size="icon"
-                className='rounded-md shadow-lg h-12 w-12 p-2.5'
+                className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
                 aria-label="Shape Tools"
               >
                 <Shapes className="h-5 w-5 text-accent-foreground" />
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="start">
+          <PopoverContent className="w-80" side="bottom" align="center">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
               onToolSelect={handleShapeToolSelected}
@@ -333,3 +323,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
