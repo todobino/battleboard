@@ -1278,7 +1278,7 @@ export default function BattleGrid({
                         x={labelX - 50} 
                         y={labelY - 15} 
                         width={100} 
-                        height={22} // Increased height slightly for better visibility
+                        height={22} 
                     >
                         <input
                             ref={shapeLabelInputRef}
@@ -1288,17 +1288,17 @@ export default function BattleGrid({
                             onBlur={handleSaveShapeLabel}
                             onKeyDown={handleShapeLabelInputKeyDown}
                             style={{
-                                background: 'hsla(var(--background), 0.9)', // Slightly transparent background
+                                background: 'hsla(var(--background), 0.9)', 
                                 color: 'hsl(var(--foreground))',
-                                border: '1px solid hsl(var(--accent))', // Use accent for focus
-                                borderRadius: '4px', // Slightly more rounded
+                                border: '1px solid hsl(var(--accent))', 
+                                borderRadius: '4px', 
                                 fontSize: '10px',
-                                padding: '3px 5px', // Increased padding
+                                padding: '3px 5px', 
                                 width: '100%',
                                 height: '100%',
                                 textAlign: 'center',
                                 outline: 'none',
-                                boxShadow: '0 0 5px hsl(var(--accent))' // Subtle glow when editing
+                                boxShadow: '0 0 5px hsl(var(--accent))' 
                             }}
                             onWheelCapture={(e) => e.stopPropagation()}
                         />
@@ -1681,9 +1681,9 @@ export default function BattleGrid({
                     open={isDeleteAlertOpen} 
                     onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
-                        if (!isOpen) {
-                           // When alert dialog closes (cancel or delete), ensure main popover's active token is cleared IF the popover is still considered open by its own state logic
-                           // This logic is now mainly handled by the Popover's onOpenChange for general closure
+                         if (!isOpen) {
+                            setPopoverOpen(false); 
+                            setActivePopoverToken(null);
                         }
                     }}
                 >
@@ -1694,9 +1694,6 @@ export default function BattleGrid({
                             "w-full justify-start h-8 px-2 text-sm flex items-center",
                             "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         )}
-                        onClick={() => {
-                           // setPopoverOpen(false); // Popover closes when dialog is triggered
-                        }}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
@@ -1715,8 +1712,9 @@ export default function BattleGrid({
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
-                          setIsDeleteAlertOpen(false); // Close dialog
-                          setPopoverOpen(false); // Explicitly close popover
+                          setIsDeleteAlertOpen(false);
+                          setPopoverOpen(false); 
+                          setActivePopoverToken(null);
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1762,7 +1760,13 @@ export default function BattleGrid({
                     </Button>
                     <AlertDialog
                         open={textObjectDeleteAlertOpen}
-                        onOpenChange={setTextObjectDeleteAlertOpen}
+                        onOpenChange={(isOpen) => {
+                            setTextObjectDeleteAlertOpen(isOpen);
+                            if (!isOpen) {
+                                setTextObjectPopoverOpen(false);
+                                setActivePopoverTextObject(null);
+                            }
+                        }}
                     >
                         <AlertDialogTrigger asChild>
                             <Button
@@ -1791,6 +1795,7 @@ export default function BattleGrid({
                                         }
                                         setTextObjectDeleteAlertOpen(false);
                                         setTextObjectPopoverOpen(false);
+                                        setActivePopoverTextObject(null);
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1822,18 +1827,7 @@ export default function BattleGrid({
             </PopoverTrigger>
             {activePopoverShape && (
                 <PopoverContent side="bottom" align="center" className="w-60 p-2 space-y-2" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-start h-8 px-2 text-sm flex items-center"
-                        onClick={() => {
-                            setEditingShapeId(activePopoverShape.id);
-                            setEditingShapeLabelText(activePopoverShape.label || '');
-                            setShapePopoverOpen(false);
-                        }}
-                    >
-                        <Edit3 className="mr-2 h-3.5 w-3.5" /> {activePopoverShape.label ? 'Edit Label' : 'Add Label'}
-                    </Button>
-
+                    
                     {(activePopoverShape.type === 'circle' || activePopoverShape.type === 'square') && (
                         <div className="space-y-1 pt-1">
                             <Label htmlFor={`shape-opacity-slider-${activePopoverShape.id}`} className="text-xs flex items-center">
@@ -1860,7 +1854,7 @@ export default function BattleGrid({
                                     className="h-8 w-8"
                                     onClick={() => {
                                         const currentFeet = parseFloat(shapeRadiusInput) || 0;
-                                        const newFeet = Math.max(FEET_PER_SQUARE, currentFeet - FEET_PER_SQUARE);
+                                        const newFeet = Math.max(FEET_PER_SQUARE / 2, currentFeet - FEET_PER_SQUARE); // Ensure min radius
                                         setShapeRadiusInput(String(newFeet));
                                         handleShapeRadiusChange(activePopoverShape.id, String(newFeet));
                                     }}
@@ -1872,8 +1866,15 @@ export default function BattleGrid({
                                     type="number"
                                     value={shapeRadiusInput}
                                     onChange={(e) => setShapeRadiusInput(e.target.value)}
+                                    onBlur={() => handleShapeRadiusChange(activePopoverShape.id, shapeRadiusInput)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleShapeRadiusChange(activePopoverShape.id, shapeRadiusInput);
+                                            (e.target as HTMLInputElement).blur();
+                                        }
+                                    }}
                                     className="h-8 text-sm text-center w-16"
-                                    min={FEET_PER_SQUARE}
+                                    min={FEET_PER_SQUARE / 2}
                                     step={FEET_PER_SQUARE}
                                 />
                                 <Button 
@@ -1889,17 +1890,27 @@ export default function BattleGrid({
                                 >
                                     <Plus className="h-4 w-4"/>
                                 </Button>
-                                <Button size="sm" className="h-8 flex-1" onClick={() => handleShapeRadiusChange(activePopoverShape.id, shapeRadiusInput)}>Set</Button>
                             </div>
                         </div>
                     )}
-
+                    <Button
+                        variant="ghost"
+                        className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                        onClick={() => {
+                            setEditingShapeId(activePopoverShape.id);
+                            setEditingShapeLabelText(activePopoverShape.label || '');
+                            setShapePopoverOpen(false);
+                        }}
+                    >
+                        <Edit3 className="mr-2 h-3.5 w-3.5" /> {activePopoverShape.label ? 'Edit Label' : 'Add Label'}
+                    </Button>
                     <AlertDialog
                         open={shapeDeleteAlertOpen}
                         onOpenChange={(isOpen) => {
                             setShapeDeleteAlertOpen(isOpen);
-                            if(!isOpen && shapePopoverOpen) {
-                                // If dialog closes and popover was open, ensure popover stays or re-evaluates
+                             if (!isOpen) { // If dialog closes (cancel or delete)
+                                setShapePopoverOpen(false); // Close main popover
+                                setActivePopoverShape(null); // Clear active shape
                             }
                         }}
                     >
@@ -1927,7 +1938,8 @@ export default function BattleGrid({
                                     onClick={() => {
                                         setDrawnShapes(prev => prev.filter(s => s.id !== activePopoverShape.id));
                                         setShapeDeleteAlertOpen(false);
-                                        setShapePopoverOpen(false); // Close parent popover as well
+                                        setShapePopoverOpen(false); 
+                                        setActivePopoverShape(null);
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1984,4 +1996,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
