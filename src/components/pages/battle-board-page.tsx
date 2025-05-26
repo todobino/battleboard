@@ -857,7 +857,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               <DialogTrigger asChild>
                 <Button className="w-full"> Add Combatant </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-xl">
+              <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
@@ -889,6 +889,31 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
+                  <div>
+                    <Label>Type</Label>
+                    <div className="flex space-x-2 mt-1">
+                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                        const config = participantTypeButtonConfig[type];
+                        const isSelected = newParticipantType === type;
+                        const IconComponent = config.icon;
+                        return (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={isSelected ? undefined : 'outline'}
+                            onClick={() => setNewParticipantType(type)}
+                            className={cn(
+                              "flex-1 flex items-center justify-center gap-2",
+                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                            )}
+                          >
+                            <IconComponent className="h-4 w-4" />
+                            {config.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div>
                     <Label htmlFor="participant-name-dialog">Name</Label>
                     <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
@@ -925,32 +950,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true, false)}
                     {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Qty*", "participant-quantity-dialog", false, !!selectedAssignedTokenId)}
                   </div>
-                  <div>
-                    <Label>Type</Label>
-                    <div className="flex space-x-2 mt-1">
-                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                        const config = participantTypeButtonConfig[type];
-                        const isSelected = newParticipantType === type;
-                        const IconComponent = config.icon;
-                        return (
-                          <Button
-                            key={type}
-                            type="button"
-                            variant={isSelected ? undefined : 'outline'}
-                            onClick={() => setNewParticipantType(type)}
-                            className={cn(
-                              "flex-1 flex items-center justify-center gap-2",
-                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
-                            )}
-                          >
-                            <IconComponent className="h-4 w-4" />
-                            {config.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <FormDialogFooter> <Button type="submit"> Add to Turn Order </Button> </FormDialogFooter>
+                  
+                  <FormDialogFooter> 
+                    <Button type="submit" className="w-full"> Add to Turn Order </Button> 
+                  </FormDialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -981,6 +984,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
