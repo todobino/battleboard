@@ -598,18 +598,21 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       icon: PlayerIcon,
       selectedClass: 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]',
       outlineIconClass: 'text-[hsl(var(--player-green-bg))]',
+      unselectedHoverClass: 'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]',
     },
     enemy: {
       label: 'Enemy',
       icon: EnemyIcon,
       selectedClass: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
       outlineIconClass: 'text-destructive',
+      unselectedHoverClass: 'hover:bg-destructive hover:text-destructive-foreground',
     },
     ally: {
       label: 'Ally',
       icon: AllyIcon,
       selectedClass: 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]',
       outlineIconClass: 'text-[hsl(var(--app-blue-bg))]',
+      unselectedHoverClass: 'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]',
     },
   };
 
@@ -731,7 +734,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                             onClick={() => setNewParticipantType(type)}
                             className={cn(
                               "flex-1 flex items-center justify-center gap-2",
-                              isSelected ? config.selectedClass : "border-border"
+                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
                             )}
                           >
                             <IconComponent className={cn("h-4 w-4", !isSelected && config.outlineIconClass)} />
@@ -772,3 +775,4 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
