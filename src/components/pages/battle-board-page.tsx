@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { tokenTemplates } from '@/config/token-templates';
 
 const GRID_ROWS = 40;
@@ -80,6 +81,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [newParticipantQuantity, setNewParticipantQuantity] = useState('1');
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
+  const [selectedAssignedTokenId, setSelectedAssignedTokenId] = useState<string | undefined>(undefined);
 
 
   // Undo/Redo State
@@ -411,33 +413,35 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setCurrentParticipantIndex(nextIndex);
   };
 
-  const handleAddParticipantToList = (participantData: Omit<Participant, 'id' | 'tokenId'> & { tokenId?: string}) => {
+  const handleAddParticipantToList = useCallback((
+    participantData: Omit<Participant, 'id' | 'tokenId'>,
+    explicitTokenId?: string // New param
+  ) => {
     const participantName = participantData.name.trim();
-    const template = tokenTemplates.find(t => t.type === participantData.type);
+    let finalTokenId: string | undefined = explicitTokenId;
 
-    let newToken: Token | undefined = undefined;
-    if (template) {
-      const middleX = Math.floor(GRID_COLS / 2);
-      const middleY = Math.floor(GRID_ROWS / 2);
-      newToken = {
-        id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        x: middleX,
-        y: middleY,
-        color: template.color,
-        icon: template.icon,
-        type: template.type,
-        label: template.name,
-        instanceName: participantName,
-        size: 1,
-      };
-      setTokens(prev => [...prev, newToken!]);
+    if (!finalTokenId) { // Only create new token if one is not being explicitly assigned
+      const template = tokenTemplates.find(t => t.type === participantData.type);
+      if (template) {
+        const middleX = Math.floor(GRID_COLS / 2);
+        const middleY = Math.floor(GRID_ROWS / 2);
+        const newToken: Token = {
+          id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          x: middleX, y: middleY,
+          color: template.color, icon: template.icon,
+          type: template.type, label: template.name,
+          instanceName: participantName, size: 1,
+        };
+        setTokens(prev => [...prev, newToken]);
+        finalTokenId = newToken.id;
+      }
     }
 
     const newParticipant: Participant = {
       ...participantData,
       id: `participant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       name: participantName,
-      tokenId: newToken?.id,
+      tokenId: finalTokenId,
     };
 
     setParticipants(prev => {
@@ -459,7 +463,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newList;
     });
-  };
+  }, [isCombatActive, currentParticipantIndex]);
+
 
   const handleRemoveParticipantFromList = (idToRemove: string) => {
     const participantToRemove = participants.find(p => p.id === idToRemove);
@@ -484,7 +489,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     });
 
     if (participantToRemove?.tokenId) {
-      setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
+      // Do not delete the token if it was assigned, only unlink
+      // setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
     }
   };
 
@@ -515,14 +521,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) return;
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) return;
-
-    const quantity = parseInt(newParticipantQuantity, 10) || 1;
+    
+    const quantity = selectedAssignedTokenId ? 1 : (parseInt(newParticipantQuantity, 10) || 1);
     if (quantity < 1) {
         return;
     }
 
     for (let i = 0; i < quantity; i++) {
-      const finalName = quantity > 1 ? `${participantNameInput} ${i + 1}` : participantNameInput;
+      const finalName = (quantity > 1 && !selectedAssignedTokenId) ? `${participantNameInput} ${i + 1}` : participantNameInput;
       const newParticipantData: Omit<Participant, 'id' | 'tokenId'> = {
         name: finalName,
         initiative: initiativeValue,
@@ -530,7 +536,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         hp: hpValue,
         ac: acValue,
       };
-      handleAddParticipantToList(newParticipantData);
+      
+      if (selectedAssignedTokenId) {
+        handleAddParticipantToList(newParticipantData, selectedAssignedTokenId);
+        setTokens(prevTokens => prevTokens.map(t =>
+          t.id === selectedAssignedTokenId ? { ...t, instanceName: finalName } : t
+        ));
+      } else {
+        handleAddParticipantToList(newParticipantData);
+      }
     }
 
     setNewParticipantName('');
@@ -543,6 +557,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setNewParticipantQuantity('1');
     setIsEditingQuantity(false);
     setNewParticipantType('player');
+    setSelectedAssignedTokenId(undefined);
     setDialogOpen(false);
   };
 
@@ -553,11 +568,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setIsEditing: Dispatch<SetStateAction<boolean>>,
     label: string,
     idPrefix: string,
-    optional: boolean = false
+    optional: boolean = false,
+    disabled: boolean = false
   ) => (
     <div className="flex-1 space-y-1">
-      <Label htmlFor={`${idPrefix}-display`}>{label}</Label>
-      {isEditing ? (
+      <Label htmlFor={disabled ? undefined : `${idPrefix}-input`}>{label}</Label>
+      {isEditing && !disabled ? (
         <Input
           id={`${idPrefix}-input`} type="number" value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -570,7 +586,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               if (optional && value.trim() === '') { /* Keep empty if optional */ }
               else {
                 const num = parseInt(value, 10);
-                // Default to 10 for non-optional invalid, 0 for optional invalid negatives
                 if (isNaN(num) || (!optional && num < 0) || (optional && num < 0 && value.trim() !== '')) {
                     setValue('10'); 
                 } else if (optional && num < 0 && value.trim() !== '') {
@@ -581,26 +596,34 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             setIsEditing(false);
           }}
           autoFocus className="w-full text-center"
+          disabled={disabled}
         />
       ) : (
         <div className="flex items-center gap-1 mt-1">
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
             onClick={() => { 
+                if(disabled) return;
                 const currentValue = parseInt(value, 10) || 0;
                 const isQuantityField = idPrefix === 'participant-quantity-dialog';
                 const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0);
                 setValue(String(Math.max(minValue, currentValue - 1)));
-            }}>
+            }}
+            disabled={disabled}>
             <Minus className="h-4 w-4" />
           </Button>
-          <Button type="button" variant="ghost" id={`${idPrefix}-display`} onClick={() => setIsEditing(true)} className="h-8 px-2 text-base w-full justify-center" >
+          <Button type="button" variant="ghost" id={`${idPrefix}-display`} 
+            onClick={() => !disabled && setIsEditing(true)} 
+            className="h-8 px-2 text-base w-full justify-center" 
+            disabled={disabled} >
             {value || (idPrefix === 'participant-quantity-dialog' ? '1' : (optional ? 'N/A' : '10'))}
           </Button>
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
             onClick={() => { 
+                if(disabled) return;
                 const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? 0 : 0)); 
                 setValue(String(currentValue + 1)); 
-            }}>
+            }}
+            disabled={disabled}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -630,6 +653,29 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       selectedClass: 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]',
       unselectedHoverClass: 'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]',
     },
+  };
+
+  const unassignedTokens = useMemo(() => tokens.filter(token =>
+    ['player', 'enemy', 'ally'].includes(token.type) &&
+    !participants.some(p => p.tokenId === token.id)
+  ), [tokens, participants]);
+
+  const handleDialogClose = (isOpen: boolean) => {
+    setDialogOpen(isOpen);
+    if (!isOpen) {
+      // Reset form fields when dialog is closed
+      setNewParticipantName('');
+      setNewParticipantInitiative('10');
+      setNewParticipantHp('10');
+      setNewParticipantAc('10');
+      setNewParticipantQuantity('1');
+      setNewParticipantType('player');
+      setSelectedAssignedTokenId(undefined);
+      setIsEditingInitiative(false);
+      setIsEditingHp(false);
+      setIsEditingAc(false);
+      setIsEditingQuantity(false);
+    }
   };
 
   return (
@@ -717,7 +763,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           </SidebarContent>
 
           <div className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
               <DialogTrigger asChild>
                 <Button className="w-full"> Add Combatant </Button>
               </DialogTrigger>
@@ -729,13 +775,39 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div>
                     <Label htmlFor="participant-name-dialog">Name</Label>
-                    <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" />
+                    <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
                   </div>
+                  <div>
+                    <Label htmlFor="assign-token-select">Assign To Token (Optional)</Label>
+                    <Select
+                      value={selectedAssignedTokenId}
+                      onValueChange={(value) => {
+                        const newSelectedId = value === 'none' ? undefined : value;
+                        setSelectedAssignedTokenId(newSelectedId);
+                        if (newSelectedId) {
+                          setNewParticipantQuantity('1');
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="assign-token-select">
+                        <SelectValue placeholder="Select existing token..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None (Create new token)</SelectItem>
+                        {unassignedTokens.map(token => (
+                          <SelectItem key={token.id} value={token.id}>
+                            {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-3">
-                    {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog")}
-                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "HP", "participant-hp-dialog", true)}
-                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true)}
-                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Qty*", "participant-quantity-dialog")}
+                    {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog", false, false)}
+                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "HP", "participant-hp-dialog", true, false)}
+                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true, false)}
+                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Qty*", "participant-quantity-dialog", false, !!selectedAssignedTokenId)}
                   </div>
                   <div>
                     <Label>Type</Label>
@@ -793,6 +865,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
