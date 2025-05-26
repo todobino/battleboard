@@ -132,12 +132,12 @@ export default function BattleGrid({
     const calculatedTotalContentWidth = numCols * cellSize;
     const calculatedTotalContentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    const svgPadding = currentBorderWidth / 2;
+    const svgPadding = currentBorderWidth / 2; // Padding around the grid due to border
 
-    const actualTotalContentWidth = calculatedTotalContentWidth + currentBorderWidth;
-    const actualTotalContentHeight = calculatedTotalContentHeight + currentBorderWidth;
     const actualTotalContentMinX = 0 - svgPadding;
     const actualTotalContentMinY = 0 - svgPadding;
+    const actualTotalContentWidth = calculatedTotalContentWidth + currentBorderWidth;
+    const actualTotalContentHeight = calculatedTotalContentHeight + currentBorderWidth;
 
     if (svgRef.current) {
       const svg = svgRef.current;
@@ -145,21 +145,34 @@ export default function BattleGrid({
       const viewportHeight = svg.clientHeight;
 
       if (viewportWidth > 0 && viewportHeight > 0 && actualTotalContentWidth > 0 && actualTotalContentHeight > 0) {
+        // Calculate a scale factor that ensures the content's width matches the viewport's width.
         const scaleToFillViewportWidth = viewportWidth / actualTotalContentWidth;
+        
+        // The viewBox width will be the actual content width.
         const initialViewWidth = actualTotalContentWidth;
+        // The viewBox height will be determined by scaling the viewport height by the inverse of the width scale factor.
+        // This ensures the aspect ratio of the viewBox matches the aspect ratio of the viewport.
         const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
+
+        // Center the viewBox vertically.
+        // initialViewMinY is the starting y-coordinate for the viewBox.
+        // It's calculated by taking the content's minimum y, then adding half the difference
+        // between the content's total height and the calculated viewBox height.
+        // This centers the (potentially taller or shorter) viewBox within the content area.
         const initialViewMinX = actualTotalContentMinX;
         const initialViewMinY = actualTotalContentMinY + (actualTotalContentHeight - initialViewHeight) / 2;
         
         setViewBox(`${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`);
       } else {
+        // Fallback if viewport dimensions are not available or content is zero-sized
         setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
       }
     } else {
+      // Fallback if svgRef is not yet available (e.g., initial server render)
       setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); // Added backgroundImageUrl to re-center on new image
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -534,23 +547,29 @@ export default function BattleGrid({
       const absoluteContentMinX = 0 - paddingForOrigin;
       const absoluteContentMinY = 0 - paddingForOrigin;
       
+      // Max VB min_x is the absolute content min_x + total width - visible width
       const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
       const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
 
-      const min_vb_min_x = absoluteContentMinX;
-      const min_vb_min_y = absoluteContentMinY;
+      const min_vb_min_x = absoluteContentMinX; // Absolute min x of content
+      const min_vb_min_y = absoluteContentMinY; // Absolute min y of content
       
       let finalNewVx = newCandidateVx;
+      // If the content is narrower than or same as the viewBox, center it horizontally
       if (absoluteContentWidth <= currentVbWidth) { 
+         // Center content within the viewBox if content is smaller than viewBox
          finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
       } else { 
+         // Otherwise, clamp to the content boundaries
          finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
       let finalNewVy = newCandidateVy;
+      // If the content is shorter than or same as the viewBox, center it vertically
       if (absoluteContentHeight <= currentVbHeight) {
         finalNewVy = absoluteContentMinY + (absoluteContentHeight - currentVbHeight) / 2;
       } else {
+        // Otherwise, clamp to the content boundaries
         finalNewVy = Math.max(min_vb_min_y, Math.min(newCandidateVy, max_vb_min_y));
       }
       
@@ -1267,7 +1286,7 @@ export default function BattleGrid({
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete {activePopoverToken?.instanceName || 'Token'}?</AlertDialogTitle>
                       <AlertDialogDescription>
@@ -1280,8 +1299,8 @@ export default function BattleGrid({
                         onClick={() => {
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
-                            // Popover already closed by trigger, alert will close on action
                             setIsDeleteAlertOpen(false);
+                            // setActivePopoverToken(null); // Popover is already closed, token cleared by its onOpenChange
                           }
                         }}
                         className={buttonVariants({ variant: "destructive" })}
