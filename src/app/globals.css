@@ -6,6 +6,7 @@
   html,
   body {
     @apply h-full;
+    overscroll-behavior: none; /* Remove rubber-banding effect */
   }
   :root {
     /* Dark Brown Theme */
