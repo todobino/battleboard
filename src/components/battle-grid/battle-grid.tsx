@@ -75,7 +75,7 @@ export default function BattleGrid({
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = numCols * cellSize;
     const initialContentHeight = numRows * cellSize;
-    const initialBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0; // Use current showGridLines
+    const initialBorderWidth = BORDER_WIDTH_WHEN_VISIBLE; // Assume grid lines initially visible for default padding
     const padding = initialBorderWidth / 2;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + initialBorderWidth} ${initialContentHeight + initialBorderWidth}`;
   });
@@ -450,16 +450,9 @@ export default function BattleGrid({
 
       if (svgContainerWidth === 0 || svgContainerHeight === 0) return;
       
-      // Calculate how much of the viewBox is visible (effective size)
-      // This depends on how the viewBox is scaled to fit the container by preserveAspectRatio
-      // For 'xMidYMid slice', the content is scaled to cover the container.
-      // The scale factor is determined by the dimension that needs more scaling.
-      let scaleX = svgContainerWidth / currentVbWidth;
-      let scaleY = svgContainerHeight / currentVbHeight;
-      let scaleToCover = Math.max(scaleX, scaleY); // For slice, we want to cover
-
-      // If using preserveAspectRatio="xMidYMid meet" (default if not specified, or specified meet)
-      // scaleToCover = Math.min(scaleX, scaleY);
+      const scaleX = svgContainerWidth / currentVbWidth;
+      const scaleY = svgContainerHeight / currentVbHeight;
+      const scaleToCover = Math.max(scaleX, scaleY);
 
       const effectiveVisibleViewBoxWidth = svgContainerWidth / scaleToCover;
       const effectiveVisibleViewBoxHeight = svgContainerHeight / scaleToCover;
@@ -467,23 +460,41 @@ export default function BattleGrid({
       const screenDeltaX = panStart.x - event.clientX;
       const screenDeltaY = panStart.y - event.clientY;
 
-      const dxViewBox = screenDeltaX * (currentVbWidth / svgContainerWidth);
-      const dyViewBox = screenDeltaY * (currentVbHeight / svgContainerHeight);
+      const dx_vb = screenDeltaX / scaleToCover;
+      const dy_vb = screenDeltaY / scaleToCover;
       
-      let newVx = currentVbMinX + dxViewBox;
-      let newVy = currentVbMinY + dyViewBox;
+      let newCandidateVx = currentVbMinX + dx_vb;
+      let newCandidateVy = currentVbMinY + dy_vb;
 
-      // Define the boundaries based on the viewBox's own coordinate system
-      const min_allowed_vx = currentVbMinX; // Should be initial minX from useEffect
-      const max_allowed_vx = currentVbMinX + currentVbWidth - effectiveVisibleViewBoxWidth;
+      // Calculate absolute content origin based on current grid settings
+      const gridContentWidth = numCols * cellSize;
+      const gridContentHeight = numRows * cellSize;
+      const borderWidthForOrigin = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+      const paddingForOrigin = borderWidthForOrigin / 2;
+      const content_origin_x = 0 - paddingForOrigin;
+      const content_origin_y = 0 - paddingForOrigin;
       
-      const min_allowed_vy = currentVbMinY; // Should be initial minY from useEffect
-      const max_allowed_vy = currentVbMinY + currentVbHeight - effectiveVisibleViewBoxHeight;
+      // Absolute clamping limits
+      const min_abs_vx = content_origin_x;
+      const max_abs_vx = content_origin_x + currentVbWidth - effectiveVisibleViewBoxWidth;
+      const min_abs_vy = content_origin_y;
+      const max_abs_vy = content_origin_y + currentVbHeight - effectiveVisibleViewBoxHeight;
       
-      newVx = Math.max(Math.min(min_allowed_vx, max_allowed_vx), Math.min(newVx, Math.max(min_allowed_vx, max_allowed_vx)));
-      newVy = Math.max(Math.min(min_allowed_vy, max_allowed_vy), Math.min(newVy, Math.max(min_allowed_vy, max_allowed_vy)));
+      let finalNewVx = newCandidateVx;
+      if (min_abs_vx <= max_abs_vx) { // Normal case: content wider/taller than effective view
+         finalNewVx = Math.max(min_abs_vx, Math.min(newCandidateVx, max_abs_vx));
+      } else { // Content is narrower/shorter than effective view, lock to centered position
+         finalNewVx = min_abs_vx; // Or (min_abs_vx + max_abs_vx) / 2 for centering
+      }
+
+      let finalNewVy = newCandidateVy;
+      if (min_abs_vy <= max_abs_vy) {
+        finalNewVy = Math.max(min_abs_vy, Math.min(newCandidateVy, max_abs_vy));
+      } else {
+        finalNewVy = min_abs_vy;
+      }
       
-      setViewBox(`${newVx} ${newVy} ${currentVbWidth} ${currentVbHeight}`);
+      setViewBox(`${finalNewVx} ${finalNewVy} ${currentVbWidth} ${currentVbHeight}`);
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
 
@@ -1113,4 +1124,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
