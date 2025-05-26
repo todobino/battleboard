@@ -572,15 +572,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
         setTokens(prevTokens => prevTokens.map(t => {
           if (t.id === selectedAssignedTokenId) {
-            const isAvatarProvided = !!croppedAvatarDataUrl; // Check if a new avatar was just uploaded for this combatant
+            const isAvatarProvided = !!croppedAvatarDataUrl; 
             return {
               ...t,
               instanceName: finalName,
-              type: newParticipantType, // Update token type from dialog
-              // Update color and icon based on new type, unless an avatar is explicitly provided
-              color: isAvatarProvided ? 'hsl(var(--muted))' : (newTypeTemplate ? newTypeTemplate.color : t.color),
+              type: newParticipantType, 
+              color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
               icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
-              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl, // Prioritize newly uploaded avatar
+              customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : t.customImageUrl,
             };
           }
           return t;
@@ -615,7 +614,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     optional: boolean = false,
     disabled: boolean = false
   ) => (
-    <div className="flex-1 space-y-1 border border-border rounded-md p-3">
+    <div className="flex-1 min-w-0 space-y-1 border border-border rounded-md p-3">
       <Label htmlFor={disabled ? undefined : `${idPrefix}-input`}>{label}</Label>
       {isEditing && !disabled ? (
         <Input
@@ -982,6 +981,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
