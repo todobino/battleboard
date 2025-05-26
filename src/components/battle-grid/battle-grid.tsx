@@ -84,8 +84,8 @@ function isSquareOccupied(
   return tokens.some(
     (token) =>
       token.id !== excludeTokenId &&
-      Math.floor(token.x) === Math.floor(x) && // Assuming tokens occupy a single cell
-      Math.floor(token.y) === Math.floor(y)
+      Math.floor(token.x) === Math.floor(x) && 
+      Math.floor(token.y) === Math.floor(y) 
   );
 }
 
@@ -110,7 +110,6 @@ function findAvailableSquare(
   let currentY = 0;
   let dx = 0;
   let dy = -1;
-  // Determine a reasonable limit for search, e.g., a 10x10 spiral area or grid diagonal
   const maxSearchRadius = Math.max(numCols, numRows);
 
   for (let i = 0; i < Math.pow(maxSearchRadius * 2 + 1, 2) ; i++) {
@@ -230,7 +229,7 @@ export default function BattleGrid({
   const [currentDraggingShapeId, setCurrentDraggingShapeId] = useState<string | null>(null);
   const [shapeDragOffset, setShapeDragOffset] = useState<Point | null>(null);
 
-  const [clickedShapeCandidate, setClickedShapeCandidate] = useState<DrawnShape | null>(null); // Used to decide if popover should open on mouseUp
+  const [clickedShapeCandidate, setClickedShapeCandidate] = useState<DrawnShape | null>(null); 
   const [shapeRadiusInput, setShapeRadiusInput] = useState<string>('');
 
 
@@ -240,29 +239,22 @@ export default function BattleGrid({
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const svgPadding = currentBorderWidth / 2;
 
-    const actualTotalContentMinX = 0 - svgPadding;
-    const actualTotalContentMinY = 0 - svgPadding;
-    const actualTotalContentWidth = calculatedTotalContentWidth + currentBorderWidth;
-    const actualTotalContentHeight = calculatedTotalContentHeight + currentBorderWidth;
-
     if (svgRef.current) {
       const svg = svgRef.current;
       const viewportWidth = svg.clientWidth;
       const viewportHeight = svg.clientHeight;
 
-      if (viewportWidth > 0 && viewportHeight > 0 && actualTotalContentWidth > 0 && actualTotalContentHeight > 0) {
-        const scaleToFillViewportWidth = viewportWidth / actualTotalContentWidth;
-        const initialViewWidth = actualTotalContentWidth;
+      if (viewportWidth > 0 && viewportHeight > 0 && calculatedTotalContentWidth > 0 && calculatedTotalContentHeight > 0) {
+        const scaleToFillViewportWidth = viewportWidth / (calculatedTotalContentWidth + currentBorderWidth);
+        const initialViewWidth = calculatedTotalContentWidth + currentBorderWidth;
         const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
-        const initialViewMinX = actualTotalContentMinX;
-        const initialViewMinY = actualTotalContentMinY + (actualTotalContentHeight - initialViewHeight) / 2;
+        const initialViewMinX = 0 - svgPadding;
+        const initialViewMinY = (0 - svgPadding) + ((calculatedTotalContentHeight + currentBorderWidth) - initialViewHeight) / 2;
 
         return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
-      } else {
-        return `${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`;
       }
     }
-    return `${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`;
+    return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
   }, [numCols, numRows, cellSize, showGridLines]);
 
 
@@ -302,19 +294,15 @@ export default function BattleGrid({
     if (escapePressCount && escapePressCount > 0) {
       if (popoverOpen) {
         setPopoverOpen(false);
-        setActivePopoverToken(null);
       }
       if (textObjectPopoverOpen) {
         setTextObjectPopoverOpen(false);
-        setActivePopoverTextObject(null);
       }
       if (shapePopoverOpen) {
         setShapePopoverOpen(false);
-        setActivePopoverShape(null);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [escapePressCount]);
+  }, [escapePressCount, popoverOpen, textObjectPopoverOpen, shapePopoverOpen]);
 
   const measureText = useCallback((text: string, fontSize: number) => {
     if (typeof document === 'undefined') return { width: 0, height: 0};
@@ -410,8 +398,7 @@ export default function BattleGrid({
     if (activeTool !== 'type_tool') {
       if (isCreatingText) finalizeTextCreation();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, editingTokenId, editingTextObjectId, editingShapeId, isCreatingText]);
+  }, [activeTool, editingTokenId, handleSaveTokenName, editingTextObjectId, handleFinalizeTextEdit, editingShapeId, handleSaveShapeLabel, isCreatingText, finalizeTextCreation]);
 
 
   const getMousePosition = (event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
@@ -529,7 +516,7 @@ export default function BattleGrid({
           hit = isPointInRectangle(pos, rectX, rectY, rectWidth, rectHeight);
         }
 
-        if (hit && (shape.type === 'circle' || shape.type === 'square')) { // Only circles and squares are draggable for now
+        if (hit && (shape.type === 'circle' || shape.type === 'square')) { 
           event.stopPropagation();
           setPotentialDraggingShapeInfo({
             id: shape.id,
@@ -538,12 +525,12 @@ export default function BattleGrid({
             originalStartPoint: shape.startPoint,
             originalEndPoint: shape.endPoint
           });
-          setClickedShapeCandidate(shape); // Still a candidate for popover if it's a click
+          setClickedShapeCandidate(shape); 
           if (popoverOpen && !isDeleteAlertOpen) { setPopoverOpen(false); setActivePopoverToken(null); }
           if (textObjectPopoverOpen && !textObjectDeleteAlertOpen) { setTextObjectPopoverOpen(false); setActivePopoverTextObject(null); }
           if (shapePopoverOpen && activePopoverShape?.id !== shape.id && !shapeDeleteAlertOpen) { setShapePopoverOpen(false); setActivePopoverShape(null); }
           return;
-        } else if (hit && shape.type === 'line') { // For lines, only set as popover candidate
+        } else if (hit && shape.type === 'line') { 
             event.stopPropagation();
             setClickedShapeCandidate(shape);
              if (popoverOpen && !isDeleteAlertOpen) { setPopoverOpen(false); setActivePopoverToken(null); }
@@ -664,7 +651,7 @@ export default function BattleGrid({
             endPoint: startP,
             color: 'hsl(var(--accent))',
             strokeWidth: 2,
-            opacity: 1,
+            opacity: 1, // Lines are fully opaque by default
           });
         }
         break;
@@ -680,10 +667,10 @@ export default function BattleGrid({
             type: activeTool === 'draw_circle' ? 'circle' : 'square',
             startPoint: startP,
             endPoint: startP,
-            color: 'hsl(var(--accent))',
-            fillColor: 'hsl(var(--accent))',
+            color: 'hsl(var(--accent))',      // Border color
+            fillColor: 'hsl(var(--accent))', // Fill color
             strokeWidth: 1,
-            opacity: 0.5,
+            opacity: 0.5, // Default fill opacity
           });
         }
         break;
@@ -855,19 +842,18 @@ export default function BattleGrid({
             setIsActuallyDraggingShape(true);
             setCurrentDraggingShapeId(potentialDraggingShapeInfo.id);
 
-            // Calculate initial drag offset based on shape type
             let initialShapeRefX, initialShapeRefY;
             if (potentialDraggingShapeInfo.type === 'circle') {
                 initialShapeRefX = potentialDraggingShapeInfo.originalStartPoint.x;
                 initialShapeRefY = potentialDraggingShapeInfo.originalStartPoint.y;
-            } else { // square
+            } else { 
                 initialShapeRefX = Math.min(potentialDraggingShapeInfo.originalStartPoint.x, potentialDraggingShapeInfo.originalEndPoint.x);
                 initialShapeRefY = Math.min(potentialDraggingShapeInfo.originalStartPoint.y, potentialDraggingShapeInfo.originalEndPoint.y);
             }
             setShapeDragOffset({ x: mouseDownPos.x - initialShapeRefX, y: mouseDownPos.y - initialShapeRefY });
 
-            setClickedShapeCandidate(null); // It's a drag, not a click for popover
-            setPotentialDraggingShapeInfo(null); // Transitioned to actual drag
+            setClickedShapeCandidate(null); 
+            setPotentialDraggingShapeInfo(null); 
         }
     } else if (isActuallyDraggingShape && currentDraggingShapeId && shapeDragOffset && activeTool === 'select' && !editingShapeId) {
         if (popoverOpen) setPopoverOpen(false);
@@ -887,17 +873,15 @@ export default function BattleGrid({
                 x: draggedShape.endPoint.x - draggedShape.startPoint.x,
                 y: draggedShape.endPoint.y - draggedShape.startPoint.y,
             };
-            newStartPoint = { x: newRefX, y: newRefY }; // newRefX/Y is the new center
+            newStartPoint = { x: newRefX, y: newRefY }; 
             newEndPoint = { x: newStartPoint.x + radiusVector.x, y: newStartPoint.y + radiusVector.y };
         } else if (draggedShape.type === 'square') {
             const width = Math.abs(draggedShape.startPoint.x - draggedShape.endPoint.x);
             const height = Math.abs(draggedShape.startPoint.y - draggedShape.endPoint.y);
-            // Assuming originalStartPoint was top-left for offset calculation
-            // For squares, newRefX/Y is the new top-left
             newStartPoint = { x: newRefX, y: newRefY };
             newEndPoint = { x: newRefX + width, y: newRefY + height };
         } else {
-            return; // Only circles and squares are draggable
+            return; 
         }
 
         setDrawnShapes(prevShapes => prevShapes.map(s =>
@@ -952,9 +936,31 @@ export default function BattleGrid({
         setHoveredCellWhilePaintingOrErasing(null);
       }
     } else if (isDrawing && currentDrawingShape && drawingStartPoint) {
-        const snapFn = currentDrawingShape.type === 'circle' ? snapToCellCenter : snapToVertex;
-        const currentEndPoint = snapFn(pos, cellSize);
-        setCurrentDrawingShape(prev => prev ? {...prev, endPoint: currentEndPoint} : null);
+        if (currentDrawingShape.type === 'circle') {
+            const rawRadiusEndPoint = pos;
+            const pixelDist = Math.sqrt(dist2(drawingStartPoint, rawRadiusEndPoint));
+            const numCellsRadius = Math.max(1, Math.round(pixelDist / cellSize)); // Min 1 cell radius (5ft)
+            const snappedPixelDist = numCellsRadius * cellSize;
+
+            const vectorX = rawRadiusEndPoint.x - drawingStartPoint.x;
+            const vectorY = rawRadiusEndPoint.y - drawingStartPoint.y;
+            const currentLength = Math.sqrt(vectorX * vectorX + vectorY * vectorY);
+
+            let unitX = 1, unitY = 0; // Default direction if mouse is at center
+            if (currentLength > 0) {
+                unitX = vectorX / currentLength;
+                unitY = vectorY / currentLength;
+            }
+            const finalEndPoint = {
+                x: drawingStartPoint.x + unitX * snappedPixelDist,
+                y: drawingStartPoint.y + unitY * snappedPixelDist,
+            };
+            setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: finalEndPoint } : null);
+        } else { // For lines and squares (square endpoint snaps to vertex, line doesn't snap during drag)
+            const snapFn = currentDrawingShape.type === 'square' ? snapToVertex : (p: Point) => p; 
+            const currentEndPoint = snapFn(pos, cellSize);
+            setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: currentEndPoint } : null);
+        }
         setHoveredCellWhilePaintingOrErasing(null);
     }
      else {
@@ -980,7 +986,6 @@ export default function BattleGrid({
       if (distanceSquared < CLICK_THRESHOLD_SQUARED) {
         if (activePopoverToken?.id === draggingToken.id && popoverOpen) {
              setPopoverOpen(false);
-             // No longer setting activePopoverToken to null here, popover's onOpenChange will handle it
         } else {
             setActivePopoverToken(draggingToken);
             if (popoverTriggerRef.current) {
@@ -989,7 +994,7 @@ export default function BattleGrid({
                 popoverTriggerRef.current.style.top = `${event.clientY}px`;
             }
             setPopoverOpen(true);
-            setTextObjectPopoverOpen(false); // Close other popovers
+            setTextObjectPopoverOpen(false); 
             setShapePopoverOpen(false);
         }
       } else if (draggingTokenPosition) {
@@ -998,7 +1003,7 @@ export default function BattleGrid({
       setDraggingToken(null);
       setDragOffset(null);
       setDraggingTokenPosition(null);
-    } else if (draggingToken) { // If draggingToken is true but other conditions aren't met (e.g. not select tool)
+    } else if (draggingToken) { 
         if (draggingTokenPosition) {
              onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
         }
@@ -1016,16 +1021,13 @@ export default function BattleGrid({
         const textObj = textObjects.find(to => to.id === draggingTextObjectId);
 
         if (distanceSquared < CLICK_THRESHOLD_SQUARED && textObj) {
-            // Revert position if it was a click, not a drag
             setTextObjects(prev => prev.map(obj =>
                 obj.id === draggingTextObjectId
                     ? { ...obj, x: textObjectDragStartPos!.x - textObjectDragOffset!.x, y: textObjectDragStartPos!.y - textObjectDragOffset!.y }
                     : obj
             ));
-            // Open popover
             if (activePopoverTextObject?.id === textObj.id && textObjectPopoverOpen) {
                 setTextObjectPopoverOpen(false);
-                // No longer setting activePopoverTextObject to null here
             } else {
                 setActivePopoverTextObject(textObj);
                 if (textObjectPopoverTriggerRef.current) {
@@ -1034,11 +1036,10 @@ export default function BattleGrid({
                     textObjectPopoverTriggerRef.current.style.top = `${event.clientY}px`;
                 }
                 setTextObjectPopoverOpen(true);
-                setPopoverOpen(false); // Close other popovers
+                setPopoverOpen(false); 
                 setShapePopoverOpen(false);
             }
         }
-        // Reset drag state regardless of click or drag
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
         setTextObjectDragStartPos(null);
@@ -1046,12 +1047,10 @@ export default function BattleGrid({
     }
 
     if (isActuallyDraggingShape) {
-        // Drag finished, shape position already updated by mouseMove
+        // Drag finished
     } else if (clickedShapeCandidate && activeTool === 'select' && !editingShapeId) {
-        // This was a click on a shape (not a drag)
         if (activePopoverShape?.id === clickedShapeCandidate.id && shapePopoverOpen) {
             setShapePopoverOpen(false);
-            // No longer setting activePopoverShape to null here
         } else {
             setActivePopoverShape(clickedShapeCandidate);
             if (clickedShapeCandidate.type === 'circle') {
@@ -1067,17 +1066,16 @@ export default function BattleGrid({
                 shapePopoverTriggerRef.current.style.top = `${event.clientY}px`;
             }
             setShapePopoverOpen(true);
-            setPopoverOpen(false); // Close other popovers
+            setPopoverOpen(false); 
             setTextObjectPopoverOpen(false);
         }
     }
 
-    // Clear all temporary dragging/click states for shapes
     setPotentialDraggingShapeInfo(null);
     setIsActuallyDraggingShape(false);
     setCurrentDraggingShapeId(null);
     setShapeDragOffset(null);
-    setClickedShapeCandidate(null); // Clear this regardless of drag or click
+    setClickedShapeCandidate(null); 
 
     setMouseDownPos(null);
 
@@ -1097,7 +1095,14 @@ export default function BattleGrid({
         setHoveredCellWhilePaintingOrErasing(null);
     }
     if (isDrawing && currentDrawingShape) {
-      setDrawnShapes(prev => [...prev, currentDrawingShape]);
+      let shapeToAdd = { ...currentDrawingShape }; 
+
+      if (shapeToAdd.type === 'circle' || shapeToAdd.type === 'square') {
+        const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
+        const defaultLabel = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+        shapeToAdd.label = defaultLabel; 
+      }
+      setDrawnShapes(prev => [...prev, shapeToAdd]); 
       setCurrentDrawingShape(null);
       setIsDrawing(false);
       setDrawingStartPoint(null);
@@ -1135,7 +1140,7 @@ export default function BattleGrid({
         setDraggingTokenPosition(null);
         setMouseDownPos(null);
     }
-    if (isActuallyDraggingShape) { // If dragging a shape and mouse leaves, finalize
+    if (isActuallyDraggingShape) { 
         setIsActuallyDraggingShape(false);
         setCurrentDraggingShapeId(null);
         setShapeDragOffset(null);
@@ -1144,7 +1149,13 @@ export default function BattleGrid({
     setClickedShapeCandidate(null);
 
     if (isDrawing && currentDrawingShape) {
-        setDrawnShapes(prev => [...prev, currentDrawingShape]);
+        let shapeToAdd = { ...currentDrawingShape };
+         if (shapeToAdd.type === 'circle' || shapeToAdd.type === 'square') {
+            const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
+            const defaultLabel = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+            shapeToAdd.label = defaultLabel;
+        }
+        setDrawnShapes(prev => [...prev, shapeToAdd]);
         setCurrentDrawingShape(null);
         setIsDrawing(false);
         setDrawingStartPoint(null);
@@ -1248,7 +1259,7 @@ export default function BattleGrid({
 
   const handleSetShapeOpacity = (shapeId: string, opacityValue: number) => {
       const newActiveShape = { ...activePopoverShape!, opacity: opacityValue };
-      setActivePopoverShape(newActiveShape);
+      setActivePopoverShape(newActiveShape); // Update popover state immediately
       setDrawnShapes(prev => prev.map(s =>
           s.id === shapeId ? { ...s, opacity: opacityValue } : s
       ));
@@ -1273,7 +1284,6 @@ export default function BattleGrid({
       }
       return s;
     }));
-    // Update popover shape too
     if (activePopoverShape && activePopoverShape.id === shapeId && activePopoverShape.type === 'circle') {
         setActivePopoverShape(prev => ({...prev!, endPoint: {x: prev!.startPoint.x + newRadiusInPixels, y: prev!.startPoint.y}}));
     }
@@ -1382,7 +1392,7 @@ export default function BattleGrid({
                     x2={shape.endPoint.x} y2={shape.endPoint.y}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={shape.opacity ?? 1}
+                    strokeOpacity={shape.opacity ?? 1} // Lines use opacity for stroke
                   />
                 )}
                 {shape.type === 'circle' && (
@@ -1391,7 +1401,7 @@ export default function BattleGrid({
                     r={Math.sqrt(dist2(shape.startPoint, shape.endPoint))}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={1} // Border is always 100% opaque
+                    strokeOpacity={1} // Border is always 100% opaque for circles
                     fill={shape.fillColor}
                     fillOpacity={shape.opacity ?? 0.5} // Fill uses managed opacity, defaults to 0.5
                   />
@@ -1404,7 +1414,7 @@ export default function BattleGrid({
                     height={Math.abs(shape.endPoint.y - shape.startPoint.y)}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={1} // Border is always 100% opaque
+                    strokeOpacity={1} // Border is always 100% opaque for squares
                     fill={shape.fillColor}
                     fillOpacity={shape.opacity ?? 0.5} // Fill uses managed opacity, defaults to 0.5
                   />
@@ -1484,9 +1494,9 @@ export default function BattleGrid({
                 r={Math.sqrt( dist2(currentDrawingShape.startPoint, currentDrawingShape.endPoint) )}
                 stroke={currentDrawingShape.color}
                 strokeWidth={currentDrawingShape.strokeWidth}
-                strokeOpacity={1} // Border is always 100% opaque for preview
+                strokeOpacity={1} 
                 fill={currentDrawingShape.fillColor}
-                fillOpacity={currentDrawingShape.opacity ?? 0.5} // Fill uses managed opacity for preview
+                fillOpacity={currentDrawingShape.opacity ?? 0.5} 
                 strokeDasharray="3 3"
               />
             )}
@@ -1498,9 +1508,9 @@ export default function BattleGrid({
                 height={Math.abs(currentDrawingShape.endPoint.y - currentDrawingShape.startPoint.y)}
                 stroke={currentDrawingShape.color}
                 strokeWidth={currentDrawingShape.strokeWidth}
-                strokeOpacity={1} // Border is always 100% opaque for preview
+                strokeOpacity={1} 
                 fill={currentDrawingShape.fillColor}
-                fillOpacity={currentDrawingShape.opacity ?? 0.5} // Fill uses managed opacity for preview
+                fillOpacity={currentDrawingShape.opacity ?? 0.5}
                 strokeDasharray="3 3"
               />
             )}
@@ -1878,9 +1888,9 @@ export default function BattleGrid({
                     open={isDeleteAlertOpen}
                      onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
-                        if (!isOpen) { // If dialog is closing for any reason
-                           setPopoverOpen(false); // Also close the parent popover
-                           setActivePopoverToken(null); // And clear the active token context
+                        if (!isOpen) { 
+                           setPopoverOpen(false); 
+                           setActivePopoverToken(null); 
                         }
                     }}
                 >
@@ -1909,7 +1919,6 @@ export default function BattleGrid({
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
-                           // States will be reset by AlertDialog's onOpenChange
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1926,7 +1935,7 @@ export default function BattleGrid({
             open={textObjectPopoverOpen}
             onOpenChange={(isOpen) => {
                 setTextObjectPopoverOpen(isOpen);
-                if (!isOpen && !textObjectDeleteAlertOpen) { // If popover is closing and delete alert is not the reason
+                if (!isOpen && !textObjectDeleteAlertOpen) { 
                     setActivePopoverTextObject(null);
                 }
             }}
@@ -1957,9 +1966,9 @@ export default function BattleGrid({
                         open={textObjectDeleteAlertOpen}
                         onOpenChange={(isOpen) => {
                             setTextObjectDeleteAlertOpen(isOpen);
-                             if (!isOpen) { // If dialog is closing
-                               setTextObjectPopoverOpen(false); // Also close the parent popover
-                               setActivePopoverTextObject(null); // Clear context
+                             if (!isOpen) { 
+                               setTextObjectPopoverOpen(false); 
+                               setActivePopoverTextObject(null); 
                             }
                         }}
                     >
@@ -1988,7 +1997,6 @@ export default function BattleGrid({
                                         if (activePopoverTextObject) {
                                             setTextObjects(prev => prev.filter(to => to.id !== activePopoverTextObject!.id));
                                         }
-                                        // States will be reset by AlertDialog's onOpenChange
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -2006,7 +2014,7 @@ export default function BattleGrid({
             open={shapePopoverOpen}
             onOpenChange={(isOpen) => {
                 setShapePopoverOpen(isOpen);
-                if (!isOpen && !shapeDeleteAlertOpen) { // If popover closing and not due to delete alert
+                if (!isOpen && !shapeDeleteAlertOpen) { 
                     setActivePopoverShape(null);
                 }
             }}
@@ -2110,9 +2118,9 @@ export default function BattleGrid({
                         open={shapeDeleteAlertOpen}
                         onOpenChange={(isOpen) => {
                             setShapeDeleteAlertOpen(isOpen);
-                            if (!isOpen) { // If dialog is closing
-                               setShapePopoverOpen(false); // Also close parent popover
-                               setActivePopoverShape(null); // Clear context
+                            if (!isOpen) { 
+                               setShapePopoverOpen(false); 
+                               setActivePopoverShape(null); 
                             }
                         }}
                     >
@@ -2141,7 +2149,6 @@ export default function BattleGrid({
                                         if (activePopoverShape) {
                                             setDrawnShapes(prev => prev.filter(s => s.id !== activePopoverShape!.id));
                                         }
-                                         // States will be reset by AlertDialog's onOpenChange
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
