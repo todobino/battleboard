@@ -4,7 +4,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool } from '@/types';
 import { Button } from '@/components/ui/button';
-import { LineChart, Circle, Square } from 'lucide-react'; // Shapes icon removed
+import { LineChart, Circle, Square } from 'lucide-react'; // Shapes icon removed, Square can represent Rectangle
 
 interface ShapeToolPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
@@ -15,7 +15,7 @@ export default function ShapeToolPanel({
   setActiveTool,
   onToolSelect,
 }: ShapeToolPanelProps) {
-  const handleShapeSelect = (tool: 'draw_line' | 'draw_circle' | 'draw_square') => {
+  const handleShapeSelect = (tool: 'draw_line' | 'draw_circle' | 'draw_rectangle') => {
     setActiveTool(tool);
     onToolSelect?.();
   };
@@ -44,12 +44,12 @@ export default function ShapeToolPanel({
         </Button>
         <Button
           variant="outline"
-          onClick={() => handleShapeSelect('draw_square')}
+          onClick={() => handleShapeSelect('draw_rectangle')}
           className="flex flex-col items-center h-auto py-2"
-          title="Draw Square"
+          title="Draw Rectangle" // Changed from "Draw Square"
         >
-          <Square className="mb-1 h-5 w-5" />
-          <span className="text-xs">Square</span>
+          <Square className="mb-1 h-5 w-5" /> {/* Square icon is fine for rectangle */}
+          <span className="text-xs">Rectangle</span> {/* Changed from "Square" */}
         </Button>
       </div>
       {/* "Click and drag on the grid to draw a shape." paragraph removed */}

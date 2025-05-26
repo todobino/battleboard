@@ -47,8 +47,7 @@ export type ActiveTool =
   | 'shapes_tool' // Parent tool for shapes popover
   | 'draw_line'
   | 'draw_circle'
-  | 'draw_square'
-  | 'type_tool';
+  | 'draw_rectangle'; // Changed from 'draw_square'
 
 
 export interface TokenTemplate {
@@ -67,11 +66,11 @@ export interface Measurement {
 
 export interface DrawnShape {
   id:string;
-  type: 'line' | 'circle' | 'square';
-  startPoint: Point; // For line: start; for circle: center; for square: top-left
-  endPoint: Point;   // For line: end; for circle: point on circumference; for square: bottom-right
-  color: string; // Stroke color for line, border color for circle/square
-  fillColor?: string; // Fill color for circle/square
+  type: 'line' | 'circle' | 'rectangle'; // Changed from 'square'
+  startPoint: Point; // For line: start; for circle: center; for rectangle: top-left
+  endPoint: Point;   // For line: end; for circle: point on circumference; for rectangle: bottom-right
+  color: string; // Stroke color for line, border color for circle/rectangle
+  fillColor?: string; // Fill color for circle/rectangle
   strokeWidth: number;
   label?: string; // Optional text label for the shape
   opacity?: number; // Optional opacity for the shape (0 to 1)

@@ -100,7 +100,7 @@ export default function FloatingToolbar({
       setActiveTool(tool);
     }
     // Close other popovers if they are not the one being interacted with
-    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_square'].includes(tool) && tool !== 'type_tool') {
+    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_rectangle'].includes(tool) && tool !== 'type_tool') {
         setIsMapSettingsPopoverOpen(false);
         setIsMeasurementPopoverOpen(false);
         setIsTokenPlacerPopoverOpen(false);
@@ -278,12 +278,12 @@ export default function FloatingToolbar({
               // Do not change active tool, just open popover
               setIsShapeToolPopoverOpen(prev => !prev);
             }}
-            isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square'}
+            isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle'}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
+                variant={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle' ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Shapes Tool"
@@ -335,5 +335,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
-
