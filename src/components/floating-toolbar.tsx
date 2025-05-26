@@ -128,7 +128,7 @@ export default function FloatingToolbar({
 
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={setIsMapSettingsPopoverOpen}>
           <ToolButton
-            label="Map & Grid Settings"
+            label="Map Tool"
             icon={Map}
             onClick={() => {
                 handleToolClick('map_tool');
@@ -142,7 +142,7 @@ export default function FloatingToolbar({
                   variant={(isMapSettingsPopoverOpen || activeTool === 'map_tool') ? 'default' : 'outline'}
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
-                  aria-label="Map & Grid Settings"
+                  aria-label="Map Tool"
                 >
                   <Map className="h-5 w-5 text-accent-foreground" />
                 </Button>
@@ -196,7 +196,7 @@ export default function FloatingToolbar({
 
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={setIsTokenPlacerPopoverOpen}>
           <ToolButton
-            label="Tokens & Terrain"
+            label="Tokens Tool"
             icon={Users}
              onClick={() => {
                 handleToolClick('token_placer_tool');
@@ -210,7 +210,7 @@ export default function FloatingToolbar({
                 variant={(isTokenPlacerPopoverOpen || activeTool === 'token_placer_tool' || activeTool === 'place_token') ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
-                aria-label="Tokens & Terrain"
+                aria-label="Tokens Tool"
               >
                 <Users className="h-5 w-5 text-accent-foreground" />
               </Button>
@@ -227,7 +227,7 @@ export default function FloatingToolbar({
 
         <Popover open={isColorPainterPopoverOpen} onOpenChange={setIsColorPainterPopoverOpen}>
           <ToolButton
-            label="Color Painter"
+            label="Paint Tool"
             icon={Paintbrush}
             onClick={() => {
                 handleToolClick('paint_cell');
@@ -241,7 +241,7 @@ export default function FloatingToolbar({
                 variant={(isColorPainterPopoverOpen || activeTool === 'paint_cell') ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
-                aria-label="Color Painter"
+                aria-label="Paint Tool"
               >
                 <Paintbrush className="h-5 w-5 text-accent-foreground" />
               </Button>
@@ -260,7 +260,7 @@ export default function FloatingToolbar({
 
         <Popover open={isShapeToolPopoverOpen} onOpenChange={setIsShapeToolPopoverOpen}>
           <ToolButton
-            label="Shape Tools"
+            label="Shapes Tool"
             icon={Shapes}
             onClick={() => {
               handleToolClick('shapes_tool');
@@ -274,7 +274,7 @@ export default function FloatingToolbar({
                 variant={isShapeToolPopoverOpen || activeTool === 'shapes_tool' || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_square' ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2' // Changed from h-12 w-12 p-2.5
-                aria-label="Shape Tools"
+                aria-label="Shapes Tool"
               >
                 <Shapes className="h-5 w-5 text-accent-foreground" />
               </Button>
@@ -297,7 +297,7 @@ export default function FloatingToolbar({
         />
         
         <ToolButton
-          label="Eraser"
+          label="Eraser Tool"
           icon={Eraser}
           tool="eraser_tool"
           currentActiveTool={activeTool}
