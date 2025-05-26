@@ -1130,32 +1130,12 @@ export default function BattleGrid({
     return 'cursor-default';
   };
 
-  const OPACITY_TOGGLE_MAP: Record<number, number> = {
-    1.0: 0.5,  // 100% -> 50%
-    0.5: 0.1,  // 50%  -> 10%
-    0.1: 1.0,  // 10%  -> 100%
+  const handleSetShapeOpacity = (shapeId: string, opacity: number) => {
+      setDrawnShapes(prev => prev.map(s => 
+          s.id === shapeId ? { ...s, opacity } : s
+      ));
   };
   
-  const handleToggleShapeOpacity = (shapeId: string) => {
-      setDrawnShapes(prev => prev.map(s => {
-          if (s.id === shapeId) {
-              const currentOpacity = s.opacity ?? 1.0; // Default to 100% if undefined
-              let nextOpacity: number;
-              if (currentOpacity === 1.0) {
-                  nextOpacity = 0.5;
-              } else if (currentOpacity === 0.5) {
-                  nextOpacity = 0.1;
-              } else if (currentOpacity === 0.1) {
-                  nextOpacity = 1.0;
-              } else { // If current opacity is some other value, snap to 1.0
-                  nextOpacity = 1.0;
-              }
-              return { ...s, opacity: nextOpacity };
-          }
-          return s;
-      }));
-  };
-
   const handleShapeRadiusChange = (shapeId: string, newRadiusInFeetString: string) => {
     const newRadiusInFeet = parseFloat(newRadiusInFeetString);
     if (isNaN(newRadiusInFeet) || newRadiusInFeet < (FEET_PER_SQUARE / 2)) { 
@@ -1710,9 +1690,9 @@ export default function BattleGrid({
                     open={isDeleteAlertOpen} 
                     onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
-                         if (!isOpen) { // This will be called when dialog is dismissed via Cancel or action
-                            setActivePopoverToken(null); // Clear context when dialog fully closes
-                            setPopoverOpen(false); // Ensure main popover also closes if not already
+                         if (!isOpen) { 
+                            setActivePopoverToken(null); 
+                            setPopoverOpen(false); 
                         }
                     }}
                 >
@@ -1742,7 +1722,6 @@ export default function BattleGrid({
                             onTokenDelete(activePopoverToken.id);
                           }
                           setIsDeleteAlertOpen(false);
-                          // PopoverOpen and ActivePopoverToken will be handled by AlertDialog's onOpenChange
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1790,9 +1769,9 @@ export default function BattleGrid({
                         open={textObjectDeleteAlertOpen}
                         onOpenChange={(isOpen) => {
                             setTextObjectDeleteAlertOpen(isOpen);
-                            if (!isOpen) { // If dialog closes (cancel or delete)
-                                setActivePopoverTextObject(null); // Clear active text object
-                                setTextObjectPopoverOpen(false); // Close main popover
+                            if (!isOpen) { 
+                                setActivePopoverTextObject(null); 
+                                setTextObjectPopoverOpen(false); 
                             }
                         }}
                     >
@@ -1822,7 +1801,6 @@ export default function BattleGrid({
                                             setTextObjects(prev => prev.filter(to => to.id !== activePopoverTextObject!.id));
                                         }
                                         setTextObjectDeleteAlertOpen(false); 
-                                        // ActivePopoverTextObject and TextObjectPopoverOpen will be handled by AlertDialog's onOpenChange
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1858,13 +1836,18 @@ export default function BattleGrid({
                     {(activePopoverShape.type === 'circle' || activePopoverShape.type === 'square') && (
                         <div className="space-y-1 pt-1">
                              <Label className="text-xs">Shape Opacity</Label>
-                             <Button
-                                 variant="outline"
-                                 className="w-full justify-center h-8 text-sm"
-                                 onClick={() => handleToggleShapeOpacity(activePopoverShape.id)}
-                             >
-                                 {`${((activePopoverShape.opacity ?? 1) * 100).toFixed(0)}%`}
-                             </Button>
+                            <div className="flex space-x-1">
+                                {[0.1, 0.5, 1.0].map(opacityValue => (
+                                    <Button
+                                        key={`opacity-${opacityValue}`}
+                                        variant={(activePopoverShape.opacity ?? 1.0) === opacityValue ? 'default' : 'outline'}
+                                        className="flex-1 h-8 text-xs"
+                                        onClick={() => handleSetShapeOpacity(activePopoverShape.id, opacityValue)}
+                                    >
+                                        {`${(opacityValue * 100).toFixed(0)}%`}
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
                     )}
 
@@ -1964,7 +1947,6 @@ export default function BattleGrid({
                                     onClick={() => {
                                         setDrawnShapes(prev => prev.filter(s => s.id !== activePopoverShape.id));
                                         setShapeDeleteAlertOpen(false);
-                                        // ActivePopoverShape and ShapePopoverOpen will be handled by AlertDialog's onOpenChange
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -2021,4 +2003,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
