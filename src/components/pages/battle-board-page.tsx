@@ -7,6 +7,7 @@ import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnSh
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
+import WelcomeDialog from '@/components/welcome-dialog'; // Added WelcomeDialog import
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { LandPlot, UserPlus, CirclePlay, CircleX, Plus, Minus } from 'lucide-react';
@@ -30,6 +31,7 @@ const GRID_ROWS = 40;
 const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
 const MAX_HISTORY_LENGTH = 30;
+const WELCOME_DIALOG_STORAGE_KEY = 'hasSeenWelcomeDialogV1';
 
 
 const initialGridCells = (): GridCellData[][] =>
@@ -87,6 +89,25 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [tokenToChangeImage, setTokenToChangeImage] = useState<string | null>(null);
   const [uncroppedTokenImageSrc, setUncroppedTokenImageSrc] = useState<string | null>(null);
   const [isTokenCropDialogOpen, setIsTokenCropDialogOpen] = useState(false);
+
+  // Welcome Dialog State
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSeen = localStorage.getItem(WELCOME_DIALOG_STORAGE_KEY);
+      if (!hasSeen) {
+        setShowWelcomeDialog(true);
+      }
+    }
+  }, []);
+
+  const handleCloseWelcomeDialog = () => {
+    setShowWelcomeDialog(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WELCOME_DIALOG_STORAGE_KEY, 'true');
+    }
+  };
 
 
   const getCurrentUndoableState = useCallback((): UndoableState => {
@@ -571,6 +592,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   return (
     <div className="flex h-screen">
+       {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
       <div className="flex-1 relative">
           <BattleGrid
             gridCells={gridCells} setGridCells={setGridCells}

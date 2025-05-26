@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -7,11 +8,19 @@ import { cn } from "@/lib/utils"
 
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+    // Adding specific data attribute for welcome dialog styling
+    'data-welcome-scroll-area'?: boolean;
+  }
+>(({ className, children, 'data-welcome-scroll-area': dataWelcomeScrollArea, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
-    className={cn("relative overflow-hidden", className)}
+    className={cn(
+      "relative overflow-hidden",
+       // Custom styles for welcome dialog scroll area
+      dataWelcomeScrollArea && "flex-grow overflow-y-auto px-6 py-4",
+      className
+    )}
     {...props}
   >
     <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
