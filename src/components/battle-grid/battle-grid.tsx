@@ -73,11 +73,10 @@ export default function BattleGrid({
   const cellSize = DEFAULT_CELL_SIZE; 
 
   const [viewBox, setViewBox] = useState(() => {
+    // Initial placeholder, will be properly set by useEffect
     const initialContentWidth = numCols * cellSize;
     const initialContentHeight = numRows * cellSize;
-    const initialBorderWidth = BORDER_WIDTH_WHEN_VISIBLE; // Assume grid lines initially visible for default padding
-    const padding = initialBorderWidth / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + initialBorderWidth} ${initialContentHeight + initialBorderWidth}`;
+    return `0 0 ${initialContentWidth || 100} ${initialContentHeight || 100}`;
   });
 
   const [isPanning, setIsPanning] = useState(false);
@@ -105,18 +104,46 @@ export default function BattleGrid({
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
    useEffect(() => {
-    const contentWidth = numCols * cellSize;
-    const contentHeight = numRows * cellSize;
+    const calculatedTotalContentWidth = numCols * cellSize;
+    const calculatedTotalContentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const svgPadding = currentBorderWidth / 2;
 
-    const expectedMinX = 0 - svgPadding;
-    const expectedMinY = 0 - svgPadding;
-    const expectedVw = contentWidth + currentBorderWidth;
-    const expectedVh = contentHeight + currentBorderWidth;
+    // These define the full extent of the 40x40 grid content
+    const actualTotalContentWidth = calculatedTotalContentWidth + currentBorderWidth;
+    const actualTotalContentHeight = calculatedTotalContentHeight + currentBorderWidth;
+    const actualTotalContentMinX = 0 - svgPadding;
+    const actualTotalContentMinY = 0 - svgPadding;
 
-    setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
+    if (svgRef.current) {
+      const svg = svgRef.current;
+      const viewportWidth = svg.clientWidth;
+      const viewportHeight = svg.clientHeight;
+
+      if (viewportWidth > 0 && viewportHeight > 0 && actualTotalContentWidth > 0 && actualTotalContentHeight > 0) {
+        // Scale to fit width strategy for initial view
+        const scaleToFillViewportWidth = viewportWidth / actualTotalContentWidth;
+
+        // The viewBox width will be the full content width.
+        const initialViewWidth = actualTotalContentWidth;
+        // The viewBox height will be the portion of content height visible when scaled to fill viewport width.
+        const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
+
+        const initialViewMinX = actualTotalContentMinX;
+        // Center this viewBox vertically within the total content height
+        const initialViewMinY = actualTotalContentMinY + (actualTotalContentHeight - initialViewHeight) / 2;
+        
+        setViewBox(`${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`);
+      } else {
+        // Fallback if viewport dimensions aren't available or content is zero-size
+        setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
+      }
+    } else {
+      // Fallback if svgRef isn't available
+      setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); // Also depends on clientWidth/Height implicitly, handled by browser.
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -448,50 +475,55 @@ export default function BattleGrid({
       const svgContainerWidth = svgContainerEl.clientWidth;
       const svgContainerHeight = svgContainerEl.clientHeight;
 
-      if (svgContainerWidth === 0 || svgContainerHeight === 0) return;
+      if (svgContainerWidth === 0 || svgContainerHeight === 0 || currentVbWidth === 0 || currentVbHeight === 0) return;
       
-      const scaleX = svgContainerWidth / currentVbWidth;
-      const scaleY = svgContainerHeight / currentVbHeight;
-      const scaleToCover = Math.max(scaleX, scaleY);
-
-      const effectiveVisibleViewBoxWidth = svgContainerWidth / scaleToCover;
-      const effectiveVisibleViewBoxHeight = svgContainerHeight / scaleToCover;
+      const scaleXViewBoxToViewport = svgContainerWidth / currentVbWidth;
+      // const scaleYViewBoxToViewport = svgContainerHeight / currentVbHeight;
+      // const effectiveScale = Math.min(scaleXViewBoxToViewport, scaleYViewBoxToViewport); // Use this if using preserveAspectRatio="xMidYMid meet" or similar logic
 
       const screenDeltaX = panStart.x - event.clientX;
       const screenDeltaY = panStart.y - event.clientY;
 
-      const dx_vb = screenDeltaX / scaleToCover;
-      const dy_vb = screenDeltaY / scaleToCover;
+      // Convert screen delta to viewBox delta
+      const dx_vb = screenDeltaX / scaleXViewBoxToViewport; // Use scaleX for both, as width is fixed
+      const dy_vb = screenDeltaY / scaleXViewBoxToViewport; // Use scaleX for both
       
       let newCandidateVx = currentVbMinX + dx_vb;
       let newCandidateVy = currentVbMinY + dy_vb;
 
-      // Calculate absolute content origin based on current grid settings
-      const gridContentWidth = numCols * cellSize;
-      const gridContentHeight = numRows * cellSize;
+      // Define absolute content boundaries
+      const calculatedTotalContentWidth = numCols * cellSize;
+      const calculatedTotalContentHeight = numRows * cellSize;
       const borderWidthForOrigin = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
       const paddingForOrigin = borderWidthForOrigin / 2;
-      const content_origin_x = 0 - paddingForOrigin;
-      const content_origin_y = 0 - paddingForOrigin;
       
-      // Absolute clamping limits
-      const min_abs_vx = content_origin_x;
-      const max_abs_vx = content_origin_x + currentVbWidth - effectiveVisibleViewBoxWidth;
-      const min_abs_vy = content_origin_y;
-      const max_abs_vy = content_origin_y + currentVbHeight - effectiveVisibleViewBoxHeight;
+      const absoluteContentWidth = calculatedTotalContentWidth + borderWidthForOrigin;
+      const absoluteContentHeight = calculatedTotalContentHeight + borderWidthForOrigin;
+      const absoluteContentMinX = 0 - paddingForOrigin;
+      const absoluteContentMinY = 0 - paddingForOrigin;
+      
+      // Max values for viewBox's minX and minY (top-left corner of viewBox)
+      // The viewBox cannot move its top-left beyond where its bottom-right would pass the content's bottom-right
+      const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
+      const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
+
+      // Min values for viewBox's minX and minY are simply the content's minX and minY
+      const min_vb_min_x = absoluteContentMinX;
+      const min_vb_min_y = absoluteContentMinY;
       
       let finalNewVx = newCandidateVx;
-      if (min_abs_vx <= max_abs_vx) { // Normal case: content wider/taller than effective view
-         finalNewVx = Math.max(min_abs_vx, Math.min(newCandidateVx, max_abs_vx));
-      } else { // Content is narrower/shorter than effective view, lock to centered position
-         finalNewVx = min_abs_vx; // Or (min_abs_vx + max_abs_vx) / 2 for centering
+      // If content is narrower than or same width as the current viewBox (e.g. after extreme zoom out), center it.
+      if (absoluteContentWidth <= currentVbWidth) { 
+         finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
+      } else { // Otherwise, clamp within content boundaries
+         finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
       let finalNewVy = newCandidateVy;
-      if (min_abs_vy <= max_abs_vy) {
-        finalNewVy = Math.max(min_abs_vy, Math.min(newCandidateVy, max_abs_vy));
+      if (absoluteContentHeight <= currentVbHeight) {
+        finalNewVy = absoluteContentMinY + (absoluteContentHeight - currentVbHeight) / 2;
       } else {
-        finalNewVy = min_abs_vy;
+        finalNewVy = Math.max(min_vb_min_y, Math.min(newCandidateVy, max_vb_min_y));
       }
       
       setViewBox(`${finalNewVx} ${finalNewVy} ${currentVbWidth} ${currentVbHeight}`);
@@ -652,18 +684,40 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
     }
 
-    const baseContentWidth = numCols * cellSize;
+    // Absolute content dimensions (full 40x40 grid)
+    const calculatedTotalContentWidth = numCols * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    const minAllowedVw = baseContentWidth / 10; 
-    const maxAllowedVw = baseContentWidth + currentBorderWidth;
+    const absoluteContentWidth = calculatedTotalContentWidth + currentBorderWidth;
+    const absoluteContentHeight = (numRows * cellSize) + currentBorderWidth; // Ensure this matches absoluteContentWidth's derivation for consistency
+    const absoluteContentMinX = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
+    const absoluteContentMinY = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
+
+    // Max zoom out: viewBox width equals total content width.
+    // Min zoom in: viewBox width is 1/10th of total content width.
+    const maxAllowedVw = absoluteContentWidth;
+    const minAllowedVw = absoluteContentWidth / 10; 
+    
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
 
     if (vw !== 0) { newVh = (newVw / vw) * vh; } 
-    else { newVh = (numRows / numCols) * newVw; }
+    else { newVh = (numRows / numCols) * newVw; } // Should not happen if vw is clamped
 
 
-    const newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
-    const newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
+    let newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
+    let newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
+    
+    // Clamp zoomed viewBox
+    if (newVw >= absoluteContentWidth) {
+        newVx = absoluteContentMinX + (absoluteContentWidth - newVw) / 2;
+    } else {
+        newVx = Math.max(absoluteContentMinX, Math.min(newVx, absoluteContentMinX + absoluteContentWidth - newVw));
+    }
+
+    if (newVh >= absoluteContentHeight) {
+        newVy = absoluteContentMinY + (absoluteContentHeight - newVh) / 2;
+    } else {
+        newVy = Math.max(absoluteContentMinY, Math.min(newVy, absoluteContentMinY + absoluteContentHeight - newVh));
+    }
 
     setViewBox(`${newVx} ${newVy} ${newVw} ${newVh}`);
   };
@@ -731,10 +785,19 @@ export default function BattleGrid({
         {backgroundImageUrl && (
           <image
             href={backgroundImageUrl}
-            x={imgScaledX}
-            y={imgScaledY}
+            x={imgScaledX} // These X,Y,Width,Height are for the <image> element itself, relative to its parent <svg>
+            y={imgScaledY} // They are NOT viewBox coordinates directly unless the viewBox is 0,0,width,height
             width={imgScaledWidth}
             height={imgScaledHeight}
+            // The image element's own coordinate system starts at 0,0 within the SVG canvas.
+            // To make it fill the grid content area (before viewBox transformations):
+            // x={0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0)}
+            // y={0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0)}
+            // width={(numCols*cellSize) + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)}
+            // height={(numRows*cellSize) + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)}
+            // However, the current approach of scaling based on backgroundZoomLevel centered on gridContentWidth/Height
+            // is simpler if backgroundZoomLevel is the primary control.
+            // The viewBox handles what portion of this potentially larger/smaller image is seen.
           />
         )}
 
@@ -1124,3 +1187,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
