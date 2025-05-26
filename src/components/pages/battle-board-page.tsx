@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog'; // Added WelcomeDialog import
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, UserPlus, CirclePlay, CircleX, Plus, Minus, CircleArrowRight } from 'lucide-react'; // Added CircleArrowRight
+import { LandPlot, UserPlus, CirclePlay, Plus, Minus, ArrowRight } from 'lucide-react'; // Changed CircleArrowRight to ArrowRight, removed CircleX
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 
@@ -720,8 +720,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button onClick={handleAdvanceTurn} className="flex-1 bg-[hsl(var(--app-blue-bg))] hover:bg-[hsl(var(--app-blue-hover-bg))] text-[hsl(var(--app-blue-foreground))]"> <CircleArrowRight className="mr-2 h-4 w-4" /> Next Turn </Button>
-                <Button onClick={handleEndCombat} variant="destructive" className="flex-1"> <CircleX className="mr-2 h-4 w-4" /> End Combat </Button>
+                <Button onClick={handleAdvanceTurn} className="flex-1 bg-[hsl(var(--app-blue-bg))] hover:bg-[hsl(var(--app-blue-hover-bg))] text-[hsl(var(--app-blue-foreground))]">
+                   Next Turn <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button onClick={handleEndCombat} variant="destructive" className="flex-1"> End Combat </Button>
               </div>
             )}
           </SidebarFooter>
@@ -730,4 +732,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+    
+
     
