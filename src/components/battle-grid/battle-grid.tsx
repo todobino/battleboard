@@ -5,7 +5,7 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Minus, Grid2x2Check, Grid2x2X, MoreVertical, Edit3, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, MoreVertical, Edit3, Trash2, Image as ImageIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -225,8 +225,7 @@ export default function BattleGrid({
   const [clickedShapeCandidate, setClickedShapeCandidate] = useState<DrawnShape | null>(null);
   const [shapeRadiusInput, setShapeRadiusInput] = useState<string>('');
 
-
-  useEffect(() => {
+  const calculateInitialViewBox = useCallback(() => {
     const calculatedTotalContentWidth = numCols * cellSize;
     const calculatedTotalContentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
@@ -249,14 +248,18 @@ export default function BattleGrid({
         const initialViewMinX = actualTotalContentMinX;
         const initialViewMinY = actualTotalContentMinY + (actualTotalContentHeight - initialViewHeight) / 2;
         
-        setViewBox(`${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`);
+        return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
       } else {
-        setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
+        return `${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`;
       }
-    } else {
-      setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
     }
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
+    return `${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`;
+  }, [numCols, numRows, cellSize, showGridLines]);
+
+
+  useEffect(() => {
+    setViewBox(calculateInitialViewBox());
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl, calculateInitialViewBox]);
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -1107,6 +1110,11 @@ export default function BattleGrid({
     applyZoom(zoomIn, ZOOM_AMOUNT);
   };
 
+  const handleResetView = useCallback(() => {
+    setViewBox(calculateInitialViewBox());
+  }, [calculateInitialViewBox]);
+
+
   const gridContentWidth = numCols * cellSize;
   const gridContentHeight = numRows * cellSize;
 
@@ -1145,7 +1153,7 @@ export default function BattleGrid({
       if (currentShape && currentShape.type === 'circle') {
           const currentPixelRadius = Math.sqrt(dist2(currentShape.startPoint, currentShape.endPoint));
           const currentRadiusInFeet = (currentPixelRadius / cellSize) * FEET_PER_SQUARE;
-          setShapeRadiusInput(String(Math.max(FEET_PER_SQUARE / 2, currentRadiusInFeet)));
+          setShapeRadiusInput(String(Math.max(FEET_PER_SQUARE / 2, Math.round(currentRadiusInFeet) )));
       }
       return;
     }
@@ -1691,7 +1699,7 @@ export default function BattleGrid({
                     onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
                          if (!isOpen) { 
-                            setActivePopoverToken(null); 
+                            // setActivePopoverToken(null); // Removed, popover controls this
                             setPopoverOpen(false); 
                         }
                     }}
@@ -1703,6 +1711,7 @@ export default function BattleGrid({
                             "w-full justify-start h-8 px-2 text-sm flex items-center",
                             "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         )}
+                        // onClick={() => setPopoverOpen(false)} // Removed, let alert dialog manage its lifecycle
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
@@ -1715,13 +1724,17 @@ export default function BattleGrid({
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel onClick={() => setIsDeleteAlertOpen(false)}>Cancel</AlertDialogCancel> 
+                      <AlertDialogCancel onClick={() => {
+                        setIsDeleteAlertOpen(false); 
+                        // setPopoverOpen(true); // Keep popover open on cancel
+                        }}>Cancel</AlertDialogCancel> 
                       <AlertDialogAction
                         onClick={() => {
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
                           setIsDeleteAlertOpen(false);
+                          setPopoverOpen(false); // Close popover on confirm
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -1770,8 +1783,8 @@ export default function BattleGrid({
                         onOpenChange={(isOpen) => {
                             setTextObjectDeleteAlertOpen(isOpen);
                             if (!isOpen) { 
-                                setActivePopoverTextObject(null); 
-                                setTextObjectPopoverOpen(false); 
+                                // setActivePopoverTextObject(null); // Popover manages this
+                                setTextObjectPopoverOpen(false);
                             }
                         }}
                     >
@@ -1782,6 +1795,7 @@ export default function BattleGrid({
                                     "w-full justify-start h-8 px-2 text-sm flex items-center",
                                     "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                                 )}
+                                // onClick={() => setTextObjectPopoverOpen(false)} // Let dialog manage its lifecycle
                             >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Text
                             </Button>
@@ -1794,13 +1808,17 @@ export default function BattleGrid({
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setTextObjectDeleteAlertOpen(false)}>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel onClick={() => {
+                                  setTextObjectDeleteAlertOpen(false);
+                                  // setTextObjectPopoverOpen(true); // Keep popover open on cancel
+                                  }}>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={() => {
                                         if (activePopoverTextObject) {
                                             setTextObjects(prev => prev.filter(to => to.id !== activePopoverTextObject!.id));
                                         }
                                         setTextObjectDeleteAlertOpen(false); 
+                                        setTextObjectPopoverOpen(false); // Close popover on confirm
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1918,8 +1936,8 @@ export default function BattleGrid({
                         onOpenChange={(isOpen) => {
                             setShapeDeleteAlertOpen(isOpen);
                              if (!isOpen) { 
-                                setShapePopoverOpen(false); 
-                                setActivePopoverShape(null); 
+                                // setShapePopoverOpen(false); // Popover manages this
+                                setActivePopoverShape(null); // Clear active shape if dialog closes
                             }
                         }}
                     >
@@ -1930,6 +1948,7 @@ export default function BattleGrid({
                                     "w-full justify-start h-8 px-2 text-sm flex items-center mt-1",
                                     "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                                 )}
+                                // onClick={() => setShapePopoverOpen(false)}
                             >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
                             </Button>
@@ -1942,11 +1961,15 @@ export default function BattleGrid({
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setShapeDeleteAlertOpen(false)}>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel onClick={() => {
+                                  setShapeDeleteAlertOpen(false);
+                                  // setShapePopoverOpen(true); // Keep popover open
+                                  }}>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={() => {
                                         setDrawnShapes(prev => prev.filter(s => s.id !== activePopoverShape.id));
                                         setShapeDeleteAlertOpen(false);
+                                        setShapePopoverOpen(false); // Close popover on confirm
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -1992,6 +2015,14 @@ export default function BattleGrid({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={handleResetView} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Reset View">
+                <Maximize className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center"><p>Reset View</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button variant="outline" size="icon" onClick={() => handleZoomButtonClick(false)} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Zoom Out" >
                 <Minus className="h-5 w-5" />
               </Button>
@@ -2003,3 +2034,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
