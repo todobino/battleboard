@@ -7,12 +7,14 @@ import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnSh
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
-import WelcomeDialog from '@/components/welcome-dialog'; // Added WelcomeDialog import
+import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Plus, Minus, ArrowRight } from 'lucide-react'; // Removed UserPlus, CirclePlay, CircleX
+import { LandPlot, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
+import { PlayerIcon, EnemyIcon, AllyIcon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 
 import {
   Dialog,
@@ -590,6 +592,27 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const activeParticipant = participants[currentParticipantIndex];
   const activeTokenId = activeParticipant?.tokenId || null;
 
+  const participantTypeButtonConfig = {
+    player: {
+      label: 'Player',
+      icon: PlayerIcon,
+      selectedClass: 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]',
+      outlineIconClass: 'text-[hsl(var(--player-green-bg))]',
+    },
+    enemy: {
+      label: 'Enemy',
+      icon: EnemyIcon,
+      selectedClass: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+      outlineIconClass: 'text-destructive',
+    },
+    ally: {
+      label: 'Ally',
+      icon: AllyIcon,
+      selectedClass: 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]',
+      outlineIconClass: 'text-[hsl(var(--app-blue-bg))]',
+    },
+  };
+
   return (
     <div className="flex h-screen">
        {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
@@ -640,10 +663,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           onCropConfirm={(croppedDataUrl) => {
             if (tokenToChangeImage) {
               setTokens(prev => prev.map(t => t.id === tokenToChangeImage ? { ...t, customImageUrl: croppedDataUrl, icon: undefined, label: t.label || 'Custom' } : t));
-              // Also update participant image if linked (though initiative tracker shows token directly)
               const linkedParticipant = participants.find(p => p.tokenId === tokenToChangeImage);
               if (linkedParticipant) {
-                // If you store image URLs on participants, update here. Otherwise, relying on token is fine.
+                // Participant's token image is updated via token state
               }
               toast({ title: "Token Image Updated" });
             }
@@ -697,11 +719,26 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   <div>
                     <Label>Type</Label>
                     <div className="flex space-x-2 mt-1">
-                      {['player', 'enemy', 'ally'].map(type => (
-                        <Button key={type} type="button" variant={newParticipantType === type ? 'default' : 'outline'} onClick={() => setNewParticipantType(type as 'player' | 'enemy' | 'ally')} className="flex-1" >
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </Button>
-                      ))}
+                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                        const config = participantTypeButtonConfig[type];
+                        const isSelected = newParticipantType === type;
+                        const IconComponent = config.icon;
+                        return (
+                          <Button
+                            key={type}
+                            type="button"
+                            variant={isSelected ? undefined : 'outline'}
+                            onClick={() => setNewParticipantType(type)}
+                            className={cn(
+                              "flex-1 flex items-center justify-center gap-2",
+                              isSelected ? config.selectedClass : "border-border"
+                            )}
+                          >
+                            <IconComponent className={cn("h-4 w-4", !isSelected && config.outlineIconClass)} />
+                            {config.label}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                   <FormDialogFooter> <Button type="submit"> Add to Turn Order </Button> </FormDialogFooter>
