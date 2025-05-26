@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Plus, Minus, ArrowRight, UserPlus, Camera } from 'lucide-react'; // Added UserPlus/Camera
+import { LandPlot, Plus, Minus, ArrowRight, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon } from '@/components/icons';
@@ -598,7 +598,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     optional: boolean = false,
     disabled: boolean = false
   ) => (
-    <div className="flex-1 space-y-1">
+    <div className="flex-1 space-y-1 border border-border rounded-md p-3">
       <Label htmlFor={disabled ? undefined : `${idPrefix}-input`}>{label}</Label>
       {isEditing && !disabled ? (
         <Input
@@ -965,6 +965,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
