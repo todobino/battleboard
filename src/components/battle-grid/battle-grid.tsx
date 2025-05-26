@@ -1253,7 +1253,17 @@ export default function BattleGrid({
                 </Button>
                 <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost"className="w-full justify-start h-8 px-2 text-sm text-destructive hover:text-destructive flex items-center">
+                    <Button 
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start h-8 px-2 text-sm flex items-center",
+                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        )}
+                        onClick={() => {
+                            setIsDeleteAlertOpen(true);
+                            setPopoverOpen(false); // Close popover when delete confirmation opens
+                        }}
+                    >
                       <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                     </Button>
                   </AlertDialogTrigger>
@@ -1270,7 +1280,7 @@ export default function BattleGrid({
                         onClick={() => {
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
-                            setPopoverOpen(false);
+                            // Popover already closed by trigger, alert will close on action
                             setIsDeleteAlertOpen(false);
                           }
                         }}
@@ -1330,3 +1340,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
