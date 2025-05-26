@@ -70,13 +70,12 @@ export default function BattleGrid({
 
   const numRows = gridCells.length;
   const numCols = gridCells.length > 0 ? gridCells[0].length : 0;
-  const cellSize = DEFAULT_CELL_SIZE; // Keep cellSize constant
+  const cellSize = DEFAULT_CELL_SIZE; 
 
   const [viewBox, setViewBox] = useState(() => {
     const initialContentWidth = numCols * cellSize;
     const initialContentHeight = numRows * cellSize;
-    // Use a fixed border width for initial calculation or rely on showGridLines default
-    const initialBorderWidth = BORDER_WIDTH_WHEN_VISIBLE;
+    const initialBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0; // Use current showGridLines
     const padding = initialBorderWidth / 2;
     return `${0 - padding} ${0 - padding} ${initialContentWidth + initialBorderWidth} ${initialContentHeight + initialBorderWidth}`;
   });
@@ -106,8 +105,6 @@ export default function BattleGrid({
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
    useEffect(() => {
-    // This effect ensures the viewbox is reset to show the entire grid content
-    // when the grid dimensions, grid lines visibility, or background image changes.
     const contentWidth = numCols * cellSize;
     const contentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
@@ -119,7 +116,7 @@ export default function BattleGrid({
     const expectedVh = contentHeight + currentBorderWidth;
 
     setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); // Added backgroundImageUrl
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -169,17 +166,14 @@ export default function BattleGrid({
   }, [isCreatingText, setTextObjects, measureText]);
 
   useEffect(() => {
-    // When activeTool changes, reset conflicting states
     if (activeTool !== 'select') {
       if (editingTokenId) {
-        // If we switch tool while editing a token name, cancel the edit
         setEditingTokenId(null);
         setEditingText('');
       }
     }
     if (activeTool !== 'type_tool') {
       if (isCreatingText) {
-        // If we switch tool while creating text, finalize it
         finalizeTextCreation();
       }
     }
@@ -271,35 +265,32 @@ export default function BattleGrid({
                 return;
             }
         }
-        // If not clicking a text object, initiate pan
         setIsPanning(true);
         setPanStart({ x: event.clientX, y: event.clientY });
         return;
     }
 
     if (activeTool === 'type_tool') {
-        event.stopPropagation(); // Prevent click from bubbling to other handlers
+        event.stopPropagation(); 
 
-        if (isCreatingText) { // If already creating text, finalize the current one
+        if (isCreatingText) { 
             finalizeTextCreation();
         }
-        // Use setTimeout to ensure any previous state updates (like blur) are processed
         setTimeout(() => {
-            const newPos = getMousePosition(event); // Re-get position in case of async delay
+            const newPos = getMousePosition(event); 
             setIsCreatingText({
                 id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                 x: newPos.x,
                 y: newPos.y,
                 currentText: '',
                 fontSize: currentTextFontSize,
-                inputWidth: 150, // Initial width, will adjust
+                inputWidth: 150, 
             });
         }, 0);
         return;
     }
 
     if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) {
-      // Outside grid, only allow panning with middle mouse or ctrl+click
       if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
@@ -325,7 +316,7 @@ export default function BattleGrid({
           const instanceNamePrefix = baseLabel || 'Token';
           const existingTokensOfTypeAndLabel = tokens.filter(t =>
             (t.type === selectedTokenTemplate.type && t.label === baseLabel) ||
-            (t.customImageUrl && t.label === baseLabel) // Check for custom images too
+            (t.customImageUrl && t.label === baseLabel) 
           );
           const count = existingTokensOfTypeAndLabel.length + 1;
           const instanceName = `${instanceNamePrefix} ${count}`;
@@ -335,8 +326,8 @@ export default function BattleGrid({
              x: gridX,
              y: gridY,
              instanceName: instanceName,
-             customImageUrl: selectedTokenTemplate.customImageUrl, // Persist custom image
-             icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon, // Clear icon if custom image
+             customImageUrl: selectedTokenTemplate.customImageUrl, 
+             icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon, 
           };
           const newToken = {
             ...newTokenData,
@@ -374,7 +365,7 @@ export default function BattleGrid({
             startPoint: startP,
             endPoint: startP,
             color: activeTool === 'draw_line' ? 'hsl(var(--accent))' : 'hsl(var(--border))',
-            fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined, // Example fill
+            fillColor: activeTool !== 'draw_line' ? 'hsla(30, 40%, 25%, 0.5)' : undefined, 
             strokeWidth: activeTool === 'draw_line' ? 2 : 1,
           });
         }
@@ -391,12 +382,12 @@ export default function BattleGrid({
       x: pos.x - token.x * cellSize,
       y: pos.y - token.y * cellSize
     });
-    setDraggingTokenPosition(null); // Reset visual dragging position until actual move
+    setDraggingTokenPosition(null); 
   };
 
   const handleTokenLabelClick = (event: React.MouseEvent, token: TokenType) => {
-    event.stopPropagation(); // Prevent grid click or pan
-    if (activeTool === 'select' && !draggingToken) { // Only allow edit if select tool active and not currently dragging this token
+    event.stopPropagation(); 
+    if (activeTool === 'select' && !draggingToken) { 
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
     }
@@ -409,7 +400,7 @@ export default function BattleGrid({
           t.id === editingTokenId ? { ...t, instanceName: editingText } : t
         )
       );
-      onTokenInstanceNameChange(editingTokenId, editingText); // Notify parent
+      onTokenInstanceNameChange(editingTokenId, editingText); 
       setEditingTokenId(null);
       setEditingText('');
     }
@@ -419,34 +410,31 @@ export default function BattleGrid({
     if (event.key === 'Enter') {
       handleSaveTokenName();
     } else if (event.key === 'Escape') {
-      setEditingTokenId(null); // Cancel edit
+      setEditingTokenId(null); 
       setEditingText('');
     }
   };
 
   const handleTextInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      event.preventDefault(); // Prevent form submission if inside one
+      event.preventDefault(); 
       finalizeTextCreation();
     } else if (event.key === 'Escape') {
-      setIsCreatingText(null); // Cancel text creation
+      setIsCreatingText(null); 
     }
   };
 
   const handleTextInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (isCreatingText) {
       const newText = event.target.value;
-      // Dynamically adjust input width based on text content
       const tempSpan = document.createElement('span');
-      tempSpan.style.font = `${isCreatingText.fontSize}px sans-serif`; // Ensure font matches final display
+      tempSpan.style.font = `${isCreatingText.fontSize}px sans-serif`; 
       tempSpan.style.visibility = 'hidden';
       tempSpan.style.position = 'absolute';
-      tempSpan.textContent = newText || " "; // Use a space if empty for min width calculation
+      tempSpan.textContent = newText || " "; 
       document.body.appendChild(tempSpan);
       const textMetricsWidth = tempSpan.offsetWidth;
       document.body.removeChild(tempSpan);
-
-      // Add padding and a little extra buffer for cursor
       setIsCreatingText(prev => prev ? { ...prev, currentText: newText, inputWidth: textMetricsWidth + TEXT_PADDING.x * 2 + 5 } : null);
     }
   };
@@ -455,51 +443,47 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
-      const currentVbParts = viewBox.split(' ').map(Number);
+      const [currentVbMinX, currentVbMinY, currentVbWidth, currentVbHeight] = viewBox.split(' ').map(Number);
       const svgContainerEl = svgRef.current;
       const svgContainerWidth = svgContainerEl.clientWidth;
       const svgContainerHeight = svgContainerEl.clientHeight;
 
       if (svgContainerWidth === 0 || svgContainerHeight === 0) return;
-
-      const currentVbX = currentVbParts[0];
-      const currentVbY = currentVbParts[1];
-      const currentVbRawWidth = currentVbParts[2];
-      const currentVbRawHeight = currentVbParts[3];
       
-      const scaleToCover = Math.max(svgContainerWidth / currentVbRawWidth, svgContainerHeight / currentVbRawHeight);
+      // Calculate how much of the viewBox is visible (effective size)
+      // This depends on how the viewBox is scaled to fit the container by preserveAspectRatio
+      // For 'xMidYMid slice', the content is scaled to cover the container.
+      // The scale factor is determined by the dimension that needs more scaling.
+      let scaleX = svgContainerWidth / currentVbWidth;
+      let scaleY = svgContainerHeight / currentVbHeight;
+      let scaleToCover = Math.max(scaleX, scaleY); // For slice, we want to cover
+
+      // If using preserveAspectRatio="xMidYMid meet" (default if not specified, or specified meet)
+      // scaleToCover = Math.min(scaleX, scaleY);
+
       const effectiveVisibleViewBoxWidth = svgContainerWidth / scaleToCover;
       const effectiveVisibleViewBoxHeight = svgContainerHeight / scaleToCover;
 
       const screenDeltaX = panStart.x - event.clientX;
       const screenDeltaY = panStart.y - event.clientY;
 
-      const dxViewBox = screenDeltaX * (currentVbRawWidth / svgContainerWidth);
-      const dyViewBox = screenDeltaY * (currentVbRawHeight / svgContainerHeight);
+      const dxViewBox = screenDeltaX * (currentVbWidth / svgContainerWidth);
+      const dyViewBox = screenDeltaY * (currentVbHeight / svgContainerHeight);
       
-      let newVx = currentVbX + dxViewBox;
-      let newVy = currentVbY + dyViewBox;
+      let newVx = currentVbMinX + dxViewBox;
+      let newVy = currentVbMinY + dyViewBox;
 
-      const contentTotalWidth = numCols * cellSize;
-      const contentTotalHeight = numRows * cellSize;
-      const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-      const svgPadding = currentBorderWidth / 2;
-
-      const vx_bound_origin_start = 0 - svgPadding; 
-      const vx_bound_origin_end = (contentTotalWidth + currentBorderWidth) - effectiveVisibleViewBoxWidth - svgPadding; 
+      // Define the boundaries based on the viewBox's own coordinate system
+      const min_allowed_vx = currentVbMinX; // Should be initial minX from useEffect
+      const max_allowed_vx = currentVbMinX + currentVbWidth - effectiveVisibleViewBoxWidth;
       
-      const min_allowed_vx = Math.min(vx_bound_origin_start, vx_bound_origin_end);
-      const max_allowed_vx = Math.max(vx_bound_origin_start, vx_bound_origin_end);
-      newVx = Math.max(min_allowed_vx, Math.min(newVx, max_allowed_vx));
-
-      const vy_bound_origin_start = 0 - svgPadding; 
-      const vy_bound_origin_end = (contentTotalHeight + currentBorderWidth) - effectiveVisibleViewBoxHeight - svgPadding;
-
-      const min_allowed_vy = Math.min(vy_bound_origin_start, vy_bound_origin_end);
-      const max_allowed_vy = Math.max(vy_bound_origin_start, vy_bound_origin_end);
-      newVy = Math.max(min_allowed_vy, Math.min(newVy, max_allowed_vy));
+      const min_allowed_vy = currentVbMinY; // Should be initial minY from useEffect
+      const max_allowed_vy = currentVbMinY + currentVbHeight - effectiveVisibleViewBoxHeight;
       
-      setViewBox(`${newVx} ${newVy} ${currentVbRawWidth} ${currentVbRawHeight}`);
+      newVx = Math.max(Math.min(min_allowed_vx, max_allowed_vx), Math.min(newVx, Math.max(min_allowed_vx, max_allowed_vx)));
+      newVy = Math.max(Math.min(min_allowed_vy, max_allowed_vy), Math.min(newVy, Math.max(min_allowed_vy, max_allowed_vy)));
+      
+      setViewBox(`${newVx} ${newVy} ${currentVbWidth} ${currentVbHeight}`);
       setPanStart({ x: event.clientX, y: event.clientY });
       setHoveredCellWhilePaintingOrErasing(null);
 
@@ -529,7 +513,7 @@ export default function BattleGrid({
       const dySquares = endPoint.y - measurement.startPoint.y;
       const distInSquares = Math.sqrt(dxSquares*dxSquares + dySquares*dySquares);
       const distInFeet = distInSquares * FEET_PER_SQUARE;
-      const roundedDistInFeet = Math.round(distInFeet * 10) / 10; // Round to one decimal place
+      const roundedDistInFeet = Math.round(distInFeet * 10) / 10; 
       const resultText = measurement.type === 'distance'
         ? `Distance: ${roundedDistInFeet} ft`
         : `Radius: ${roundedDistInFeet} ft`;
@@ -659,11 +643,10 @@ export default function BattleGrid({
 
     const baseContentWidth = numCols * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-
     const minAllowedVw = baseContentWidth / 10; 
     const maxAllowedVw = baseContentWidth + currentBorderWidth;
-
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
+
     if (vw !== 0) { newVh = (newVw / vw) * vh; } 
     else { newVh = (numRows / numCols) * newVw; }
 
@@ -970,8 +953,8 @@ export default function BattleGrid({
               if (activeTool === 'select') {
                 e.stopPropagation(); 
                 setDraggingTextObjectId(obj.id);
-                const pos = getMousePosition(e); 
-                setTextObjectDragOffset({ x: pos.x - obj.x, y: pos.y - obj.y });
+                const mousePos = getMousePosition(e); 
+                setTextObjectDragOffset({ x: mousePos.x - obj.x, y: mousePos.y - obj.y });
               }
             }}
           >
@@ -1130,3 +1113,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
