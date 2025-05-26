@@ -5,15 +5,30 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Minus, Grid2x2Check, Grid2x2X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Plus, Minus, Grid2x2Check, Grid2x2X, MoreVertical, Edit3, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 const DEFAULT_CELL_SIZE = 30; // Pixel size of each cell.
 const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
 const ZOOM_AMOUNT = 1.1;
 const TEXT_PADDING = { x: 8, y: 4 }; // Padding for text bubbles
+const CLICK_THRESHOLD_SQUARED = 25; // For distinguishing click vs drag (5px threshold)
+
 
 // Helper to snap to grid cell centers (for circles)
 const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
@@ -65,6 +80,8 @@ export default function BattleGrid({
   setMeasurement,
   activeTokenId,
   currentTextFontSize,
+  onTokenDelete,
+  onTokenImageChangeRequest,
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -73,7 +90,6 @@ export default function BattleGrid({
   const cellSize = DEFAULT_CELL_SIZE; 
 
   const [viewBox, setViewBox] = useState(() => {
-    // Initial placeholder, will be properly set by useEffect
     const initialContentWidth = numCols * cellSize;
     const initialContentHeight = numRows * cellSize;
     return `0 0 ${initialContentWidth || 100} ${initialContentHeight || 100}`;
@@ -85,6 +101,8 @@ export default function BattleGrid({
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
+  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null);
+
 
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
@@ -103,13 +121,19 @@ export default function BattleGrid({
   const [draggingTextObjectId, setDraggingTextObjectId] = useState<string | null>(null);
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
+  // Token Popover State
+  const popoverTriggerRef = useRef<HTMLButtonElement>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [activePopoverToken, setActivePopoverToken] = useState<TokenType | null>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+
+
    useEffect(() => {
     const calculatedTotalContentWidth = numCols * cellSize;
     const calculatedTotalContentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const svgPadding = currentBorderWidth / 2;
 
-    // These define the full extent of the 40x40 grid content
     const actualTotalContentWidth = calculatedTotalContentWidth + currentBorderWidth;
     const actualTotalContentHeight = calculatedTotalContentHeight + currentBorderWidth;
     const actualTotalContentMinX = 0 - svgPadding;
@@ -121,29 +145,21 @@ export default function BattleGrid({
       const viewportHeight = svg.clientHeight;
 
       if (viewportWidth > 0 && viewportHeight > 0 && actualTotalContentWidth > 0 && actualTotalContentHeight > 0) {
-        // Scale to fit width strategy for initial view
         const scaleToFillViewportWidth = viewportWidth / actualTotalContentWidth;
-
-        // The viewBox width will be the full content width.
         const initialViewWidth = actualTotalContentWidth;
-        // The viewBox height will be the portion of content height visible when scaled to fill viewport width.
         const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
-
         const initialViewMinX = actualTotalContentMinX;
-        // Center this viewBox vertically within the total content height
         const initialViewMinY = actualTotalContentMinY + (actualTotalContentHeight - initialViewHeight) / 2;
         
         setViewBox(`${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`);
       } else {
-        // Fallback if viewport dimensions aren't available or content is zero-size
         setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
       }
     } else {
-      // Fallback if svgRef isn't available
       setViewBox(`${actualTotalContentMinX} ${actualTotalContentMinY} ${Math.max(1, actualTotalContentWidth)} ${Math.max(1, actualTotalContentHeight)}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); // Also depends on clientWidth/Height implicitly, handled by browser.
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]);
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -197,6 +213,10 @@ export default function BattleGrid({
       if (editingTokenId) {
         setEditingTokenId(null);
         setEditingText('');
+      }
+      if (popoverOpen) {
+        setPopoverOpen(false);
+        setActivePopoverToken(null);
       }
     }
     if (activeTool !== 'type_tool') {
@@ -277,6 +297,7 @@ export default function BattleGrid({
   };
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (popoverOpen) setPopoverOpen(false);
     if (editingTokenId) return;
 
     const pos = getMousePosition(event);
@@ -292,8 +313,19 @@ export default function BattleGrid({
                 return;
             }
         }
-        setIsPanning(true);
-        setPanStart({ x: event.clientX, y: event.clientY });
+        // Check if clicking on a token (handled by token's onMouseDown, but this is a fallback or grid pan start)
+        const clickedOnToken = tokens.some(token => {
+            const tokenLeft = token.x * cellSize;
+            const tokenRight = (token.x + (token.size || 1)) * cellSize;
+            const tokenTop = token.y * cellSize;
+            const tokenBottom = (token.y + (token.size || 1)) * cellSize;
+            return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
+        });
+
+        if (!clickedOnToken) {
+            setIsPanning(true);
+            setPanStart({ x: event.clientX, y: event.clientY });
+        }
         return;
     }
 
@@ -401,20 +433,23 @@ export default function BattleGrid({
   };
 
   const handleTokenMouseDown = (event: React.MouseEvent<SVGElement>, token: TokenType) => {
-    if (editingTokenId === token.id || activeTool !== 'select') return;
-    event.stopPropagation();
-    setDraggingToken(token);
-    const pos = getMousePosition(event);
-    setDragOffset({
-      x: pos.x - token.x * cellSize,
-      y: pos.y - token.y * cellSize
-    });
-    setDraggingTokenPosition(null); 
+    if (activeTool === 'select' && !editingTokenId) {
+        event.stopPropagation(); // Prevent grid's mousedown if on token
+        setDraggingToken(token); // Optimistically set for drag
+        const pos = getMousePosition(event);
+        setMouseDownPos(pos); // Record for click detection
+        setDragOffset({ x: pos.x - token.x * cellSize, y: pos.y - token.y * cellSize });
+        setDraggingTokenPosition(null);
+        setPopoverOpen(false); // Close any open popover
+    } else if (activeTool !== 'select') {
+        setPopoverOpen(false); // Close popover if tool changes or not select tool
+    }
   };
+
 
   const handleTokenLabelClick = (event: React.MouseEvent, token: TokenType) => {
     event.stopPropagation(); 
-    if (activeTool === 'select' && !draggingToken) { 
+    if (activeTool === 'select' && !draggingToken && !popoverOpen) { 
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
     }
@@ -470,6 +505,7 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
+      if (popoverOpen) setPopoverOpen(false);
       const [currentVbMinX, currentVbMinY, currentVbWidth, currentVbHeight] = viewBox.split(' ').map(Number);
       const svgContainerEl = svgRef.current;
       const svgContainerWidth = svgContainerEl.clientWidth;
@@ -478,20 +514,16 @@ export default function BattleGrid({
       if (svgContainerWidth === 0 || svgContainerHeight === 0 || currentVbWidth === 0 || currentVbHeight === 0) return;
       
       const scaleXViewBoxToViewport = svgContainerWidth / currentVbWidth;
-      // const scaleYViewBoxToViewport = svgContainerHeight / currentVbHeight;
-      // const effectiveScale = Math.min(scaleXViewBoxToViewport, scaleYViewBoxToViewport); // Use this if using preserveAspectRatio="xMidYMid meet" or similar logic
 
       const screenDeltaX = panStart.x - event.clientX;
       const screenDeltaY = panStart.y - event.clientY;
 
-      // Convert screen delta to viewBox delta
-      const dx_vb = screenDeltaX / scaleXViewBoxToViewport; // Use scaleX for both, as width is fixed
-      const dy_vb = screenDeltaY / scaleXViewBoxToViewport; // Use scaleX for both
+      const dx_vb = screenDeltaX / scaleXViewBoxToViewport; 
+      const dy_vb = screenDeltaY / scaleXViewBoxToViewport; 
       
       let newCandidateVx = currentVbMinX + dx_vb;
       let newCandidateVy = currentVbMinY + dy_vb;
 
-      // Define absolute content boundaries
       const calculatedTotalContentWidth = numCols * cellSize;
       const calculatedTotalContentHeight = numRows * cellSize;
       const borderWidthForOrigin = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
@@ -502,20 +534,16 @@ export default function BattleGrid({
       const absoluteContentMinX = 0 - paddingForOrigin;
       const absoluteContentMinY = 0 - paddingForOrigin;
       
-      // Max values for viewBox's minX and minY (top-left corner of viewBox)
-      // The viewBox cannot move its top-left beyond where its bottom-right would pass the content's bottom-right
       const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
       const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
 
-      // Min values for viewBox's minX and minY are simply the content's minX and minY
       const min_vb_min_x = absoluteContentMinX;
       const min_vb_min_y = absoluteContentMinY;
       
       let finalNewVx = newCandidateVx;
-      // If content is narrower than or same width as the current viewBox (e.g. after extreme zoom out), center it.
       if (absoluteContentWidth <= currentVbWidth) { 
          finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
-      } else { // Otherwise, clamp within content boundaries
+      } else { 
          finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
@@ -531,6 +559,7 @@ export default function BattleGrid({
       setHoveredCellWhilePaintingOrErasing(null);
 
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
+      if (popoverOpen) setPopoverOpen(false);
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
       const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
@@ -607,19 +636,44 @@ export default function BattleGrid({
   };
 
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (draggingToken && mouseDownPos && activeTool === 'select' && !editingTokenId) {
+      const currentMouseSvgPos = getMousePosition(event);
+      const dx = currentMouseSvgPos.x - mouseDownPos.x;
+      const dy = currentMouseSvgPos.y - mouseDownPos.y;
+      const distanceSquared = dx * dx + dy * dy;
+
+      if (distanceSquared < CLICK_THRESHOLD_SQUARED) {
+        // It's a click
+        setActivePopoverToken(draggingToken);
+        if (popoverTriggerRef.current) {
+            popoverTriggerRef.current.style.position = 'fixed';
+            popoverTriggerRef.current.style.left = `${event.clientX}px`;
+            popoverTriggerRef.current.style.top = `${event.clientY}px`;
+        }
+        setPopoverOpen(true);
+        setDraggingToken(null); 
+        setDragOffset(null);
+        setDraggingTokenPosition(null);
+      } else if (draggingTokenPosition) { 
+        onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+        setDraggingToken(null);
+        setDragOffset(null);
+        setDraggingTokenPosition(null);
+      } else { // Drag didn't result in a move to a new cell, but was a drag
+        setDraggingToken(null);
+        setDragOffset(null);
+        setDraggingTokenPosition(null);
+      }
+    } else if (draggingToken) { // Ensure draggingToken is cleared if conditions not met
+        setDraggingToken(null);
+        setDragOffset(null);
+        setDraggingTokenPosition(null);
+    }
+    setMouseDownPos(null);
+
     if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
-    }
-    if (draggingToken && activeTool === 'select' && !editingTokenId) {
-      if (draggingTokenPosition) { 
-        const finalX = Math.max(0, Math.min(draggingTokenPosition.x, numCols - 1));
-        const finalY = Math.max(0, Math.min(draggingTokenPosition.y, numRows - 1));
-        onTokenMove(draggingToken.id, finalX, finalY);
-      }
-      setDraggingToken(null);
-      setDragOffset(null);
-      setDraggingTokenPosition(null);
     }
     if (draggingTextObjectId) {
         setDraggingTextObjectId(null);
@@ -664,6 +718,16 @@ export default function BattleGrid({
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
     }
+    // If dragging a token and mouse leaves, finalize the drag or cancel
+    if (draggingToken) {
+        if (draggingTokenPosition) {
+             onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+        }
+        setDraggingToken(null);
+        setDragOffset(null);
+        setDraggingTokenPosition(null);
+        setMouseDownPos(null);
+    }
   };
 
   const applyZoom = (zoomIn: boolean, customScaleAmount?: number) => {
@@ -684,29 +748,25 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
     }
 
-    // Absolute content dimensions (full 40x40 grid)
     const calculatedTotalContentWidth = numCols * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const absoluteContentWidth = calculatedTotalContentWidth + currentBorderWidth;
-    const absoluteContentHeight = (numRows * cellSize) + currentBorderWidth; // Ensure this matches absoluteContentWidth's derivation for consistency
+    const absoluteContentHeight = (numRows * cellSize) + currentBorderWidth; 
     const absoluteContentMinX = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
     const absoluteContentMinY = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
 
-    // Max zoom out: viewBox width equals total content width.
-    // Min zoom in: viewBox width is 1/10th of total content width.
     const maxAllowedVw = absoluteContentWidth;
     const minAllowedVw = absoluteContentWidth / 10; 
     
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
 
     if (vw !== 0) { newVh = (newVw / vw) * vh; } 
-    else { newVh = (numRows / numCols) * newVw; } // Should not happen if vw is clamped
+    else { newVh = (numRows / numCols) * newVw; } 
 
 
     let newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
     let newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
     
-    // Clamp zoomed viewBox
     if (newVw >= absoluteContentWidth) {
         newVx = absoluteContentMinX + (absoluteContentWidth - newVw) / 2;
     } else {
@@ -723,7 +783,7 @@ export default function BattleGrid({
   };
 
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
-    if (editingTokenId || isCreatingText) return; 
+    if (editingTokenId || isCreatingText || popoverOpen) return; 
     event.preventDefault();
     applyZoom(event.deltaY < 0, ZOOM_AMOUNT); 
   };
@@ -742,8 +802,11 @@ export default function BattleGrid({
 
  const getCursorStyle = () => {
     if (editingTokenId || isCreatingText) return 'cursor-text';
-    if (isPanning || (draggingToken && activeTool === 'select') || draggingTextObjectId) return 'cursor-grabbing';
-    if (activeTool === 'select' && !draggingToken && !draggingTextObjectId) return 'cursor-default'; 
+    if (isPanning) return 'cursor-grabbing';
+    if (draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
+    if (activeTool === 'select' && !draggingToken && !isPanning && hoveredTokenId && !popoverOpen) return 'cursor-pointer';
+    if (activeTool === 'select' && !draggingToken && !isPanning) return 'cursor-default';
+    if (draggingTextObjectId) return 'cursor-grabbing';
     if (activeTool === 'type_tool') return 'cursor-text';
     if ([
       'paint_cell', 'place_token', 'measure_distance', 'measure_radius',
@@ -785,19 +848,10 @@ export default function BattleGrid({
         {backgroundImageUrl && (
           <image
             href={backgroundImageUrl}
-            x={imgScaledX} // These X,Y,Width,Height are for the <image> element itself, relative to its parent <svg>
-            y={imgScaledY} // They are NOT viewBox coordinates directly unless the viewBox is 0,0,width,height
+            x={imgScaledX}
+            y={imgScaledY}
             width={imgScaledWidth}
             height={imgScaledHeight}
-            // The image element's own coordinate system starts at 0,0 within the SVG canvas.
-            // To make it fill the grid content area (before viewBox transformations):
-            // x={0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0)}
-            // y={0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0)}
-            // width={(numCols*cellSize) + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)}
-            // height={(numRows*cellSize) + (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0)}
-            // However, the current approach of scaling based on backgroundZoomLevel centered on gridContentWidth/Height
-            // is simpler if backgroundZoomLevel is the primary control.
-            // The viewBox handles what portion of this potentially larger/smaller image is seen.
           />
         )}
 
@@ -902,8 +956,8 @@ export default function BattleGrid({
               onMouseEnter={() => setHoveredTokenId(token.id)}
               onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
-                activeTool === 'select' && !isCurrentlyEditing && 'cursor-grab',
-                draggingToken?.id === token.id && !isCurrentlyEditing && 'cursor-grabbing',
+                activeTool === 'select' && !isCurrentlyEditing && !draggingToken && !popoverOpen && 'cursor-pointer',
+                activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditing && 'cursor-grabbing',
                 isCurrentlyEditing && 'cursor-text', 
                 'drop-shadow-md' 
               )}
@@ -916,12 +970,19 @@ export default function BattleGrid({
                 stroke={
                   isTokenActiveTurn
                     ? 'hsl(var(--ring))' 
-                    : hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing
+                    : hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditing && !popoverOpen
                       ? 'hsl(var(--accent))' 
                       : 'hsl(var(--primary-foreground))' 
                 }
                 strokeWidth={isTokenActiveTurn ? 3 : 1} 
-                onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
+                onClick={(e) => { 
+                  if (!isCurrentlyEditing && activeTool === 'select' && !draggingToken && !popoverOpen) {
+                    // Click logic is handled in handleMouseUp to distinguish from drag
+                  } else if (!isCurrentlyEditing && activeTool === 'select' && popoverOpen) {
+                     // If popover is open, clicking token might close it (handled by Popover's onOpenChange)
+                     // or interact with popover content. This specific onClick might not be needed here.
+                  }
+                }}
               />
               {token.customImageUrl ? (
                 <>
@@ -932,7 +993,6 @@ export default function BattleGrid({
                     width={imageDisplaySize}
                     height={imageDisplaySize}
                     clipPath={`url(#clip-${token.id})`}
-                    onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
                     className={cn(!isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none")}
                   />
                    <circle
@@ -953,7 +1013,6 @@ export default function BattleGrid({
                   height={iconDisplaySize}
                   color={'hsl(var(--primary-foreground))'} 
                   strokeWidth={1.5}
-                  onClick={(e) => { if (!isCurrentlyEditing && activeTool === 'select') handleTokenLabelClick(e, token);}}
                   className={cn(
                     !isCurrentlyEditing && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none"
                   )}
@@ -974,10 +1033,10 @@ export default function BattleGrid({
                   paintOrder="stroke" 
                   filter="url(#blurryTextDropShadow)" 
                   className={cn(
-                    activeTool === 'select' ? "cursor-text" : "cursor-default", 
+                    activeTool === 'select' && !popoverOpen ? "cursor-text" : "cursor-default", 
                     "select-none" 
                   )}
-                  onClick={(e) => handleTokenLabelClick(e, token)}
+                  onClick={(e) => {if(!popoverOpen) handleTokenLabelClick(e, token)}}
                 >
                   {token.instanceName}
                 </text>
@@ -1141,8 +1200,92 @@ export default function BattleGrid({
              fill="hsl(var(--accent))"
            />
          )}
-
       </svg>
+
+      <Popover open={popoverOpen} onOpenChange={(isOpen) => {
+          setPopoverOpen(isOpen);
+          if (!isOpen) setActivePopoverToken(null);
+        }}>
+        <PopoverTrigger asChild>
+            <button
+                ref={popoverTriggerRef}
+                style={{
+                    position: 'fixed',
+                    opacity: 0,
+                    pointerEvents: 'none',
+                    width: '1px', height: '1px',
+                    // Dynamic position will be applied here by handleMouseUp
+                }}
+                aria-hidden="true"
+            />
+        </PopoverTrigger>
+        {activePopoverToken && (
+            <PopoverContent 
+                side="bottom" 
+                align="center" 
+                className="w-48 p-1 z-[60]" // Ensure popover is above other elements
+                onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing
+            >
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                  onClick={() => {
+                    if (activePopoverToken) {
+                        setEditingTokenId(activePopoverToken.id);
+                        setEditingText(activePopoverToken.instanceName || '');
+                        setPopoverOpen(false);
+                    }
+                  }}
+                >
+                  <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                  onClick={() => {
+                    if (activePopoverToken) {
+                        onTokenImageChangeRequest(activePopoverToken.id);
+                        setPopoverOpen(false);
+                    }
+                  }}
+                >
+                  <ImageIcon className="mr-2 h-3.5 w-3.5" /> Change Image
+                </Button>
+                <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost"className="w-full justify-start h-8 px-2 text-sm text-destructive hover:text-destructive flex items-center">
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {activePopoverToken?.instanceName || 'Token'}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will remove the token from the grid.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setIsDeleteAlertOpen(false)}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          if (activePopoverToken) {
+                            onTokenDelete(activePopoverToken.id);
+                            setPopoverOpen(false);
+                            setIsDeleteAlertOpen(false);
+                          }
+                        }}
+                        className={buttonVariants({ variant: "destructive" })}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            </PopoverContent>
+        )}
+      </Popover>
+
+
       <TooltipProvider delayDuration={0}>
         <div className="absolute bottom-4 right-4 flex flex-col space-y-2 z-10">
           <Tooltip>
@@ -1187,4 +1330,3 @@ export default function BattleGrid({
     </div>
   );
 }
-

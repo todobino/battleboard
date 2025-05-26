@@ -116,6 +116,8 @@ export interface BattleGridProps {
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
   activeTokenId?: string | null;
   currentTextFontSize: number; // Font size for new text objects
+  onTokenDelete: (tokenId: string) => void;
+  onTokenImageChangeRequest: (tokenId: string) => void;
 }
 
 // For Undo/Redo functionality

@@ -11,6 +11,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/compo
 import { Button } from '@/components/ui/button';
 import { LandPlot, UserPlus, CirclePlay, CircleX, Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ImageCropDialog from '@/components/image-crop-dialog';
 
 import {
   Dialog,
@@ -81,6 +82,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [history, setHistory] = useState<UndoableState[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
   const isUndoRedoOperation = useRef<boolean>(false);
+
+  // State for changing a specific token's image
+  const [tokenToChangeImage, setTokenToChangeImage] = useState<string | null>(null);
+  const [uncroppedTokenImageSrc, setUncroppedTokenImageSrc] = useState<string | null>(null);
+  const [isTokenCropDialogOpen, setIsTokenCropDialogOpen] = useState(false);
+
 
   const getCurrentUndoableState = useCallback((): UndoableState => {
     return JSON.parse(JSON.stringify({
@@ -257,7 +264,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             setTokens(prevTokens =>
                 prevTokens.map(token =>
                     token.id === participant.tokenId
-                        ? { ...token, customImageUrl: newImageUrl, icon: undefined, label: 'Custom' }
+                        ? { ...token, customImageUrl: newImageUrl, icon: undefined, label: token.label || 'Custom' }
                         : token
                 )
             );
@@ -286,6 +293,43 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return prevParticipants; 
     });
   }, []);
+
+  const handleTokenDelete = useCallback((tokenId: string) => {
+    setTokens(prev => prev.filter(t => t.id !== tokenId));
+    setParticipants(prev => {
+      const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
+      // If a participant was auto-created with a token and now has no token, consider removing them
+      // This example keeps them but unlinks. You might want to filter them out based on some logic.
+      return newParticipants;
+    });
+    toast({ title: "Token Deleted" });
+  }, [toast]);
+
+  const handleRequestTokenImageChange = useCallback((tokenId: string) => {
+    setTokenToChangeImage(tokenId); // Set this first!
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                toast({ title: "Upload Error", description: "Image file size exceeds 2MB limit.", variant: "destructive" });
+                setTokenToChangeImage(null); // Reset if upload fails early
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setUncroppedTokenImageSrc(reader.result as string);
+                setIsTokenCropDialogOpen(true); // This will open the ImageCropDialog
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setTokenToChangeImage(null); // Reset if no file selected
+        }
+    };
+    fileInput.click();
+  }, [toast]);
 
 
   const handleStartCombat = () => {
@@ -546,6 +590,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             measurement={measurement} setMeasurement={setMeasurement}
             activeTokenId={activeTokenId}
             currentTextFontSize={currentTextFontSize}
+            onTokenDelete={handleTokenDelete}
+            onTokenImageChangeRequest={handleRequestTokenImageChange}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -563,6 +609,33 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             defaultBattlemaps={defaultBattlemaps}
           />
       </div>
+
+      {uncroppedTokenImageSrc && tokenToChangeImage && (
+        <ImageCropDialog
+          isOpen={isTokenCropDialogOpen}
+          onOpenChange={setIsTokenCropDialogOpen}
+          imageSrc={uncroppedTokenImageSrc}
+          onCropConfirm={(croppedDataUrl) => {
+            if (tokenToChangeImage) {
+              setTokens(prev => prev.map(t => t.id === tokenToChangeImage ? { ...t, customImageUrl: croppedDataUrl, icon: undefined, label: t.label || 'Custom' } : t));
+              // Also update participant image if linked (though initiative tracker shows token directly)
+              const linkedParticipant = participants.find(p => p.tokenId === tokenToChangeImage);
+              if (linkedParticipant) {
+                // If you store image URLs on participants, update here. Otherwise, relying on token is fine.
+              }
+              toast({ title: "Token Image Updated" });
+            }
+            setIsTokenCropDialogOpen(false);
+            setUncroppedTokenImageSrc(null);
+            setTokenToChangeImage(null);
+          }}
+          onCropCancel={() => {
+            setIsTokenCropDialogOpen(false);
+            setUncroppedTokenImageSrc(null);
+            setTokenToChangeImage(null);
+          }}
+        />
+      )}
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
