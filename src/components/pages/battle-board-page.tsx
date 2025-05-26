@@ -151,10 +151,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const newSnapshot = getCurrentUndoableState();
 
-    if (history[historyPointer] && JSON.stringify(newSnapshot) === JSON.stringify(history[historyPointer])) {
+    // Prevent adding identical state to history
+    const currentHistoryState = history[historyPointer];
+    if (currentHistoryState && JSON.stringify(newSnapshot) === JSON.stringify(currentHistoryState)) {
         return;
     }
-
+    
     const newHistoryBase = history.slice(0, historyPointer + 1);
     const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
 
@@ -180,23 +182,25 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const handleUndo = useCallback(() => {
     if (historyPointer <= 0) {
+      toast({ title: "Nothing to undo", duration: 2000 });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer - 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-  }, [history, historyPointer]);
+  }, [history, historyPointer, toast]);
 
   const handleRedo = useCallback(() => {
     if (historyPointer >= history.length - 1 || historyPointer < 0) {
+      toast({ title: "Nothing to redo", duration: 2000 });
       return;
     }
     isUndoRedoOperation.current = true;
     const newPointer = historyPointer + 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-  }, [history, historyPointer]);
+  }, [history, historyPointer, toast]);
 
   // Global keydown listener for Undo/Redo and Escape
   useEffect(() => {
@@ -342,34 +346,32 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setTokens(prev => prev.filter(t => t.id !== tokenId));
     setParticipants(prev => {
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
-      // If a participant was auto-created with a token and now has no token, consider removing them
-      // This example keeps them but unlinks. You might want to filter them out based on some logic.
       return newParticipants;
     });
     toast({ title: "Token Deleted" });
   }, [toast]);
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
-    setTokenToChangeImage(tokenId); // Set this first!
+    setTokenToChangeImage(tokenId); 
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
     fileInput.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            if (file.size > 2 * 1024 * 1024) { 
                 toast({ title: "Upload Error", description: "Image file size exceeds 2MB limit.", variant: "destructive" });
-                setTokenToChangeImage(null); // Reset if upload fails early
+                setTokenToChangeImage(null); 
                 return;
             }
             const reader = new FileReader();
             reader.onloadend = () => {
                 setUncroppedTokenImageSrc(reader.result as string);
-                setIsTokenCropDialogOpen(true); // This will open the ImageCropDialog
+                setIsTokenCropDialogOpen(true); 
             };
             reader.readAsDataURL(file);
         } else {
-            setTokenToChangeImage(null); // Reset if no file selected
+            setTokenToChangeImage(null); 
         }
     };
     fileInput.click();
@@ -415,12 +417,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const handleAddParticipantToList = useCallback((
     participantData: Omit<Participant, 'id' | 'tokenId'>,
-    explicitTokenId?: string // New param
+    explicitTokenId?: string 
   ) => {
     const participantName = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId;
 
-    if (!finalTokenId) { // Only create new token if one is not being explicitly assigned
+    if (!finalTokenId) { 
       const template = tokenTemplates.find(t => t.type === participantData.type);
       if (template) {
         const middleX = Math.floor(GRID_COLS / 2);
@@ -487,11 +489,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newList;
     });
-
-    if (participantToRemove?.tokenId) {
-      // Do not delete the token if it was assigned, only unlink
-      // setTokens(prevTokens => prevTokens.filter(t => t.id !== participantToRemove.tokenId));
-    }
   };
 
   useEffect(() => {
@@ -539,9 +536,21 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       
       if (selectedAssignedTokenId) {
         handleAddParticipantToList(newParticipantData, selectedAssignedTokenId);
-        setTokens(prevTokens => prevTokens.map(t =>
-          t.id === selectedAssignedTokenId ? { ...t, instanceName: finalName } : t
-        ));
+        
+        const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
+
+        setTokens(prevTokens => prevTokens.map(t => {
+          if (t.id === selectedAssignedTokenId) {
+            return {
+              ...t,
+              instanceName: finalName,
+              type: newParticipantType,
+              ...(newTypeTemplate && { color: newTypeTemplate.color }),
+              ...(newTypeTemplate && { icon: t.customImageUrl ? undefined : newTypeTemplate.icon }),
+            };
+          }
+          return t;
+        }));
       } else {
         handleAddParticipantToList(newParticipantData);
       }
@@ -865,6 +874,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
