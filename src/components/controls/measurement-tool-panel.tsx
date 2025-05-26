@@ -31,10 +31,8 @@ export default function MeasurementToolPanel({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center text-lg font-semibold mb-3 text-popover-foreground">
-        <Ruler className="mr-2 h-5 w-5" /> Measurement Tools
-      </div>
+    <div className="space-y-4"> {/* Removed p-4 */}
+      {/* Removed title section */}
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant={activeTool === 'measure_distance' ? "default" : "outline"}
@@ -68,3 +66,4 @@ export default function MeasurementToolPanel({
     </div>
   );
 }
+
