@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog'; // Added WelcomeDialog import
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, UserPlus, CirclePlay, Plus, Minus, ArrowRight } from 'lucide-react'; // Changed CircleArrowRight to ArrowRight, removed CircleX
+import { LandPlot, Plus, Minus, ArrowRight } from 'lucide-react'; // Removed UserPlus, CirclePlay, CircleX
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 
@@ -676,7 +676,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           <div className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="w-full"> <UserPlus className="mr-2 h-4 w-4" /> Add Combatant </Button>
+                <Button className="w-full"> Add Combatant </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -716,7 +716,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 onClick={handleStartCombat} 
                 className="w-full bg-[hsl(var(--player-green-bg))] hover:bg-[hsl(var(--player-green-hover-bg))] text-[hsl(var(--player-green-foreground))]"
               > 
-                <CirclePlay className="mr-2 h-4 w-4" /> Start Combat 
+                Start Combat 
               </Button>
             ) : (
               <div className="flex gap-2">
