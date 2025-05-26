@@ -70,14 +70,17 @@ export default function BattleGrid({
 
   const numRows = gridCells.length;
   const numCols = gridCells.length > 0 ? gridCells[0].length : 0;
+  const cellSize = DEFAULT_CELL_SIZE; // Keep cellSize constant
 
   const [viewBox, setViewBox] = useState(() => {
-    const initialContentWidth = numCols * DEFAULT_CELL_SIZE;
-    const initialContentHeight = numRows * DEFAULT_CELL_SIZE;
-    const currentBorderWidth = BORDER_WIDTH_WHEN_VISIBLE; // Assume grid lines initially visible for padding calc
-    const padding = currentBorderWidth / 2;
-    return `${0 - padding} ${0 - padding} ${initialContentWidth + currentBorderWidth} ${initialContentHeight + currentBorderWidth}`;
+    const initialContentWidth = numCols * cellSize;
+    const initialContentHeight = numRows * cellSize;
+    // Use a fixed border width for initial calculation or rely on showGridLines default
+    const initialBorderWidth = BORDER_WIDTH_WHEN_VISIBLE;
+    const padding = initialBorderWidth / 2;
+    return `${0 - padding} ${0 - padding} ${initialContentWidth + initialBorderWidth} ${initialContentHeight + initialBorderWidth}`;
   });
+
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
 
@@ -102,12 +105,9 @@ export default function BattleGrid({
   const [draggingTextObjectId, setDraggingTextObjectId] = useState<string | null>(null);
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
 
-
-  const cellSize = DEFAULT_CELL_SIZE;
-
    useEffect(() => {
-    // This effect primarily centers the viewbox if it's showing the entire grid content.
-    // It might need adjustments if complex panning/zooming has occurred.
+    // This effect ensures the viewbox is reset to show the entire grid content
+    // when the grid dimensions, grid lines visibility, or background image changes.
     const contentWidth = numCols * cellSize;
     const contentHeight = numRows * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
@@ -118,21 +118,8 @@ export default function BattleGrid({
     const expectedVw = contentWidth + currentBorderWidth;
     const expectedVh = contentHeight + currentBorderWidth;
 
-    setViewBox(currentVbString => {
-      const currentVbParts = currentVbString.split(' ').map(Number);
-      // Check if current viewbox matches the 'fully zoomed out to content' dimensions
-      const isFullyZoomedToContent = Math.abs(currentVbParts[0] - expectedMinX) < 1e-3 &&
-                                   Math.abs(currentVbParts[1] - expectedMinY) < 1e-3 &&
-                                   Math.abs(currentVbParts[2] - expectedVw) < 1e-3 &&
-                                   Math.abs(currentVbParts[3] - expectedVh) < 1e-3;
-
-      if (isFullyZoomedToContent) {
-           return currentVbString; // Already centered and fitting content
-      }
-      // More complex logic might be needed if trying to re-center after arbitrary pan/zoom
-      return currentVbString;
-    });
-  }, [showGridLines, cellSize, numCols, numRows]);
+    setViewBox(`${expectedMinX} ${expectedMinY} ${expectedVw} ${expectedVh}`);
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl]); // Added backgroundImageUrl
 
   useEffect(() => {
     if (editingTokenId && foreignObjectInputRef.current) {
@@ -670,7 +657,7 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
     }
 
-    const baseContentWidth = numCols * cellSize; // Use numCols
+    const baseContentWidth = numCols * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
 
     const minAllowedVw = baseContentWidth / 10; 
@@ -678,7 +665,7 @@ export default function BattleGrid({
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
     if (vw !== 0) { newVh = (newVw / vw) * vh; } 
-    else { newVh = (numRows / numCols) * newVw; } // Maintain aspect ratio based on grid dimensions if vw is 0
+    else { newVh = (numRows / numCols) * newVw; }
 
 
     const newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
@@ -1143,5 +1130,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
-    
