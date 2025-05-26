@@ -4,7 +4,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { ActiveTool, Measurement } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Ruler, Circle } from 'lucide-react'; // Changed Maximize to Circle, Ruler kept for now
+import { Ruler, Radius } from 'lucide-react'; // Changed Circle to Radius
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +44,7 @@ export default function MeasurementToolPanel({
           variant={activeTool === 'measure_radius' ? "default" : "outline"}
           onClick={() => handleToolSelect('measure_radius')}
         >
-          <Circle className="mr-2 h-4 w-4" /> Radius
+          <Radius className="mr-2 h-4 w-4" /> Radius {/* Changed icon here */}
         </Button>
       </div>
       {(activeTool === 'measure_distance' || activeTool === 'measure_radius') && (
