@@ -73,6 +73,8 @@ export interface DrawnShape {
   color: string; // Stroke color for line, border color for circle/square
   fillColor?: string; // Fill color for circle/square
   strokeWidth: number;
+  label?: string; // Optional text label for the shape
+  opacity?: number; // Optional opacity for the shape (0 to 1)
 }
 
 export interface TextObjectType {
