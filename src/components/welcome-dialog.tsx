@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Fingerprint, Grid2x2, MousePointerSquareDashed, Palette, Sword, Users } from 'lucide-react';
+import { Zap, Grid2x2, MousePointerSquareDashed, Palette, Sword, Users } from 'lucide-react'; // Changed Fingerprint to Zap
 
 interface WelcomeDialogProps {
   isOpen: boolean;
@@ -58,17 +58,17 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[650px] p-0 max-h-[90vh] flex flex-col" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader className="p-6 pb-4 border-b border-border">
-          <DialogTitle className="text-2xl font-bold flex items-center">
+      <DialogContent data-welcome={true} className="sm:max-w-[650px] p-0 max-h-[90vh] flex flex-col" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader data-welcome-header={true} className="p-6 pb-4 border-b border-border">
+          <DialogTitle data-welcome-title={true} className="text-2xl font-bold flex items-center">
             <Sword className="h-7 w-7 mr-3 text-primary" /> Welcome to the Battle Board!
           </DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription data-welcome-description={true} className="text-sm">
             Your digital tabletop awaits! Here’s a quick guide to get you started on your epic adventures.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow overflow-y-auto px-6 py-4">
+        <ScrollArea data-welcome-scroll-area={true} className="flex-grow overflow-y-auto px-6 py-4">
           <div className="space-y-4">
             <FeatureSection
               icon={MousePointerSquareDashed}
@@ -103,7 +103,7 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
               imageAlt="Drawing tools placeholder"
             />
              <FeatureSection
-              icon={Fingerprint}
+              icon={Zap} // Icon changed here
               title="Track Initiative"
               description="The right sidebar is your Initiative Tracker. Add combatants, set their initiative, HP, and AC. Start combat to cycle through turns and manage rounds."
               imageUrl="https://placehold.co/300x150.png"
@@ -113,7 +113,7 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-6 pt-4 border-t border-border">
+        <DialogFooter data-welcome-footer={true} className="p-6 pt-4 border-t border-border">
           <Button
             onClick={onClose}
             size="lg"
