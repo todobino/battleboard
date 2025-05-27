@@ -166,6 +166,8 @@ export default function BattleGrid({
   selectedTokenId, setSelectedTokenId,
   selectedShapeId, setSelectedShapeId,
   selectedTextObjectId, setSelectedTextObjectId,
+  tokenIdToFocus, // New prop
+  onFocusHandled, // New prop
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const { toast } = useToast();
@@ -506,6 +508,48 @@ export default function BattleGrid({
     }
   }, [activeTool, editingTokenId, handleSaveTokenName, editingTextObjectId, handleFinalizeTextEdit, editingShapeId, handleSaveShapeLabel, isCreatingText, finalizeTextCreation, setSelectedTokenId, setSelectedShapeId, setSelectedTextObjectId]);
 
+  useEffect(() => {
+    if (tokenIdToFocus && svgRef.current) {
+      const token = tokens.find(t => t.id === tokenIdToFocus);
+      if (token) {
+        const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
+        
+        const tokenSvgX = token.x * cellSize + (token.size || 1) * cellSize / 2;
+        const tokenSvgY = token.y * cellSize + (token.size || 1) * cellSize / 2;
+
+        let newVx = tokenSvgX - currentVw / 2;
+        let newVy = tokenSvgY - currentVh / 2;
+
+        // Use existing clamping logic from pan/zoom to keep view within bounds
+        const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+        const svgPadding = currentBorderWidth / 2;
+        const absoluteContentMinX = 0 - svgPadding;
+        const absoluteContentMinY = 0 - svgPadding;
+        const absoluteContentWidth = numCols * cellSize + currentBorderWidth;
+        const absoluteContentHeight = numRows * cellSize + currentBorderWidth;
+
+        if (currentVw >= absoluteContentWidth) {
+          newVx = absoluteContentMinX + (absoluteContentWidth - currentVw) / 2;
+        } else {
+          newVx = Math.max(absoluteContentMinX, Math.min(newVx, absoluteContentMinX + absoluteContentWidth - currentVw));
+        }
+
+        if (currentVh >= absoluteContentHeight) {
+          newVy = absoluteContentMinY + (absoluteContentHeight - currentVh) / 2;
+        } else {
+          newVy = Math.max(absoluteContentMinY, Math.min(newVy, absoluteContentMinY + absoluteContentHeight - currentVh));
+        }
+        
+        setViewBox(`${newVx} ${newVy} ${currentVw} ${currentVh}`);
+        if (onFocusHandled) {
+          onFocusHandled();
+        }
+      } else if (onFocusHandled) { // If token not found, still call onFocusHandled to clear focus state
+        onFocusHandled();
+      }
+    }
+  }, [tokenIdToFocus, tokens, viewBox, cellSize, numCols, numRows, showGridLines, setViewBox, onFocusHandled]);
+
 
   const eraseContentAtCell = (gridX: number, gridY: number) => {
     // Remove cell color
@@ -655,8 +699,8 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
 
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Select on single click
-            setSelectedTokenId(null); setSelectedShapeId(null);
+            // setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Don't select on single click with type tool
+            // setSelectedTokenId(null); setSelectedShapeId(null);
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 // Double-click: start editing
@@ -664,7 +708,7 @@ export default function BattleGrid({
                 setEditingTextObjectContent(clickedTextObjectForInteraction.content);
                 setLastTextClickInfo({ id: null, time: 0 }); // Reset for next double-click
             } else {
-                // Single-click: update last click info
+                // Single-click: update last click info, but do nothing else
                 setLastTextClickInfo({ id: clickedTextObjectForInteraction.id, time: currentTime });
             }
             return; // Prevent new text creation
@@ -796,8 +840,8 @@ export default function BattleGrid({
             endPoint: startP,
             color: 'hsl(var(--accent))',
             fillColor: 'hsl(var(--accent))',
-            strokeWidth: 1, // Default stroke for filled shapes
-            opacity: 0.5, // Default opacity for filled shapes
+            strokeWidth: 1, 
+            opacity: 0.5, 
           });
         }
         break;
@@ -993,12 +1037,12 @@ export default function BattleGrid({
 
       const absoluteContentMinX = 0 - paddingForOrigin;
       const absoluteContentMinY = 0 - paddingForOrigin;
-      const absoluteContentWidth = calculatedTotalContentWidth + borderWidthForOrigin;
-      const absoluteContentHeight = calculatedTotalContentHeight + borderWidthForOrigin;
+      const absoluteContentWidthWithBorder = calculatedTotalContentWidth + borderWidthForOrigin;
+      const absoluteContentHeightWithBorder = calculatedTotalContentHeight + borderWidthForOrigin;
 
       // Max values for viewBox minX and minY (to prevent panning beyond content)
-      const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
-      const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
+      const max_vb_min_x = absoluteContentMinX + absoluteContentWidthWithBorder - currentVbWidth;
+      const max_vb_min_y = absoluteContentMinY + absoluteContentHeightWithBorder - currentVbHeight;
 
       // Min values for viewBox minX and minY (should be absolute content origin)
       const min_vb_min_x = absoluteContentMinX;
@@ -1007,16 +1051,16 @@ export default function BattleGrid({
       // Clamp new viewBox position
       let finalNewVx = newCandidateVx;
       // If content is narrower than viewBox (zoomed out too far), center it
-      if (absoluteContentWidth <= currentVbWidth) {
-         finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
+      if (absoluteContentWidthWithBorder <= currentVbWidth) {
+         finalNewVx = absoluteContentMinX + (absoluteContentWidthWithBorder - currentVbWidth) / 2;
       } else {
          finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
       let finalNewVy = newCandidateVy;
       // If content is shorter than viewBox, center it
-      if (absoluteContentHeight <= currentVbHeight) {
-        finalNewVy = absoluteContentMinY + (absoluteContentHeight - currentVbHeight) / 2;
+      if (absoluteContentHeightWithBorder <= currentVbHeight) {
+        finalNewVy = absoluteContentMinY + (absoluteContentHeightWithBorder - currentVbHeight) / 2;
       } else {
         finalNewVy = Math.max(min_vb_min_y, Math.min(newCandidateVy, max_vb_min_y));
       }
@@ -1440,6 +1484,8 @@ export default function BattleGrid({
     setDrawnShapes(prev => prev.map(s => {
       if (s.id === shapeId && s.type === 'circle') {
         // Update endPoint based on new radius, keeping startPoint (center) fixed
+        // To maintain circle shape, only one component of endPoint relative to startPoint needs to change by radius.
+        // Example: endPoint.x = startPoint.x + radius, endPoint.y = startPoint.y
         return { ...s, endPoint: { x: s.startPoint.x + newRadiusInPixels, y: s.startPoint.y } };
       }
       return s;
@@ -2107,7 +2153,7 @@ export default function BattleGrid({
                               "w-full justify-start h-8 px-2 text-sm flex items-center",
                               "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           )}
-                          // onClick={() => setRightClickPopoverState(null)} // Close popover when opening alert
+                          onClick={() => setRightClickPopoverState(null)} // Close popover when opening alert
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                       </Button>
@@ -2120,12 +2166,11 @@ export default function BattleGrid({
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel onClick={()=> { setIsDeleteAlertOpen(false); setRightClickPopoverState(null);}}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel onClick={()=> { setIsDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
                             onTokenDelete(rightClickPopoverState.item.id);
                             setIsDeleteAlertOpen(false);
-                            setRightClickPopoverState(null); // Close popover after action
                             setSelectedTokenId(null); // Deselect
                           }}
                           className={buttonVariants({ variant: "destructive" })}
@@ -2160,6 +2205,7 @@ export default function BattleGrid({
                                     "w-full justify-start h-8 px-2 text-sm flex items-center",
                                     "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                                 )}
+                               onClick={() => setRightClickPopoverState(null)}
                             >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Text
                             </Button>
@@ -2172,12 +2218,11 @@ export default function BattleGrid({
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                 <AlertDialogCancel onClick={()=> {setTextObjectDeleteAlertOpen(false); setRightClickPopoverState(null);}}>Cancel</AlertDialogCancel>
+                                 <AlertDialogCancel onClick={()=> {setTextObjectDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={() => {
                                         setTextObjects(prev => prev.filter(to => to.id !== rightClickPopoverState.item.id));
                                         setTextObjectDeleteAlertOpen(false);
-                                        setRightClickPopoverState(null); // Close popover
                                         setSelectedTextObjectId(null); // Deselect
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
@@ -2192,7 +2237,6 @@ export default function BattleGrid({
 
               {rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
                 <div className="w-60 p-2 space-y-2"> {/* Wider for shape controls */}
-                    {/* Opacity Controls for Circles and Rectangles */}
                     {(rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
                          <div className="space-y-1 pt-1">
                             <Label className="text-xs">Shape Opacity</Label>
@@ -2214,7 +2258,6 @@ export default function BattleGrid({
                         </div>
                     )}
 
-                    {/* Radius Controls for Circles */}
                     {rightClickPopoverState.item.type === 'circle' && (
                         <div className="space-y-1 pt-1">
                             <Label htmlFor={`shape-radius-input-${rightClickPopoverState.item.id}`} className="text-xs flex items-center">
@@ -2266,7 +2309,6 @@ export default function BattleGrid({
                             </div>
                         </div>
                     )}
-                    {/* Add/Edit Label Button - Moved to bottom */}
                      <Button
                         variant="ghost"
                         className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" // !mt-3 to ensure margin
@@ -2279,7 +2321,6 @@ export default function BattleGrid({
                     >
                         <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
                     </Button>
-                    {/* Delete Shape Button */}
                     <AlertDialog open={shapeDeleteAlertOpen} onOpenChange={setShapeDeleteAlertOpen}>
                         <AlertDialogTrigger asChild>
                             <Button
@@ -2288,6 +2329,7 @@ export default function BattleGrid({
                                     "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", // Ensure spacing
                                     "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                                 )}
+                                onClick={() => setRightClickPopoverState(null)}
                             >
                                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
                             </Button>
@@ -2300,12 +2342,11 @@ export default function BattleGrid({
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => {setShapeDeleteAlertOpen(false); setRightClickPopoverState(null);}}>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel onClick={() => {setShapeDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={() => {
                                         setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
                                         setShapeDeleteAlertOpen(false);
-                                        setRightClickPopoverState(null); // Close popover
                                         setSelectedShapeId(null); // Deselect
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}

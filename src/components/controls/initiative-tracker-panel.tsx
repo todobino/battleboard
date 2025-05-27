@@ -48,6 +48,7 @@ export default function InitiativeTrackerPanel({
   onRemoveParticipant,
   onRenameParticipant,
   onChangeParticipantTokenImage,
+  onFocusToken, // New prop
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp;
 
@@ -133,14 +134,21 @@ export default function InitiativeTrackerPanel({
                 const itemIsActive = index === currentParticipantIndex;
                 const token = tokens.find(t => t.id === p.tokenId);
                 const IconComponent = token?.icon;
+                const canFocus = !!p.tokenId && !!onFocusToken;
 
                 return (
                   <li
                     key={p.id}
                     className={cn(
                       "flex flex-col p-2.5 rounded-md transition-colors",
-                      itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50"
+                      itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
+                      canFocus && "cursor-pointer"
                     )}
+                    onClick={() => {
+                      if (canFocus && p.tokenId) {
+                        onFocusToken(p.tokenId);
+                      }
+                    }}
                   >
                     {/* Top Row: Avatar, Name, Trash Icon */}
                     <div className="flex items-center justify-between w-full">
@@ -176,6 +184,7 @@ export default function InitiativeTrackerPanel({
                             size="icon"
                             className="group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
                             aria-label={`Remove ${p.name}`}
+                            onClick={(e) => e.stopPropagation()} // Prevent li onClick from firing
                           >
                             <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
                           </Button>
@@ -232,6 +241,7 @@ export default function InitiativeTrackerPanel({
                             size="icon"
                             className="group/optionsButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
                             aria-label={`Options for ${p.name}`}
+                            onClick={(e) => e.stopPropagation()} // Prevent li onClick from firing
                           >
                             <MoreVertical className="h-4 w-4 text-muted-foreground group-hover/optionsButton:text-primary-foreground" />
                           </Button>

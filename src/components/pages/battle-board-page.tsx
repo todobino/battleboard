@@ -48,7 +48,7 @@ const initialGridCells = (): GridCellData[][] =>
 
 const createInitialSnapshot = (initialState?: Partial<Omit<UndoableState, 'tokens'> & { tokens: Token[] }>): UndoableState => ({
   gridCells: initialState?.gridCells || initialGridCells(),
-  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })),
+  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })), // Icons are stripped for storage
   drawnShapes: initialState?.drawnShapes || [],
   textObjects: initialState?.textObjects || [],
   participants: initialState?.participants || [],
@@ -67,7 +67,7 @@ function isSquareOccupiedLocal(
   return tokens.some(
     (token) =>
       token.id !== excludeTokenId &&
-      Math.floor(token.x) === Math.floor(x) &&
+      Math.floor(token.x) === Math.floor(x) && // Compare floored grid positions
       Math.floor(token.y) === Math.floor(y)
   );
 }
@@ -83,15 +83,18 @@ function findAvailableSquareLocal(
   const checkOccupied = (cx: number, cy: number) =>
     isSquareOccupiedLocal(cx, cy, tokens, numCols, numRows, excludeTokenId);
 
-  if (!checkOccupied(preferredX, preferredY)) {
+  // Check if the preferred square is within bounds and unoccupied
+  if (preferredX >= 0 && preferredX < numCols && preferredY >= 0 && preferredY < numRows &&
+      !checkOccupied(preferredX, preferredY)) {
     return { x: preferredX, y: preferredY };
   }
 
+  // Spiral search for an available square
   let currentX = 0;
   let currentY = 0;
   let dx = 0;
   let dy = -1;
-  const maxSearchRadius = Math.max(numCols, numRows);
+  const maxSearchRadius = Math.max(numCols, numRows); // Max search distance
 
   for (let i = 0; i < Math.pow(maxSearchRadius * 2 + 1, 2); i++) {
     const checkGridX = preferredX + currentX;
@@ -102,13 +105,14 @@ function findAvailableSquareLocal(
         return { x: checkGridX, y: checkGridY };
       }
     }
+    // Spiral logic
     if (currentX === currentY || (currentX < 0 && currentX === -currentY) || (currentX > 0 && currentX === 1 - currentY)) {
-      [dx, dy] = [-dy, dx];
+      [dx, dy] = [-dy, dx]; // Change direction
     }
     currentX += dx;
     currentY += dy;
   }
-  return null;
+  return null; // No available square found
 }
 
 
@@ -121,7 +125,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [participants, setParticipants] = useState<Participant[]>([]);
 
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
-  const [showAllLabels, setShowAllLabels] = useState<boolean>(true); // New state for label visibility
+  const [showAllLabels, setShowAllLabels] = useState<boolean>(true);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
   const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1);
 
@@ -171,6 +175,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [selectedTextObjectId, setSelectedTextObjectId] = useState<string | null>(null);
+  const [tokenIdToFocus, setTokenIdToFocus] = useState<string | null>(null);
 
 
   const rehydrateToken = useCallback((tokenFromFile: Omit<Token, 'icon'>): Token => {
@@ -193,63 +198,66 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if (!hasSeen) {
         setShowWelcomeDialog(true);
       }
-    }
-  }, []);
 
-  useEffect(() => {
-    const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let initialSnapshotForHistory: UndoableState;
+      const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedStateJSON) {
+        try {
+          const loadedState = JSON.parse(savedStateJSON) as {
+              gridCells: GridCellData[][];
+              tokens: Omit<Token, 'icon'>[];
+              drawnShapes: DrawnShape[];
+              textObjects: TextObjectType[];
+              participants: Participant[];
+              showGridLines: boolean;
+              showAllLabels: boolean;
+              backgroundImageUrl: string | null;
+              backgroundZoomLevel: number;
+              currentParticipantIndex: number;
+              roundCounter: number;
+              isCombatActive: boolean;
+          };
 
-    if (savedStateJSON) {
-      try {
-        const loadedState = JSON.parse(savedStateJSON) as {
-            gridCells: GridCellData[][];
-            tokens: Omit<Token, 'icon'>[];
-            drawnShapes: DrawnShape[];
-            textObjects: TextObjectType[];
-            participants: Participant[];
-            showGridLines: boolean;
-            showAllLabels: boolean; // Load showAllLabels
-            backgroundImageUrl: string | null;
-            backgroundZoomLevel: number;
-            currentParticipantIndex: number;
-            roundCounter: number;
-            isCombatActive: boolean;
-        };
+          const rehydratedTokens = (loadedState.tokens || []).map(rehydrateToken);
 
-        const rehydratedTokens = (loadedState.tokens || []).map(rehydrateToken);
-
-        setGridCells(loadedState.gridCells || initialGridCells());
-        setTokens(rehydratedTokens);
-        setDrawnShapes(loadedState.drawnShapes || []);
-        setTextObjects(loadedState.textObjects || []);
-        setParticipants(loadedState.participants || []);
-        setShowGridLines(loadedState.showGridLines !== undefined ? loadedState.showGridLines : true);
-        setShowAllLabels(loadedState.showAllLabels !== undefined ? loadedState.showAllLabels : true); // Set showAllLabels
-        setBackgroundImageUrl(loadedState.backgroundImageUrl || null);
-        setBackgroundZoomLevel(loadedState.backgroundZoomLevel || 1);
-        setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
-        setRoundCounter(loadedState.roundCounter || 1);
-        setIsCombatActive(loadedState.isCombatActive || false);
-        
-        initialSnapshotForHistory = createInitialSnapshot({
+          setGridCells(loadedState.gridCells || initialGridCells());
+          setTokens(rehydratedTokens);
+          setDrawnShapes(loadedState.drawnShapes || []);
+          setTextObjects(loadedState.textObjects || []);
+          setParticipants(loadedState.participants || []);
+          setShowGridLines(loadedState.showGridLines !== undefined ? loadedState.showGridLines : true);
+          setShowAllLabels(loadedState.showAllLabels !== undefined ? loadedState.showAllLabels : true);
+          setBackgroundImageUrl(loadedState.backgroundImageUrl || null);
+          setBackgroundZoomLevel(loadedState.backgroundZoomLevel || 1);
+          setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
+          setRoundCounter(loadedState.roundCounter || 1);
+          setIsCombatActive(loadedState.isCombatActive || false);
+          
+          // Initialize history with the loaded state as the first snapshot
+          const initialSnapshot = createInitialSnapshot({
             gridCells: loadedState.gridCells || initialGridCells(),
             tokens: rehydratedTokens, 
             drawnShapes: loadedState.drawnShapes || [],
             textObjects: loadedState.textObjects || [],
             participants: loadedState.participants || [],
-        });
+          });
+          setHistory([initialSnapshot]);
+          setHistoryPointer(0);
 
-      } catch (error) {
-        console.error("Failed to load or parse saved state from localStorage:", error);
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        initialSnapshotForHistory = createInitialSnapshot({ tokens: [] });
+        } catch (error) {
+          console.error("Failed to load or parse saved state from localStorage:", error);
+          localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear corrupted state
+          // Initialize with default empty state for history
+          const initialSnapshot = createInitialSnapshot({tokens: []});
+          setHistory([initialSnapshot]);
+          setHistoryPointer(0);
+        }
+      } else {
+        // No saved state, initialize with default empty state for history
+        const initialSnapshot = createInitialSnapshot({tokens: []});
+        setHistory([initialSnapshot]);
+        setHistoryPointer(0);
       }
-    } else {
-      initialSnapshotForHistory = createInitialSnapshot({ tokens: [] });
     }
-    setHistory([initialSnapshotForHistory]);
-    setHistoryPointer(0);
     setIsInitialLoadComplete(true);
   }, [rehydrateToken]); 
 
@@ -264,17 +272,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const stateToSave = {
       gridCells,
-      tokens: stripTokenIcons(tokens),
+      tokens: stripTokenIcons(tokens), // Only current tokens, not history
       drawnShapes,
       textObjects,
       participants,
       showGridLines,
-      showAllLabels, // Save showAllLabels
+      showAllLabels,
       backgroundImageUrl,
       backgroundZoomLevel,
       currentParticipantIndex,
       roundCounter,
       isCombatActive,
+      // History and historyPointer are NOT saved to localStorage
     };
 
     try {
@@ -282,6 +291,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
+      // Potentially add more sophisticated error handling or user notification here
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
@@ -316,19 +326,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
       return;
     }
-    if (historyPointer === -1 && history.length === 0) {
-        const initialSnapshot = createInitialSnapshot({gridCells, tokens, drawnShapes, textObjects, participants});
+     // Ensure history is initialized if it's empty and load is complete
+     if (history.length === 0 && isInitialLoadComplete) {
+        const initialSnapshot = getCurrentUndoableState();
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
-        return;
+        return; // Exit after initializing history
     }
-     if (historyPointer === -1 && history.length > 0) {
-        setHistoryPointer(0);
-        return;
-    }
-
+    
     const newSnapshot = getCurrentUndoableState();
 
+    // Prevent adding duplicate states
     if (history.length > 0 && history[historyPointer] && JSON.stringify(history[historyPointer]) === JSON.stringify(newSnapshot)) {
       return;
     }
@@ -388,7 +396,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setBackgroundImageUrl(null);
     setBackgroundZoomLevel(1);
     setShowGridLines(true);
-    setShowAllLabels(true); // Reset showAllLabels
+    setShowAllLabels(true);
     setMeasurement({type: null});
     setCurrentParticipantIndex(-1);
     setRoundCounter(1);
@@ -396,10 +404,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setSelectedTokenId(null);
     setSelectedShapeId(null);
     setSelectedTextObjectId(null);
+    setTokenIdToFocus(null);
 
     const freshSnapshot = createInitialSnapshot({
         gridCells: defaultGridCells,
-        tokens: defaultTokens,
+        tokens: defaultTokens, 
         drawnShapes: defaultDrawnShapes,
         textObjects: defaultTextObjects,
         participants: defaultParticipants,
@@ -415,7 +424,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             textObjects: defaultTextObjects,
             participants: defaultParticipants,
             showGridLines: true, 
-            showAllLabels: true, // Persist reset showAllLabels
+            showAllLabels: true,
             backgroundImageUrl: null,
             backgroundZoomLevel: 1,
             currentParticipantIndex: -1,
@@ -832,7 +841,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) || 
-                                 tokenTemplates.find(t => t.type === 'generic');
+                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback to generic
             const wasParticipantSpecificAvatar = token.customImageUrl && token.instanceName === participantToRemove.name;
             return {
               ...token,
@@ -861,22 +870,35 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const removedIndex = participants.findIndex(p => p.id === participantId);
 
       if (newIndex === removedIndex) {
+        // If the active participant was removed, try to stay at the same index if possible,
+        // or move to the new end of the list if the last one was removed, or to 0 if list shrank.
         newIndex = (newIndex >= updatedParticipants.length && updatedParticipants.length > 0) ? 0 : newIndex;
       } else if (newIndex > removedIndex) {
+        // If an earlier participant was removed, decrement the current index.
         newIndex = Math.max(0, newIndex - 1);
       }
-      
+      // If newIndex is still out of bounds (e.g. -1 and list is not empty), set to 0
       if (newIndex >= updatedParticipants.length || newIndex < 0 ) {
           newIndex = updatedParticipants.length > 0 ? 0 : -1;
       }
       setCurrentParticipantIndex(newIndex);
       
-      if(updatedParticipants.length > 0 && currentParticipantIndex === 0 && newIndex === 0 && roundCounter > 1 && removedIndex === participants.length -1) {
-        // No change to roundCounter needed here
+      // Check if the round needs to change (only if the last participant of a round was removed, and combat was active)
+      if(isCombatActive && removedIndex === participants.length -1 && currentParticipantIndex >= updatedParticipants.length && updatedParticipants.length > 0){
+        // This case is tricky - if the last person was removed, and they were the active turn,
+        // the next turn should go to the new first person (index 0) of the *same* round if others remain,
+        // or advance to the next round if the list became empty (handled by updatedParticipants.length === 0 check).
+        // The current logic for advancing turn in handleAdvanceTurn already handles round increment.
+        // Here, we mainly need to ensure currentParticipantIndex is valid.
       }
     }
     toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
   }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
+
+  const handleFocusToken = useCallback((tokenId: string) => {
+    setSelectedTokenId(tokenId);
+    setTokenIdToFocus(tokenId);
+  }, []);
 
 
   const renderNumericInput = (
@@ -1060,6 +1082,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             selectedTokenId={selectedTokenId} setSelectedTokenId={setSelectedTokenId}
             selectedShapeId={selectedShapeId} setSelectedShapeId={setSelectedShapeId}
             selectedTextObjectId={selectedTextObjectId} setSelectedTextObjectId={setSelectedTextObjectId}
+            tokenIdToFocus={tokenIdToFocus}
+            onFocusHandled={() => setTokenIdToFocus(null)}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -1124,6 +1148,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               onRemoveParticipant={handleRemoveParticipantFromList}
               onRenameParticipant={handleRenameParticipant}
               onChangeParticipantTokenImage={handleChangeParticipantTokenImage}
+              onFocusToken={handleFocusToken}
             />
           </SidebarContent>
 
@@ -1165,6 +1190,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div className="space-y-1">
+                      {/* Type selection moved to the top */}
                       <div className="flex space-x-2">
                       {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                           const config = participantTypeButtonConfig[type];
@@ -1174,14 +1200,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                           <Button
                               key={type}
                               type="button"
-                              variant={isSelected ? undefined : 'outline'}
+                              variant={isSelected ? undefined : 'outline'} // Use undefined variant for selected to rely on custom classes
                               onClick={() => setNewParticipantType(type)}
                               className={cn(
                               "flex-1 flex items-center justify-center gap-2",
                               isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
                               )}
                           >
-                              <IconComponent className="h-4 w-4" />
+                              <IconComponent className="h-4 w-4" /> {/* Icon color will be inherited */}
                               {config.label}
                           </Button>
                           );
@@ -1201,7 +1227,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         onValueChange={(value) => {
                           setSelectedAssignedTokenId(value);
                           if (value !== "none") {
-                            setNewParticipantQuantity('1');
+                            setNewParticipantQuantity('1'); // Reset quantity to 1 if an existing token is selected
                           }
                         }}
                       >
@@ -1258,3 +1284,4 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+

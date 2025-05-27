@@ -106,8 +106,8 @@ export interface BattleGridProps {
   setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
-  showAllLabels: boolean; // New prop
-  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>; // New prop
+  showAllLabels: boolean;
+  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>;
   backgroundImageUrl: string | null;
   backgroundZoomLevel?: number;
   activeTool: ActiveTool;
@@ -130,6 +130,9 @@ export interface BattleGridProps {
   setSelectedShapeId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedTextObjectId?: string | null;
   setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
+
+  tokenIdToFocus?: string | null; // New prop to signal focus on a token
+  onFocusHandled?: () => void;    // New callback to reset focus signal
 }
 
 export interface UndoableState {
@@ -190,4 +193,5 @@ export interface InitiativeTrackerPanelProps {
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
+  onFocusToken?: (tokenId: string) => void; // New prop
 }
