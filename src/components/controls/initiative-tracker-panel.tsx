@@ -278,7 +278,7 @@ export default function InitiativeTrackerPanel({
                           )}
                         </div>
                         <div className="flex-1 min-w-0 overflow-hidden">
-                          <span className="truncate block text-base font-semibold" title={p.name}>
+                          <span className="text-base font-semibold truncate" title={p.name}>
                             {p.name}
                           </span>
                         </div>
@@ -491,3 +491,5 @@ export default function InitiativeTrackerPanel({
   );
 }
 
+
+    
