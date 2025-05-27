@@ -279,7 +279,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const stateToSave = {
       gridCells,
-      tokens: stripIconsForStorage(tokens), // Only current tokens are saved
+      tokens: stripIconsForStorage(tokens),
       drawnShapes,
       textObjects,
       participants,
@@ -331,7 +331,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
       return;
     }
-     if (history.length === 0 && isInitialLoadComplete) { // Ensure history isn't empty when starting
+     if (history.length === 0 && isInitialLoadComplete) {
         const initialSnapshot = getCurrentUndoableState();
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
@@ -340,7 +340,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const newSnapshot = getCurrentUndoableState();
 
-    // Prevent adding identical snapshots to history
     if (history.length > 0 && history[historyPointer] && JSON.stringify(history[historyPointer]) === JSON.stringify(newSnapshot)) {
       return;
     }
@@ -420,9 +419,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(0);
 
     if (typeof window !== 'undefined') {
-        const stateToSave = { // Save the reset state
+        const stateToSave = {
             gridCells: defaultGridCells,
-            tokens: [], // Stripped tokens
+            tokens: [],
             drawnShapes: defaultDrawnShapes,
             textObjects: defaultTextObjects,
             participants: defaultParticipants,
@@ -502,7 +501,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setSelectedShapeId(null);
         setSelectedTextObjectId(null);
     }
-  }, [activeTool, currentDrawingShape, measurement.type, measurement.startPoint, measurement.endPoint, measurement.result]);
+  }, [activeTool, currentDrawingShape, measurement.type]);
 
   useEffect(() => {
     if (participants.length === 0) {
@@ -620,8 +619,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     fileInput.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                toast({ title: "Upload Error", description: "Image file size exceeds 2MB limit.", variant: "destructive" });
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                setTimeout(() => {
+                    toast({ title: "Upload Error", description: "Image file size exceeds 2MB limit.", variant: "destructive" });
+                },0);
                 setTokenToChangeImage(null);
                 return;
             }
@@ -659,7 +660,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           if (otherToken.id === tokenId) continue;
 
           const otherTokenSize = otherToken.size || 1;
-          // Check for overlap
           const overlapX = Math.max(0, Math.min(tokenToResize.x + newSize, otherToken.x + otherTokenSize) - Math.max(tokenToResize.x, otherToken.x));
           const overlapY = Math.max(0, Math.min(tokenToResize.y + newSize, otherToken.y + otherTokenSize) - Math.max(tokenToResize.y, otherToken.y));
 
@@ -727,7 +727,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const participantNameInput = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId !== "none" ? explicitTokenId : undefined;
     let newTokensCreated: Token[] = [];
-    const tokenSize = (selectedTokenTemplate?.size || 1);
+    let tokenSize = 1; // Default size
+
+    if (finalTokenId) {
+        const existingToken = tokens.find(t => t.id === finalTokenId);
+        if (existingToken) tokenSize = existingToken.size || 1;
+    } else if (selectedTokenTemplate) { // This branch might not be relevant if we always assign or create new
+        tokenSize = selectedTokenTemplate.size || 1;
+    }
 
 
     if (!finalTokenId) {
@@ -764,6 +771,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       id: `participant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       name: participantNameInput,
       tokenId: finalTokenId,
+      customImageUrl: avatarUrl || undefined,
     };
 
     setParticipants(prev => {
@@ -893,19 +901,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
-                                 tokenTemplates.find(t => t.type === 'generic');
+                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback to generic
             const wasParticipantSpecificAvatar = token.customImageUrl &&
                                                 token.instanceName === participantToRemove.name &&
-                                                participantToRemove.type === token.type &&
-                                                participantToRemove.customImageUrl === token.customImageUrl; // Check if avatar was specific
+                                                participantToRemove.customImageUrl === token.customImageUrl;
 
             return {
               ...token,
-              instanceName: undefined,
-              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl,
+              instanceName: undefined, // Clear instance name
+              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, // Clear avatar only if it was specific
               icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
               color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
-              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label,
+              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label, // Reset label if specific
             };
           }
           return token;
@@ -929,12 +936,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
         } else {
-            const removedIndex = participants.findIndex(p => p.id === participantId);
-            if (currentParticipantIndex >= removedIndex && currentParticipantIndex > 0) {
+            const removedIndexOriginal = participants.findIndex(p => p.id === participantId);
+            if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
                 setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
             } else if (currentParticipantIndex >= updatedParticipants.length) {
-                 setCurrentParticipantIndex(0);
+                 setCurrentParticipantIndex(0); // Cycle to the start if active was last
             }
+            // Ensure index is valid after adjustments
             if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
                 setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
             }
@@ -956,10 +964,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (['player', 'enemy', 'ally'].includes(token.type)) {
       setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
     } else {
-      setNewParticipantType('generic' as 'player'); // Fallback, though ideally token.type is one of the three
+      setNewParticipantType('generic' as 'player'); // Fallback, should ideally not happen for combatant types
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(token.customImageUrl || null); // Pre-fill avatar if token has one
+    setCroppedAvatarDataUrl(null); // Do not pre-fill avatar; user can upload a new one
 
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
@@ -1026,19 +1034,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return p;
       });
 
-      if (!participantUpdated) return prevParticipants; // Should not happen if ID is valid
+      if (!participantUpdated) return prevParticipants;
 
-      // Re-sort if initiative changed
       if (newStats.initiative !== undefined) {
         updatedParticipantsList.sort((a, b) => b.initiative - a.initiative);
-        // Update currentParticipantIndex if combat is active
         if (isCombatActive) {
           const activeParticipant = prevParticipants[currentParticipantIndex];
           if (activeParticipant) {
             const newActiveIndex = updatedParticipantsList.findIndex(p => p.id === activeParticipant.id);
             if (newActiveIndex !== -1) {
               setCurrentParticipantIndex(newActiveIndex);
-            } else { // Active participant somehow removed or ID changed - reset
+            } else {
               setCurrentParticipantIndex(updatedParticipantsList.length > 0 ? 0 : -1);
             }
           } else {
@@ -1062,7 +1068,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     optional: boolean = false,
     disabled: boolean = false
   ) => (
-    <div className="flex-1 min-w-0 space-y-1 border border-border rounded-md p-3">
+    <div className={cn("flex-1 min-w-0 space-y-1 border border-border rounded-md p-3", disabled && "opacity-50")}>
       <Label htmlFor={disabled ? undefined : `${idPrefix}-input`}>{label}</Label>
       {isEditing && !disabled ? (
         <Input
@@ -1369,7 +1375,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         );
                     })}
                     </div>
-                </div>
+                  </div>
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
                       <Label htmlFor="participant-name-dialog">Name</Label>
@@ -1387,7 +1393,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         }}
                       >
                         <SelectTrigger id="assign-token-select">
-                          <SelectValue placeholder="None (Create new token)" />
+                          <SelectValue placeholder="Select existing token..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None (Create new token)</SelectItem>
@@ -1439,3 +1445,4 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+
