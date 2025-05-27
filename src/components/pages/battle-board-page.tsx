@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { Point, GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types';
+import type { Point, GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { LandPlot, Plus, Minus, ArrowRight, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
-import { PlayerIcon, EnemyIcon, AllyIcon } from '@/components/icons';
+import { PlayerIcon, EnemyIcon, AllyIcon, GenericTokenIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 import {
@@ -35,6 +35,7 @@ const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
 const MAX_HISTORY_LENGTH = 30;
 const WELCOME_DIALOG_STORAGE_KEY = 'hasSeenWelcomeDialogV1';
+const LOCAL_STORAGE_KEY = 'battleBoardStateV2'; // V2 to manage potential schema changes
 
 
 const initialGridCells = (): GridCellData[][] =>
@@ -127,7 +128,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState<number>(-1);
   const [roundCounter, setRoundCounter] = useState<number>(1);
-  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false);
+  const [isAutoAdvanceOn, setIsAutoAdvanceOn] = useState<boolean>(false); // Not used yet, but good to have for future
   const [isCombatActive, setIsCombatActive] = useState<boolean>(false);
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
@@ -167,6 +168,21 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [showWelcomeDialog, setShowWelcomeDialog] = useState<boolean>(false);
   const [escapePressCount, setEscapePressCount] = useState(0);
 
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+
+  const rehydrateToken = useCallback((tokenFromFile: Omit<Token, 'icon'>): Token => {
+    const tokenData = tokenFromFile as Token; // Cast to allow access to label/type for template lookup
+    if (tokenData.customImageUrl) {
+      return { ...tokenData, icon: undefined };
+    }
+    const template = tokenTemplates.find(t => t.type === tokenData.type && t.name === tokenData.label) ||
+                     tokenTemplates.find(t => t.type === tokenData.type);
+    return {
+      ...tokenData,
+      icon: template ? template.icon : GenericTokenIcon,
+    };
+  }, []);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -177,6 +193,107 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
   }, []);
 
+  // Load state from localStorage on mount
+  useEffect(() => {
+    const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (savedStateJSON) {
+      try {
+        const loadedState = JSON.parse(savedStateJSON) as {
+          gridCells: GridCellData[][];
+          tokens: Omit<Token, 'icon'>[]; // Icons are stripped
+          drawnShapes: DrawnShape[];
+          textObjects: TextObjectType[];
+          participants: Participant[];
+          showGridLines: boolean;
+          backgroundImageUrl: string | null;
+          backgroundZoomLevel: number;
+          currentParticipantIndex: number;
+          roundCounter: number;
+          isCombatActive: boolean;
+          history: (Omit<UndoableState, 'tokens'> & { tokens: Omit<Token, 'icon'>[] })[]; // History has stripped icons
+          historyPointer: number;
+        };
+
+        setGridCells(loadedState.gridCells || initialGridCells());
+        setTokens((loadedState.tokens || []).map(rehydrateToken));
+        setDrawnShapes(loadedState.drawnShapes || []);
+        setTextObjects(loadedState.textObjects || []);
+        setParticipants(loadedState.participants || []);
+        setShowGridLines(loadedState.showGridLines !== undefined ? loadedState.showGridLines : true);
+        setBackgroundImageUrl(loadedState.backgroundImageUrl || null);
+        setBackgroundZoomLevel(loadedState.backgroundZoomLevel || 1);
+        setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
+        setRoundCounter(loadedState.roundCounter || 1);
+        setIsCombatActive(loadedState.isCombatActive || false);
+
+        const rehydratedHistory = (loadedState.history || [createInitialSnapshot()]).map(snapshot => ({
+          ...snapshot,
+          tokens: (snapshot.tokens || []).map(rehydrateToken),
+        }));
+        setHistory(rehydratedHistory);
+        setHistoryPointer(loadedState.historyPointer !== undefined ? loadedState.historyPointer : (rehydratedHistory.length > 0 ? rehydratedHistory.length - 1 : 0));
+
+      } catch (error) {
+        console.error("Failed to load or parse saved state from localStorage:", error);
+        setHistory([createInitialSnapshot()]);
+        setHistoryPointer(0);
+      }
+    } else {
+      setHistory([createInitialSnapshot()]);
+      setHistoryPointer(0);
+    }
+    setIsInitialLoadComplete(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rehydrateToken]); // rehydrateToken is stable due to useCallback
+
+  // Save state to localStorage when relevant states change
+  useEffect(() => {
+    if (!isInitialLoadComplete) {
+      return; // Don't save until initial load/hydration is complete
+    }
+
+    const stripTokenIcons = (tokensToStrip: Token[]): Omit<Token, 'icon'>[] => {
+        return tokensToStrip.map(({ icon, ...restOfToken }) => restOfToken);
+    };
+
+    const stripIconsFromSnapshot = (snapshot: UndoableState): Omit<UndoableState, 'tokens'> & { tokens: Omit<Token, 'icon'>[] } => {
+        return {
+            ...snapshot,
+            tokens: stripTokenIcons(snapshot.tokens),
+        };
+    };
+
+    const stateToSave = {
+      gridCells,
+      tokens: stripTokenIcons(tokens),
+      drawnShapes,
+      textObjects,
+      participants,
+      showGridLines,
+      backgroundImageUrl,
+      backgroundZoomLevel,
+      currentParticipantIndex,
+      roundCounter,
+      isCombatActive,
+      history: history.map(stripIconsFromSnapshot),
+      historyPointer,
+    };
+
+    try {
+      const serializedState = JSON.stringify(stateToSave);
+      localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
+    } catch (error) {
+      console.error("Failed to save state to localStorage:", error);
+    }
+  }, [
+    gridCells, tokens, drawnShapes, textObjects, participants,
+    showGridLines, backgroundImageUrl, backgroundZoomLevel,
+    currentParticipantIndex, roundCounter, isCombatActive,
+    history, historyPointer,
+    isInitialLoadComplete
+  ]);
+
+
   const handleCloseWelcomeDialog = () => {
     setShowWelcomeDialog(false);
     if (typeof window !== 'undefined') {
@@ -184,11 +301,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
   };
 
-
   const getCurrentUndoableState = useCallback((): UndoableState => {
-    return JSON.parse(JSON.stringify({
+    return JSON.parse(JSON.stringify({ // Deep clone to ensure no mutation issues
       gridCells,
-      tokens,
+      tokens, // Will contain icon functions here, handled by strip/rehydrate for storage/load
       drawnShapes,
       textObjects,
       participants,
@@ -196,12 +312,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
   useEffect(() => {
-    if (isUndoRedoOperation.current) {
-      isUndoRedoOperation.current = false;
+    if (!isInitialLoadComplete || isUndoRedoOperation.current) {
+      if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
       return;
     }
-
-    if (historyPointer === -1 && history.length === 0) { // Initial setup case
+    if (historyPointer === -1 && history.length === 0) {
         const initialSnapshot = createInitialSnapshot();
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
@@ -209,13 +324,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
     if (historyPointer === -1) return;
 
-
     const newSnapshot = getCurrentUndoableState();
-    const currentHistoryState = history[historyPointer];
-    if (currentHistoryState && JSON.stringify(newSnapshot) === JSON.stringify(currentHistoryState)) {
-        return;
-    }
-    
+    // To compare, we should compare with stripped icons, as that's what's in history after load.
+    // Or, more simply, just compare the stringified versions (might be slow for large states).
+    // For robustness, let's assume a change occurred unless it's the exact same object reference
+    // or do a smarter comparison if performance becomes an issue.
+    // For now, we assume if this effect runs, it's due to a meaningful change.
+
     const newHistoryBase = history.slice(0, historyPointer + 1);
     const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
 
@@ -223,21 +338,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(updatedHistory.length - 1);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridCells, tokens, drawnShapes, textObjects, participants]);
+  }, [gridCells, tokens, drawnShapes, textObjects, participants, isInitialLoadComplete]); // getCurrentUndoableState ensures stability
 
-  const restoreStateFromSnapshot = (snapshot: UndoableState) => {
+  const restoreStateFromSnapshot = useCallback((snapshot: UndoableState) => {
     setGridCells(snapshot.gridCells);
-    setTokens(snapshot.tokens.map(tokenFromFile => {
-        const template = tokenTemplates.find(t => t.type === tokenFromFile.type && t.name === tokenFromFile.label) || tokenTemplates.find(t => t.type === tokenFromFile.type);
-        return {
-            ...tokenFromFile,
-            icon: tokenFromFile.customImageUrl ? undefined : template?.icon,
-        };
-    }));
+    setTokens(snapshot.tokens.map(rehydrateToken)); // Rehydrate tokens from history snapshot
     setDrawnShapes(snapshot.drawnShapes);
     setTextObjects(snapshot.textObjects);
     setParticipants(snapshot.participants);
-  };
+  }, [rehydrateToken]);
 
   const handleUndo = useCallback(() => {
     if (historyPointer <= 0) {
@@ -248,7 +357,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const newPointer = historyPointer - 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-  }, [history, historyPointer, toast]);
+  }, [history, historyPointer, toast, restoreStateFromSnapshot]);
 
   const handleRedo = useCallback(() => {
     if (historyPointer >= history.length - 1 || historyPointer < 0) {
@@ -259,7 +368,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const newPointer = historyPointer + 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
-  }, [history, historyPointer, toast]);
+  }, [history, historyPointer, toast, restoreStateFromSnapshot]);
 
   const handleResetBoard = useCallback(() => {
     setGridCells(initialGridCells());
@@ -277,8 +386,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const initialSnapshot = createInitialSnapshot();
     setHistory([initialSnapshot]);
     setHistoryPointer(0);
-    isUndoRedoOperation.current = false; // Ensure this flag is reset
+    isUndoRedoOperation.current = false;
 
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
     toast({ title: "Battle Board Cleared", description: "Everything has been reset." });
   }, [toast]);
 
@@ -292,16 +404,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         if (isInputFocused) {
           return;
         }
-        event.preventDefault(); 
+        event.preventDefault();
         setActiveTool('select');
         setEscapePressCount(prev => prev + 1);
-        return; 
+        return;
       }
-      
+
       if (isInputFocused) {
-        return; 
+        return;
       }
-      
+
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
@@ -400,40 +512,37 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
             if (!availableSquare) {
                 toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
-                return prevParticipants; // Don't change participants if token can't be placed
+                return prevParticipants;
             }
             const newToken: Token = {
                 id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                 x: availableSquare.x,
                 y: availableSquare.y,
-                color: 'hsl(var(--muted))', 
+                color: 'hsl(var(--muted))',
                 customImageUrl: newImageUrl,
                 icon: undefined,
-                type: 'generic', 
+                type: 'generic',
                 label: 'Custom',
                 instanceName: participant.name,
                 size: 1,
             };
             setTokens(prevTokens => [...prevTokens, newToken]);
-            
+
             return prevParticipants.map(p =>
                 p.id === participantId ? { ...p, tokenId: newToken.id } : p
             );
         }
-        return prevParticipants; 
+        return prevParticipants;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tokens, toast]); // Removed 'participants' from deps as it causes loop with setParticipants
+  }, [tokens, toast]);
 
   const handleTokenDelete = useCallback((tokenId: string) => {
     setTokens(prev => prev.filter(t => t.id !== tokenId));
     setParticipants(prev => {
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
-      // Check if the currently active participant's token was the one deleted
       const activeParticipant = prev[currentParticipantIndex];
       if (activeParticipant && activeParticipant.tokenId === tokenId) {
         const updatedCurrentParticipant = { ...activeParticipant, tokenId: undefined };
-        // Update the participant in the new list
         const idx = newParticipants.findIndex(p => p.id === activeParticipant.id);
         if (idx !== -1) {
           newParticipants[idx] = updatedCurrentParticipant;
@@ -442,29 +551,29 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       return newParticipants;
     });
     toast({ title: "Token Deleted" });
-  }, [toast, currentParticipantIndex]); // Removed participants from here too to avoid loop
+  }, [currentParticipantIndex, toast]);
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
-    setTokenToChangeImage(tokenId); 
+    setTokenToChangeImage(tokenId);
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
     fileInput.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) { 
+            if (file.size > 2 * 1024 * 1024) {
                 toast({ title: "Upload Error", description: "Image file size exceeds 2MB limit.", variant: "destructive" });
-                setTokenToChangeImage(null); 
+                setTokenToChangeImage(null);
                 return;
             }
             const reader = new FileReader();
             reader.onloadend = () => {
                 setUncroppedTokenImageSrc(reader.result as string);
-                setIsTokenCropDialogOpen(true); 
+                setIsTokenCropDialogOpen(true);
             };
             reader.readAsDataURL(file);
         } else {
-            setTokenToChangeImage(null); 
+            setTokenToChangeImage(null);
         }
     };
     fileInput.click();
@@ -517,28 +626,28 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     let finalTokenId: string | undefined = explicitTokenId;
     let newTokensCreated: Token[] = [];
 
-    if (!finalTokenId || finalTokenId === "none") { 
-      finalTokenId = undefined; 
+    if (!finalTokenId || finalTokenId === "none") {
+      finalTokenId = undefined;
       const middleX = Math.floor(GRID_COLS / 2);
       const middleY = Math.floor(GRID_ROWS / 2);
       const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
 
       if (!availableSquare) {
         toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
-        return false; 
+        return false;
       }
-      
+
       const template = tokenTemplates.find(t => t.type === participantData.type);
       const newToken: Token = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        x: availableSquare.x, 
+        x: availableSquare.x,
         y: availableSquare.y,
         customImageUrl: avatarUrl || undefined,
         icon: avatarUrl ? undefined : template?.icon,
         color: avatarUrl ? 'hsl(var(--muted))' : (template?.color || 'hsl(var(--accent))'),
-        type: participantData.type, 
+        type: participantData.type,
         label: avatarUrl ? 'Custom Avatar' : (template?.name || 'Generic'),
-        instanceName: participantName, 
+        instanceName: participantName,
         size: 1,
       };
       newTokensCreated.push(newToken);
@@ -573,8 +682,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newList;
     });
-    return true; 
-  }, [isCombatActive, currentParticipantIndex, tokens, toast]); 
+    return true;
+  }, [isCombatActive, currentParticipantIndex, tokens, toast]);
 
 
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
@@ -595,7 +704,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) return;
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) return;
-    
+
     const quantity = (selectedAssignedTokenId && selectedAssignedTokenId !== "none") ? 1 : (parseInt(newParticipantQuantity, 10) || 1);
     if (quantity < 1) {
         return;
@@ -611,7 +720,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         hp: hpValue,
         ac: acValue,
       };
-      
+
       let success;
       if (selectedAssignedTokenId && selectedAssignedTokenId !== "none") {
         success = handleAddParticipantToList(newParticipantData, selectedAssignedTokenId, croppedAvatarDataUrl);
@@ -619,11 +728,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
             setTokens(prevTokens => prevTokens.map(t => {
             if (t.id === selectedAssignedTokenId) {
-                const isAvatarProvided = !!croppedAvatarDataUrl; 
+                const isAvatarProvided = !!croppedAvatarDataUrl;
                 return {
                   ...t,
                   instanceName: finalName,
-                  type: newParticipantType, 
+                  type: newParticipantType,
                   color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
                   icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
                   customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined),
@@ -637,7 +746,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       if (!success) {
         allAddedSuccessfully = false;
-        break; 
+        break;
       }
     }
 
@@ -653,58 +762,64 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setIsEditingQuantity(false);
         setNewParticipantType('player');
         setSelectedAssignedTokenId("none");
-        setCroppedAvatarDataUrl(null); 
+        setCroppedAvatarDataUrl(null);
         setDialogOpen(false);
     }
   };
 
-  const handleRemoveParticipantFromList = useCallback((participantId: string) => {
+ const handleRemoveParticipantFromList = useCallback((participantId: string) => {
     const participantToRemove = participants.find(p => p.id === participantId);
     if (!participantToRemove) return;
 
-    let newTokens = [...tokens];
-    if (participantToRemove.tokenId) {
-      newTokens = newTokens.map(token => {
-        if (token.id === participantToRemove.tokenId) {
-          // Reset token properties
-          const baseTemplate = tokenTemplates.find(t => t.type === token.type) || tokenTemplates.find(t => t.type === 'generic');
-          return {
-            ...token,
-            instanceName: undefined, 
-            customImageUrl: undefined, // Clear custom image if it was linked
-            icon: baseTemplate?.icon, // Revert to base icon
-            color: baseTemplate?.color || 'hsl(var(--accent))', // Revert to base color
-          };
-        }
-        return token;
-      });
-      setTokens(newTokens);
-    }
+    setTokens(prevTokens => {
+      if (participantToRemove.tokenId) {
+        return prevTokens.map(token => {
+          if (token.id === participantToRemove.tokenId) {
+            const baseTemplate = tokenTemplates.find(t => t.type === token.type) || tokenTemplates.find(t => t.type === 'generic');
+            return {
+              ...token,
+              instanceName: undefined,
+              customImageUrl: undefined, // Clear custom image
+              icon: baseTemplate?.icon,
+              color: baseTemplate?.color || 'hsl(var(--accent))',
+            };
+          }
+          return token;
+        });
+      }
+      return prevTokens;
+    });
 
     const updatedParticipants = participants.filter(p => p.id !== participantId);
-    setParticipants(updatedParticipants); // Update participants list
+    setParticipants(updatedParticipants);
 
-    // Adjust currentParticipantIndex
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
-      setRoundCounter(1); // Reset round if no one is left
-      setIsCombatActive(false); // End combat if no one is left
+      if (isCombatActive) setRoundCounter(1);
+      setIsCombatActive(false);
     } else {
-      if (currentParticipantIndex >= updatedParticipants.length) {
-        setCurrentParticipantIndex(updatedParticipants.length - 1);
-      } else if (participantToRemove && participants.indexOf(participantToRemove) < currentParticipantIndex) {
-        setCurrentParticipantIndex(prevIndex => Math.max(0, prevIndex - 1));
+      let newIndex = currentParticipantIndex;
+      const removedIndex = participants.findIndex(p => p.id === participantId);
+
+      if (newIndex === removedIndex) {
+        // If current was removed, try to keep index same (next person takes over)
+        // If it was the last one, move to 0 (or -1 if empty)
+        newIndex = (newIndex >= updatedParticipants.length) ? 0 : newIndex;
+      } else if (newIndex > removedIndex) {
+        newIndex = Math.max(0, newIndex - 1);
       }
-      // If the current participant was removed and it's not the last one, 
-      // the index might naturally point to the next one or needs adjustment.
-      // If it was the active one and not the last, index should ideally remain,
-      // letting the "next" participant effectively take its place.
-      // The current logic might need slight refinement based on desired behavior when active is removed.
-      // For now, this ensures index is valid.
+      // If current is -1 or current becomes invalid after removal, reset to 0 if list not empty
+      if (newIndex >= updatedParticipants.length || newIndex < 0 ) {
+          newIndex = updatedParticipants.length > 0 ? 0 : -1;
+      }
+      setCurrentParticipantIndex(newIndex);
+      if(updatedParticipants.length > 0 && currentParticipantIndex === 0 && newIndex === 0 && roundCounter > 1 && removedIndex === participants.length -1) {
+        // If the one removed was the *last* in a round, and current was already 0 (start of next round)
+        // then currentParticipantIndex should remain 0. The round counter should not change here.
+      }
     }
-    
     toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
-  }, [participants, currentParticipantIndex, tokens, toast]);
+  }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
 
 
   const renderNumericInput = (
@@ -733,7 +848,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               else {
                 const num = parseInt(value, 10);
                 if (isNaN(num) || (!optional && num < 0) || (optional && num < 0 && value.trim() !== '')) {
-                    setValue('10'); 
+                    setValue('10');
                 } else if (optional && num < 0 && value.trim() !== '') {
                     setValue('0');
                 }
@@ -747,7 +862,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       ) : (
         <div className="flex items-center gap-1 mt-1">
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => { 
+            onClick={() => {
                 if(disabled) return;
                 const currentValue = parseInt(value, 10) || 0;
                 const isQuantityField = idPrefix === 'participant-quantity-dialog';
@@ -757,17 +872,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             disabled={disabled}>
             <Minus className="h-4 w-4" />
           </Button>
-          <Button type="button" variant="ghost" id={`${idPrefix}-display`} 
-            onClick={() => !disabled && setIsEditing(true)} 
-            className="h-8 px-2 text-base w-full justify-center" 
+          <Button type="button" variant="ghost" id={`${idPrefix}-display`}
+            onClick={() => !disabled && setIsEditing(true)}
+            className="h-8 px-2 text-base w-full justify-center"
             disabled={disabled} >
             {value || (idPrefix === 'participant-quantity-dialog' ? '1' : (optional ? 'N/A' : '10'))}
           </Button>
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => { 
+            onClick={() => {
                 if(disabled) return;
-                const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? 0 : 0)); 
-                setValue(String(currentValue + 1)); 
+                const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? 0 : 0));
+                setValue(String(currentValue + 1));
             }}
             disabled={disabled}>
             <Plus className="h-4 w-4" />
@@ -829,7 +944,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAvatarImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: 'Upload Error',
           description: 'Avatar image file size exceeds 2MB limit.',
@@ -841,7 +956,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       reader.onloadend = () => {
         setUncroppedAvatarImageSrc(reader.result as string);
         setIsAvatarCropDialogOpen(true);
-        if (event.target) event.target.value = ''; 
+        if (event.target) event.target.value = '';
       };
       reader.readAsDataURL(file);
     }
@@ -912,10 +1027,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           onCropConfirm={(croppedDataUrl) => {
             if (tokenToChangeImage) {
               setTokens(prev => prev.map(t => t.id === tokenToChangeImage ? { ...t, customImageUrl: croppedDataUrl, icon: undefined, label: t.label || 'Custom' } : t));
-              const linkedParticipant = participants.find(p => p.tokenId === tokenToChangeImage);
-              if (linkedParticipant) {
-                // Participant's token image is updated via token state
-              }
               toast({ title: "Token Image Updated" });
             }
             setIsTokenCropDialogOpen(false);
@@ -929,7 +1040,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           }}
         />
       )}
-      
+
       {uncroppedAvatarImageSrc && (
         <ImageCropDialog
           isOpen={isAvatarCropDialogOpen}
@@ -992,9 +1103,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-                  
+
                     <div className="space-y-1">
-                        {/* Label removed as per previous request */}
+                        {/* Label for Type section removed */}
                         <div className="flex space-x-2">
                         {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                             const config = participantTypeButtonConfig[type];
@@ -1018,7 +1129,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         })}
                         </div>
                     </div>
-                  
+
 
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
@@ -1058,9 +1169,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
                     {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
                   </div>
-                  
-                  <FormDialogFooter> 
-                    <Button type="submit" className="w-full"> Add to Turn Order </Button> 
+
+                  <FormDialogFooter>
+                    <Button type="submit" className="w-full"> Add to Turn Order </Button>
                   </FormDialogFooter>
                 </form>
               </DialogContent>
@@ -1069,11 +1180,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
           <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
-              <Button 
-                onClick={handleStartCombat} 
+              <Button
+                onClick={handleStartCombat}
                 className="w-full bg-[hsl(var(--player-green-bg))] hover:bg-[hsl(var(--player-green-hover-bg))] text-[hsl(var(--player-green-foreground))]"
-              > 
-                Start Combat 
+              >
+                Start Combat
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -1089,4 +1200,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-    
