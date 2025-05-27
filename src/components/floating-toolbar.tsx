@@ -350,7 +350,7 @@ export default function FloatingToolbar({
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",
-                    "border-destructive text-destructive bg-destructive/20 hover:bg-destructive/30 hover:text-destructive-foreground"
+                    "bg-card hover:bg-muted border-destructive text-destructive hover:text-destructive"
                   )}
                   aria-label="Reset Board"
                 >
