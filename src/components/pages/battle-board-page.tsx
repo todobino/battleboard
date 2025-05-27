@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types';
+import type { Point, GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps, DefaultBattleMap } from '@/types';
 import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
@@ -303,7 +303,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setMeasurement({ type: null, startPoint: undefined, endPoint: undefined, result: undefined });
       }
     }
-    if (currentDrawingShape && !['draw_line', 'draw_circle', 'draw_square'].includes(activeTool)) {
+    if (currentDrawingShape && !['draw_line', 'draw_circle', 'draw_rectangle'].includes(activeTool)) {
       setCurrentDrawingShape(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -998,10 +998,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
-                    {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative*", "participant-initiative-dialog", false, false)}
-                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "HP", "participant-hp-dialog", true, false)}
-                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "AC", "participant-ac-dialog", true, false)}
-                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Qty*", "participant-quantity-dialog", false, !!selectedAssignedTokenId)}
+                    {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
+                    {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
+                    {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
+                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, !!selectedAssignedTokenId)}
                   </div>
                   
                   <FormDialogFooter> 
@@ -1037,6 +1037,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
