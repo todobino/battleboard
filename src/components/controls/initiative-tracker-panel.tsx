@@ -82,7 +82,7 @@ export default function InitiativeTrackerPanel({
   };
 
   const handleSaveRename = () => {
-    if (participantToRename && newNameInput.trim()) {
+    if (participantToRename && newNameInput.trim() && onRenameParticipant) {
       onRenameParticipant(participantToRename.id, newNameInput.trim());
     }
     setIsRenameDialogOpen(false);
@@ -99,6 +99,11 @@ export default function InitiativeTrackerPanel({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+            title: "Upload Error",
+            description: "Token image file size exceeds 2MB.",
+            variant: "destructive",
+        });
         return;
       }
       const reader = new FileReader();
@@ -112,7 +117,7 @@ export default function InitiativeTrackerPanel({
   };
 
   const handleTokenCropConfirm = (croppedDataUrl: string) => {
-    if (participantToChangeTokenFor) {
+    if (participantToChangeTokenFor && onChangeParticipantTokenImage) {
       onChangeParticipantTokenImage(participantToChangeTokenFor.id, croppedDataUrl);
     }
     setIsTokenCropDialogOpen(false);
@@ -270,7 +275,7 @@ export default function InitiativeTrackerPanel({
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <span className="block text-base font-semibold truncate" title={p.name}>{p.name}</span>
+                        <span className="block w-full text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
                         <Button
                           variant="ghost"
@@ -279,7 +284,7 @@ export default function InitiativeTrackerPanel({
                           aria-label={`Remove ${p.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onRemoveParticipant(p.id);
+                            if (onRemoveParticipant) onRemoveParticipant(p.id);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
@@ -480,3 +485,5 @@ export default function InitiativeTrackerPanel({
   );
 }
 
+
+    
