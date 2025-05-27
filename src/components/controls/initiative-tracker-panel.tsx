@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { Participant, InitiativeTrackerPanelProps as InitiativeTrackerPanelPropsType, Token } from '@/types';
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon, ArrowUpCircle, ArrowDownCircle, Edit3, ImagePlus, SlidersVertical, Plus, Minus } from 'lucide-react';
@@ -242,7 +242,7 @@ export default function InitiativeTrackerPanel({
                     <li
                       key={p.id}
                       className={cn(
-                        "flex flex-col p-2.5 w-full max-w-full min-w-0 rounded-md overflow-hidden transition-colors",
+                        "flex flex-col p-2.5 w-full max-w-full min-w-0 rounded-md overflow-hidden",
                         itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
                         canFocus && "cursor-pointer"
                       )}
@@ -277,8 +277,8 @@ export default function InitiativeTrackerPanel({
                             </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <span className="text-base font-semibold truncate" title={p.name}>
+                        <div className="w-0 flex-1 min-w-0 overflow-hidden">
+                          <span className="block truncate text-base font-semibold" title={p.name}>
                             {p.name}
                           </span>
                         </div>
@@ -490,6 +490,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
-
-    
