@@ -20,7 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -42,7 +41,7 @@ const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
   y: Math.floor(pos.y / cellSize) * cellSize + cellSize / 2,
 });
 
-// Helper to snap to grid vertices (for lines, squares/rectangles)
+// Helper to snap to grid vertices (for lines, rectangles)
 const snapToVertex = (pos: Point, cellSize: number): Point => ({
   x: Math.round(pos.x / cellSize) * cellSize,
   y: Math.round(pos.y / cellSize) * cellSize,
@@ -652,7 +651,7 @@ export default function BattleGrid({
             endPoint: startP,
             color: 'hsl(var(--accent))',
             strokeWidth: 2,
-            opacity: 1, // Lines are fully opaque by default
+            opacity: 1, 
           });
         }
         break;
@@ -668,10 +667,10 @@ export default function BattleGrid({
             type: activeTool === 'draw_circle' ? 'circle' : 'rectangle',
             startPoint: startP,
             endPoint: startP,
-            color: 'hsl(var(--accent))',      // Border color
-            fillColor: 'hsl(var(--accent))', // Fill color
+            color: 'hsl(var(--accent))',      
+            fillColor: 'hsl(var(--accent))', 
             strokeWidth: 1,
-            opacity: 0.5, // Default fill opacity
+            opacity: 0.5, 
           });
         }
         break;
@@ -959,7 +958,7 @@ export default function BattleGrid({
                 y: drawingStartPoint.y + unitY * snappedPixelDist,
             };
             setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: finalEndPoint } : null);
-        } else { // For lines and rectangles (rectangle endpoint snaps to vertex, line doesn't snap during drag)
+        } else { 
             const snapFn = currentDrawingShape.type === 'rectangle' ? snapToVertex : (p: Point) => p; 
             const currentEndPoint = snapFn(pos, cellSize);
             setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: currentEndPoint } : null);
@@ -1371,16 +1370,17 @@ export default function BattleGrid({
           {drawnShapes.map(shape => {
             const isCurrentlyEditingThisShapeLabel = editingShapeId === shape.id;
             let labelX = 0, labelY = 0;
+            const labelOffset = 15; // Standard offset for labels below shapes
             if (shape.label) {
                 if (shape.type === 'line') {
                     labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2 - 5;
+                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + labelOffset;
                 } else if (shape.type === 'circle') {
                     labelX = shape.startPoint.x;
-                    labelY = shape.startPoint.y - Math.sqrt(dist2(shape.startPoint, shape.endPoint)) - 10;
+                    labelY = shape.startPoint.y + Math.sqrt(dist2(shape.startPoint, shape.endPoint)) + labelOffset;
                 } else if (shape.type === 'rectangle') {
                     labelX = Math.min(shape.startPoint.x, shape.endPoint.x) + Math.abs(shape.endPoint.x - shape.startPoint.x) / 2;
-                    labelY = Math.min(shape.startPoint.y, shape.endPoint.y) - 10;
+                    labelY = Math.max(shape.startPoint.y, shape.endPoint.y) + labelOffset;
                 }
             }
 
@@ -1395,7 +1395,7 @@ export default function BattleGrid({
                     x2={shape.endPoint.x} y2={shape.endPoint.y}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={shape.opacity ?? 1} // Lines use opacity for stroke
+                    strokeOpacity={shape.opacity ?? 1}
                   />
                 )}
                 {shape.type === 'circle' && (
@@ -1404,9 +1404,9 @@ export default function BattleGrid({
                     r={Math.sqrt(dist2(shape.startPoint, shape.endPoint))}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={1} // Border is always 100% opaque for circles
+                    strokeOpacity={1} 
                     fill={shape.fillColor}
-                    fillOpacity={shape.opacity ?? 0.5} // Fill uses managed opacity, defaults to 0.5
+                    fillOpacity={shape.opacity ?? 0.5} 
                   />
                 )}
                 {shape.type === 'rectangle' && (
@@ -1417,9 +1417,9 @@ export default function BattleGrid({
                     height={Math.abs(shape.endPoint.y - shape.startPoint.y)}
                     stroke={shape.color}
                     strokeWidth={shape.strokeWidth}
-                    strokeOpacity={1} // Border is always 100% opaque for rectangles
+                    strokeOpacity={1}
                     fill={shape.fillColor}
-                    fillOpacity={shape.opacity ?? 0.5} // Fill uses managed opacity, defaults to 0.5
+                    fillOpacity={shape.opacity ?? 0.5}
                   />
                 )}
                  {shape.label && !isCurrentlyEditingThisShapeLabel && (
@@ -1443,8 +1443,8 @@ export default function BattleGrid({
                 )}
                 {isCurrentlyEditingThisShapeLabel && (
                     <foreignObject
-                        x={labelX - 50} // Adjust width/height and offsets as needed
-                        y={labelY - 15}
+                        x={labelX - 50} 
+                        y={labelY - 7.5} // Adjust y based on label position and input height
                         width={100}
                         height={22}
                     >
@@ -1838,8 +1838,8 @@ export default function BattleGrid({
         open={popoverOpen}
         onOpenChange={(isOpen) => {
             setPopoverOpen(isOpen);
-            if (!isOpen && !isDeleteAlertOpen) { // Only clear if the alert isn't the reason it might be closing
-              setActivePopoverToken(null);
+            if (!isOpen) { 
+              setActivePopoverToken(null); 
             }
         }}
       >
@@ -1862,8 +1862,6 @@ export default function BattleGrid({
                 className="w-48 p-1"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onPointerDownOutside={(e) => {
-                    // Prevent closing if the delete alert is open.
-                    // The delete alert's onOpenChange will handle clearing activePopoverToken if needed.
                     if (isDeleteAlertOpen) {
                         e.preventDefault();
                     }
@@ -1899,7 +1897,6 @@ export default function BattleGrid({
                      onOpenChange={(isOpen) => {
                         setIsDeleteAlertOpen(isOpen);
                         if (!isOpen) { 
-                           // If dialog closes, and popover was still technically open, close popover and clear context.
                            setPopoverOpen(false); 
                            setActivePopoverToken(null); 
                         }
@@ -1930,8 +1927,6 @@ export default function BattleGrid({
                           if (activePopoverToken) {
                             onTokenDelete(activePopoverToken.id);
                           }
-                          // AlertDialog's onOpenChange will handle setting isDeleteAlertOpen to false
-                          // which in turn will close the popover and clear activePopoverToken.
                         }}
                         className={buttonVariants({ variant: "destructive" })}
                       >
@@ -2132,7 +2127,7 @@ export default function BattleGrid({
                     )}
                      <Button
                         variant="ghost"
-                        className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" // !mt-3 ensures margin even if sections above are hidden
+                        className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
                         onClick={() => {
                             if (activePopoverShape) {
                                 setEditingShapeId(activePopoverShape.id);
