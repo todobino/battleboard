@@ -33,9 +33,9 @@ import { tokenTemplates } from '@/config/token-templates';
 const GRID_ROWS = 40;
 const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
-const MAX_HISTORY_LENGTH = 30;
+const MAX_HISTORY_LENGTH = 10; // Reduced from 30
 const WELCOME_DIALOG_STORAGE_KEY = 'hasSeenWelcomeDialogV1';
-const LOCAL_STORAGE_KEY = 'battleBoardStateV2'; // V2 to manage potential schema changes
+const LOCAL_STORAGE_KEY = 'battleBoardStateV2';
 
 
 const initialGridCells = (): GridCellData[][] =>
@@ -235,6 +235,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       } catch (error) {
         console.error("Failed to load or parse saved state from localStorage:", error);
+        // If parsing fails, remove the potentially corrupted item
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
         setHistory([createInitialSnapshot()]);
         setHistoryPointer(0);
       }
@@ -284,6 +286,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
+      // Potentially add more sophisticated error handling or user notification here
+      // For now, we'll just log it, but this is where you might clear history or reduce data
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
@@ -322,14 +326,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setHistoryPointer(0);
         return;
     }
-    if (historyPointer === -1) return;
+    if (historyPointer === -1) return; // Should ideally not happen if initialized properly
 
     const newSnapshot = getCurrentUndoableState();
-    // To compare, we should compare with stripped icons, as that's what's in history after load.
-    // Or, more simply, just compare the stringified versions (might be slow for large states).
-    // For robustness, let's assume a change occurred unless it's the exact same object reference
-    // or do a smarter comparison if performance becomes an issue.
-    // For now, we assume if this effect runs, it's due to a meaningful change.
 
     const newHistoryBase = history.slice(0, historyPointer + 1);
     const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
@@ -402,16 +401,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       if (event.key === 'Escape') {
         if (isInputFocused) {
+          // Allow default behavior for inputs (e.g., blur, cancel edit)
           return;
         }
         event.preventDefault();
         setActiveTool('select');
-        setEscapePressCount(prev => prev + 1);
-        return;
+        setEscapePressCount(prev => prev + 1); // Increment to trigger effects in child components
+        return; // Stop further processing for Escape key here
       }
 
       if (isInputFocused) {
-        return;
+        return; // Don't process other hotkeys if an input is focused
       }
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -778,8 +778,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) || tokenTemplates.find(t => t.type === 'generic');
             return {
               ...token,
-              instanceName: undefined,
-              customImageUrl: undefined, // Clear custom image
+              instanceName: undefined, // Clear specific instance name
+              customImageUrl: undefined, // Clear custom image if it was from this participant
+              // Revert to base template icon and color unless it's a generic token that should retain its specific visual
               icon: baseTemplate?.icon,
               color: baseTemplate?.color || 'hsl(var(--accent))',
             };
@@ -795,8 +796,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
-      if (isCombatActive) setRoundCounter(1);
-      setIsCombatActive(false);
+      if (isCombatActive) setRoundCounter(1); // Reset round if combat was active and list is now empty
+      setIsCombatActive(false); // End combat if no participants left
     } else {
       let newIndex = currentParticipantIndex;
       const removedIndex = participants.findIndex(p => p.id === participantId);
@@ -806,6 +807,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         // If it was the last one, move to 0 (or -1 if empty)
         newIndex = (newIndex >= updatedParticipants.length) ? 0 : newIndex;
       } else if (newIndex > removedIndex) {
+        // If removed participant was before current, decrement current index
         newIndex = Math.max(0, newIndex - 1);
       }
       // If current is -1 or current becomes invalid after removal, reset to 0 if list not empty
@@ -813,9 +815,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           newIndex = updatedParticipants.length > 0 ? 0 : -1;
       }
       setCurrentParticipantIndex(newIndex);
+      // Specific edge case: if the one removed was the *last* in a round,
+      // and current was already 0 (meaning next round just started),
+      // then currentParticipantIndex should remain 0. The round counter should not change here.
       if(updatedParticipants.length > 0 && currentParticipantIndex === 0 && newIndex === 0 && roundCounter > 1 && removedIndex === participants.length -1) {
-        // If the one removed was the *last* in a round, and current was already 0 (start of next round)
-        // then currentParticipantIndex should remain 0. The round counter should not change here.
+        // No change to roundCounter needed here, as the next turn was already the start of a new round
       }
     }
     toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
@@ -848,9 +852,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               else {
                 const num = parseInt(value, 10);
                 if (isNaN(num) || (!optional && num < 0) || (optional && num < 0 && value.trim() !== '')) {
-                    setValue('10');
+                    setValue('10'); // Default to 10 if invalid non-optional or invalid negative optional
                 } else if (optional && num < 0 && value.trim() !== '') {
-                    setValue('0');
+                    setValue('0'); // Default to 0 if invalid negative optional (but was explicitly entered)
                 }
               }
             }
@@ -866,7 +870,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 if(disabled) return;
                 const currentValue = parseInt(value, 10) || 0;
                 const isQuantityField = idPrefix === 'participant-quantity-dialog';
-                const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0);
+                const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0); // Allow negative for optional stats if desired, else 0
                 setValue(String(Math.max(minValue, currentValue - 1)));
             }}
             disabled={disabled}>
@@ -881,7 +885,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
             onClick={() => {
                 if(disabled) return;
-                const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? 0 : 0));
+                const currentValue = parseInt(value,10) || (idPrefix === 'participant-quantity-dialog' ? 0 : (optional && value === '' ? -1 : 0));
                 setValue(String(currentValue + 1));
             }}
             disabled={disabled}>
@@ -924,6 +928,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleDialogClose = (isOpen: boolean) => {
     setDialogOpen(isOpen);
     if (!isOpen) {
+      // Reset form fields when dialog closes
       setNewParticipantName('');
       setNewParticipantInitiative('10');
       setNewParticipantHp('10');
@@ -944,7 +949,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAvatarImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
         toast({
           title: 'Upload Error',
           description: 'Avatar image file size exceeds 2MB limit.',
@@ -956,7 +961,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       reader.onloadend = () => {
         setUncroppedAvatarImageSrc(reader.result as string);
         setIsAvatarCropDialogOpen(true);
-        if (event.target) event.target.value = '';
+        if (event.target) event.target.value = ''; // Reset file input
       };
       reader.readAsDataURL(file);
     }
@@ -1013,9 +1018,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             onRedo={handleRedo}
             canUndo={historyPointer > 0}
             canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
+            onResetBoard={handleResetBoard}
             defaultBattlemaps={defaultBattlemaps}
             escapePressCount={escapePressCount}
-            onResetBoard={handleResetBoard}
           />
       </div>
 
@@ -1103,33 +1108,31 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-
-                    <div className="space-y-1">
-                        {/* Label for Type section removed */}
-                        <div className="flex space-x-2">
-                        {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                            const config = participantTypeButtonConfig[type];
-                            const isSelected = newParticipantType === type;
-                            const IconComponent = config.icon;
-                            return (
-                            <Button
-                                key={type}
-                                type="button"
-                                variant={isSelected ? undefined : 'outline'}
-                                onClick={() => setNewParticipantType(type)}
-                                className={cn(
-                                "flex-1 flex items-center justify-center gap-2",
-                                isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
-                                )}
-                            >
-                                <IconComponent className="h-4 w-4" />
-                                {config.label}
-                            </Button>
-                            );
-                        })}
-                        </div>
-                    </div>
-
+                  <div className="space-y-1">
+                      {/* Label for Type section removed */}
+                      <div className="flex space-x-2">
+                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                          const config = participantTypeButtonConfig[type];
+                          const isSelected = newParticipantType === type;
+                          const IconComponent = config.icon;
+                          return (
+                          <Button
+                              key={type}
+                              type="button"
+                              variant={isSelected ? undefined : 'outline'}
+                              onClick={() => setNewParticipantType(type)}
+                              className={cn(
+                              "flex-1 flex items-center justify-center gap-2",
+                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                              )}
+                          >
+                              <IconComponent className="h-4 w-4" />
+                              {config.label}
+                          </Button>
+                          );
+                      })}
+                      </div>
+                  </div>
 
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
