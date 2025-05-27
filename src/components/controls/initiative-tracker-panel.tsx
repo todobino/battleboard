@@ -247,7 +247,7 @@ export default function InitiativeTrackerPanel({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center flex-grow min-w-0">
+                      <div className="flex items-center flex-grow min-w-0 overflow-hidden">
                         {token ? (
                           token.customImageUrl ? (
                             <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 border border-sidebar-border">
