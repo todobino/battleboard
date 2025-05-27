@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon, ArrowUpCircle, ArrowDownCircle, Edit3, Image as ImageIcon } from 'lucide-react'; // Added Edit3, ImageIcon
+import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon, ArrowUpCircle, ArrowDownCircle, Edit3, ImagePlus } from 'lucide-react'; // Changed Image to ImagePlus
 
 import {
   Dialog,
@@ -250,7 +250,7 @@ export default function InitiativeTrackerPanel({
                             <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
                           </Button>
                           <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleChangeTokenClick(p)}>
-                            <ImageIcon className="mr-2 h-3.5 w-3.5" /> Update Image
+                            <ImagePlus className="mr-2 h-3.5 w-3.5" /> Update Image
                           </Button>
                         </PopoverContent>
                       </Popover>
