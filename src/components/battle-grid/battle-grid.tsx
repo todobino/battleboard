@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Slider import already removed
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -34,6 +33,7 @@ const TEXT_PADDING = { x: 8, y: 4 };
 const CLICK_THRESHOLD_SQUARED = 25; // For distinguishing click vs drag
 const SHAPE_CLICK_THRESHOLD = 8; // For hit detection on shapes
 const MIN_NEW_TEXT_INPUT_WIDTH = 150;
+const DOUBLE_CLICK_THRESHOLD_MS = 300;
 
 
 const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
@@ -197,6 +197,8 @@ export default function BattleGrid({
   const [editingTextObjectId, setEditingTextObjectId] = useState<string | null>(null);
   const [editingTextObjectContent, setEditingTextObjectContent] = useState<string>('');
   const textObjectEditInputRef = useRef<HTMLInputElement>(null);
+  const [lastTextClickInfo, setLastTextClickInfo] = useState<{ id: string | null; time: number }>({ id: null, time: 0 });
+
 
   const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
   const [editingShapeLabelText, setEditingShapeLabelText] = useState<string>('');
@@ -543,17 +545,37 @@ export default function BattleGrid({
         event.stopPropagation();
         if (isCreatingText) finalizeTextCreation();
         if (editingTextObjectId) handleFinalizeTextEdit(); 
-        setTimeout(() => { 
-            const newPos = getMousePosition(event); 
-            setIsCreatingText({
-                id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                x: newPos.x,
-                y: newPos.y,
-                currentText: '',
-                fontSize: currentTextFontSize,
-                inputWidth: MIN_NEW_TEXT_INPUT_WIDTH,
-            });
-        }, 0);
+        
+        const clickedTextObjectForEdit = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
+        if (clickedTextObjectForEdit) {
+            const currentTime = Date.now();
+            if (clickedTextObjectForEdit.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
+                // Double click
+                setEditingTextObjectId(clickedTextObjectForEdit.id);
+                setEditingTextObjectContent(clickedTextObjectForEdit.content);
+                setLastTextClickInfo({ id: null, time: 0 }); // Reset double click state
+                return;
+            } else {
+                // Single click
+                setLastTextClickInfo({ id: clickedTextObjectForEdit.id, time: currentTime });
+                // Do not create new text if clicking an existing one
+                return;
+            }
+        } else {
+          // Clicked on grid background, create new text
+          setLastTextClickInfo({ id: null, time: 0 }); // Reset to avoid false double-clicks
+          setTimeout(() => { 
+              const newPos = getMousePosition(event); 
+              setIsCreatingText({
+                  id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                  x: newPos.x,
+                  y: newPos.y,
+                  currentText: '',
+                  fontSize: currentTextFontSize,
+                  inputWidth: MIN_NEW_TEXT_INPUT_WIDTH,
+              });
+          }, 0);
+        }
         return;
     }
 
@@ -1074,7 +1096,7 @@ export default function BattleGrid({
 
       if (shapeToAdd.type === 'circle') {
           const pixelRadius = Math.sqrt(dist2(shapeToAdd.startPoint, shapeToAdd.endPoint));
-          if (pixelRadius < cellSize * 0.5) { // Min radius check
+          if (pixelRadius < cellSize * 0.5) { 
               setCurrentDrawingShape(null);
               setIsDrawing(false);
               setDrawingStartPoint(null);
@@ -1086,7 +1108,7 @@ export default function BattleGrid({
       } else if (shapeToAdd.type === 'rectangle') {
           const width = Math.abs(shapeToAdd.endPoint.x - shapeToAdd.startPoint.x);
           const height = Math.abs(shapeToAdd.endPoint.y - shapeToAdd.startPoint.y);
-          if (width < cellSize * 0.5 || height < cellSize * 0.5) { // Min dimensions check
+          if (width < cellSize * 0.5 || height < cellSize * 0.5) { 
               setCurrentDrawingShape(null);
               setIsDrawing(false);
               setDrawingStartPoint(null);
@@ -1380,13 +1402,13 @@ export default function BattleGrid({
             if (shape.label) {
                 if (shape.type === 'line') {
                     labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + 10; // Centered on line, offset down
+                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + 10; 
                 } else if (shape.type === 'circle') {
-                    labelX = shape.startPoint.x; // Center X
-                    labelY = shape.startPoint.y; // Center Y
+                    labelX = shape.startPoint.x; 
+                    labelY = shape.startPoint.y; 
                 } else if (shape.type === 'rectangle') {
-                    labelX = Math.min(shape.startPoint.x, shape.endPoint.x) + Math.abs(shape.endPoint.x - shape.startPoint.x) / 2; // Center X
-                    labelY = Math.min(shape.startPoint.y, shape.endPoint.y) + Math.abs(shape.endPoint.y - shape.startPoint.y) / 2; // Center Y
+                    labelX = Math.min(shape.startPoint.x, shape.endPoint.x) + Math.abs(shape.endPoint.x - shape.startPoint.x) / 2; 
+                    labelY = Math.min(shape.startPoint.y, shape.endPoint.y) + Math.abs(shape.endPoint.y - shape.startPoint.y) / 2;
                 }
             }
 
@@ -1910,7 +1932,6 @@ export default function BattleGrid({
                           )}
                           onClick={() => {
                             // We don't need to close popover here as AlertDialog will take over focus.
-                            // If we did, AlertDialog might also close if popover closure is too fast.
                           }}
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
