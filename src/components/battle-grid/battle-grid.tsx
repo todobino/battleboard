@@ -666,6 +666,10 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
+            setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Select on single click
+            setSelectedTokenId(null);
+            setSelectedShapeId(null);
+
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 setEditingTextObjectId(clickedTextObjectForInteraction.id);
@@ -682,9 +686,8 @@ export default function BattleGrid({
             setSelectedTextObjectId(null);
 
             setTimeout(() => {
-                // Ensure we re-check conditions inside setTimeout as state might change
                 if (activeTool === 'type_tool' && !editingTextObjectId && !isCreatingText) { 
-                    const newPos = getMousePosition(event); // Re-fetch position in case of slight delay
+                    const newPos = getMousePosition(event); 
                     setIsCreatingText({
                         id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         x: newPos.x,
@@ -836,16 +839,10 @@ export default function BattleGrid({
 
     for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
-        if (shape.type === 'line') { // Lines do not have a popover
-           setSelectedShapeId(shape.id);
-           setSelectedTokenId(null);
-           setSelectedTextObjectId(null);
-           setRightClickPopoverState(null); // Ensure no popover for lines
-           return;
-        }
-
         let hit = false;
-        if (shape.type === 'circle') {
+        if (shape.type === 'line') {
+          hit = distanceToLineSegment(pos.x, pos.y, shape.startPoint.x, shape.startPoint.y, shape.endPoint.x, shape.endPoint.y) <= SHAPE_CLICK_THRESHOLD;
+        } else if (shape.type === 'circle') {
           const radius = Math.sqrt(dist2(shape.startPoint, shape.endPoint));
           hit = isPointInCircle(pos, shape.startPoint, radius);
         } else if (shape.type === 'rectangle') {
@@ -2139,106 +2136,123 @@ export default function BattleGrid({
                 </div>
               )}
 
-              {rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
+              {rightClickPopoverState.type === 'shape' && (
                 <div className="w-60 p-2 space-y-2" key={`shape-popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity}`}>
-                    {(rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
-                         <div className="space-y-1 pt-1">
-                            <Label className="text-xs">Shape Opacity</Label>
-                             <div
-                                className="flex space-x-1"
-                                key={`opacity-controls-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity ?? 0.5}`} 
-                            >
-                                {[1.0, 0.5, 0.1].map(opacityValue => (
-                                    <Button
-                                        key={`opacity-${opacityValue}`}
-                                        variant={(((rightClickPopoverState.item as DrawnShape).opacity ?? 0.5) === opacityValue) ? 'default' : 'outline'}
-                                        className="flex-1 h-8 text-xs"
-                                        onClick={() => handleSetShapeOpacity(rightClickPopoverState.item.id, opacityValue)}
-                                    >
-                                        {`${(opacityValue * 100).toFixed(0)}%`}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {rightClickPopoverState.item.type === 'circle' && (
-                        <div className="space-y-1 pt-1">
-                            <Label htmlFor={`shape-radius-input-${rightClickPopoverState.item.id}`} className="text-xs flex items-center">
-                               Radius (ft)
-                            </Label>
-                            <div className="flex items-center space-x-1">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                        const currentFeet = parseFloat(shapeRadiusInput) || 0;
-                                        const newFeet = Math.max(FEET_PER_SQUARE / 2, currentFeet - FEET_PER_SQUARE);
-                                        setShapeRadiusInput(String(newFeet)); 
-                                        handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
-                                    }}
-                                >
-                                    <Minus className="h-4 w-4"/>
-                                </Button>
-                                <Input
-                                    id={`shape-radius-input-${rightClickPopoverState.item.id}`}
-                                    type="number"
-                                    value={shapeRadiusInput}
-                                    onChange={(e) => setShapeRadiusInput(e.target.value)}
-                                    onBlur={() => handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput);
-                                            (e.target as HTMLInputElement).blur(); 
-                                        }
-                                    }}
-                                    className="h-8 text-sm text-center w-16"
-                                    min={FEET_PER_SQUARE / 2} 
-                                    step={FEET_PER_SQUARE} 
-                                />
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                        const currentFeet = parseFloat(shapeRadiusInput) || 0;
-                                        const newFeet = currentFeet + FEET_PER_SQUARE;
-                                        setShapeRadiusInput(String(newFeet)); 
-                                        handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
-                                    }}
-                                >
-                                    <Plus className="h-4 w-4"/>
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                     <Button
-                        variant="ghost"
-                        className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
-                        onClick={() => {
-                            const shape = rightClickPopoverState.item as DrawnShape;
-                            setEditingShapeId(shape.id);
-                            setEditingShapeLabelText(shape.label || '');
-                            setRightClickPopoverState(null); 
-                        }}
-                    >
-                        <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
-                    </Button>
+                  {(rightClickPopoverState.item as DrawnShape).type === 'line' ? (
                     <Button
-                        variant="ghost"
-                        className={cn(
-                            "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
-                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        )}
-                        onClick={() => {
-                            setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
-                            setRightClickPopoverState(null); 
-                            setSelectedShapeId(null); 
-                        }}
+                      variant="ghost"
+                      className={cn(
+                          "w-full justify-start h-8 px-2 text-sm flex items-center",
+                          "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      )}
+                      onClick={() => {
+                          setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
+                          setRightClickPopoverState(null);
+                          setSelectedShapeId(null);
+                      }}
                     >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
                     </Button>
+                  ) : (
+                    <>
+                      <div className="space-y-1 pt-1">
+                          <Label className="text-xs">Shape Opacity</Label>
+                          <div
+                              className="flex space-x-1"
+                              key={`opacity-controls-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity ?? 0.5}`}
+                          >
+                              {[1.0, 0.5, 0.1].map(opacityValue => (
+                                  <Button
+                                      key={`opacity-${opacityValue}`}
+                                      variant={(((rightClickPopoverState.item as DrawnShape).opacity ?? 0.5) === opacityValue) ? 'default' : 'outline'}
+                                      className="flex-1 h-8 text-xs"
+                                      onClick={() => handleSetShapeOpacity(rightClickPopoverState.item.id, opacityValue)}
+                                  >
+                                      {`${(opacityValue * 100).toFixed(0)}%`}
+                                  </Button>
+                              ))}
+                          </div>
+                      </div>
+
+                      {(rightClickPopoverState.item as DrawnShape).type === 'circle' && (
+                          <div className="space-y-1 pt-1">
+                              <Label htmlFor={`shape-radius-input-${rightClickPopoverState.item.id}`} className="text-xs flex items-center">
+                                 Radius (ft)
+                              </Label>
+                              <div className="flex items-center space-x-1">
+                                  <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                          const currentFeet = parseFloat(shapeRadiusInput) || 0;
+                                          const newFeet = Math.max(FEET_PER_SQUARE / 2, currentFeet - FEET_PER_SQUARE);
+                                          setShapeRadiusInput(String(newFeet)); 
+                                          handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
+                                      }}
+                                  >
+                                      <Minus className="h-4 w-4"/>
+                                  </Button>
+                                  <Input
+                                      id={`shape-radius-input-${rightClickPopoverState.item.id}`}
+                                      type="number"
+                                      value={shapeRadiusInput}
+                                      onChange={(e) => setShapeRadiusInput(e.target.value)}
+                                      onBlur={() => handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput)}
+                                      onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                              handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput);
+                                              (e.target as HTMLInputElement).blur(); 
+                                          }
+                                      }}
+                                      className="h-8 text-sm text-center w-16"
+                                      min={FEET_PER_SQUARE / 2} 
+                                      step={FEET_PER_SQUARE} 
+                                  />
+                                  <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                          const currentFeet = parseFloat(shapeRadiusInput) || 0;
+                                          const newFeet = currentFeet + FEET_PER_SQUARE;
+                                          setShapeRadiusInput(String(newFeet)); 
+                                          handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
+                                      }}
+                                  >
+                                      <Plus className="h-4 w-4"/>
+                                  </Button>
+                              </div>
+                          </div>
+                      )}
+                       <Button
+                          variant="ghost"
+                          className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
+                          onClick={() => {
+                              const shape = rightClickPopoverState.item as DrawnShape;
+                              setEditingShapeId(shape.id);
+                              setEditingShapeLabelText(shape.label || '');
+                              setRightClickPopoverState(null); 
+                          }}
+                      >
+                          <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
+                      </Button>
+                      <Button
+                          variant="ghost"
+                          className={cn(
+                              "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
+                              "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          )}
+                          onClick={() => {
+                              setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
+                              setRightClickPopoverState(null); 
+                              setSelectedShapeId(null); 
+                          }}
+                      >
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </PopoverContent>
