@@ -88,33 +88,9 @@ export default function TokenPlacerPanel({
 
   return (
     <div>
-      <Card className="border-none shadow-none bg-transparent">
-        <CardContent className="grid grid-cols-3 gap-2 p-0">
-          {tokenTemplates.map(template => {
-            const Icon = template.icon;
-            return (
-            <Button
-              key={template.name}
-              variant="outline"
-              className={cn(
-                "aspect-square h-auto flex flex-col items-center justify-center p-1 space-y-0.5",
-                "border-2 border-transparent hover:border-accent"
-              )}
-              style={{ backgroundColor: template.color }}
-              onClick={() => handleSelectTokenTemplate(template)}
-              aria-label={`Place ${template.name} token`}
-            >
-              {Icon && <Icon className="h-5 w-5" color={"hsl(var(--primary-foreground))"} />}
-              <span className="text-xs text-primary-foreground text-center leading-tight">{template.name}</span>
-            </Button>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      <div className="mt-3 pt-3 border-t border-border">
+      <div className="mb-3">
         <Label className="text-sm font-medium">Token Size</Label>
-        <div className="flex items-center justify-between mt-1 space-x-1">
+        <div className="flex items-center mt-1 space-x-1">
           <Button
             variant="outline"
             size="icon"
@@ -139,6 +115,32 @@ export default function TokenPlacerPanel({
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="mb-3 pt-3 border-t border-border">
+        <Card className="border-none shadow-none bg-transparent">
+          <CardContent className="grid grid-cols-3 gap-2 p-0">
+            {tokenTemplates.map(template => {
+              const Icon = template.icon;
+              return (
+              <Button
+                key={template.name}
+                variant="outline"
+                className={cn(
+                  "aspect-square h-auto flex flex-col items-center justify-center p-1 space-y-0.5",
+                  "border-2 border-transparent hover:border-accent"
+                )}
+                style={{ backgroundColor: template.color }}
+                onClick={() => handleSelectTokenTemplate(template)}
+                aria-label={`Place ${template.name} token`}
+              >
+                {Icon && <Icon className="h-5 w-5" color={"hsl(var(--primary-foreground))"} />}
+                <span className="text-xs text-primary-foreground text-center leading-tight">{template.name}</span>
+              </Button>
+              );
+            })}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="mt-3 pt-3 border-t border-border">
