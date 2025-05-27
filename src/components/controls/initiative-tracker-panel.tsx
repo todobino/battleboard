@@ -9,17 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+
 import {
   Dialog,
   DialogContent,
@@ -177,31 +167,18 @@ export default function InitiativeTrackerPanel({
                         )}
                         <span className="text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
-                            aria-label={`Remove ${p.name}`}
-                            onClick={(e) => e.stopPropagation()} // Prevent li onClick from firing
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove {p.name}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. Are you sure you want to remove this participant?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onRemoveParticipant(p.id)}>Remove</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
+                          aria-label={`Remove ${p.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent li onClick from firing
+                            onRemoveParticipant(p.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
+                        </Button>
                     </div>
 
                     {/* Bottom Row: Stats with Icons, Badge, Three Dots Icon */}

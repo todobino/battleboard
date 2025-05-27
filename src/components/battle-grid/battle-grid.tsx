@@ -5,21 +5,10 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users } from 'lucide-react';
+import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users, CircleDotDashed, VenetianMask } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -239,21 +228,6 @@ export default function BattleGrid({
   } | null>(null);
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [isTokenDeleteAlertOpen, setIsTokenDeleteAlertOpen] = useState(false);
-  const [isTextObjectDeleteAlertOpen, setIsTextObjectDeleteAlertOpen] = useState(false);
-  const [isShapeDeleteAlertOpen, setIsShapeDeleteAlertOpen] = useState(false);
-
-  const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
-    if (!svgRef.current) return { x: 0, y: 0 };
-    const svg = svgRef.current;
-    const CTM = svg.getScreenCTM();
-    if (!CTM) return { x: 0, y: 0 };
-    return {
-      x: (event.clientX - CTM.e) / CTM.a,
-      y: (event.clientY - CTM.f) / CTM.d,
-    };
-  }, []);
-
   const measureText = useCallback((text: string, fontSize: number) => {
     if (typeof document === 'undefined') return { width: 0, height: 0}; 
     const tempSpan = document.createElement('span');
@@ -321,7 +295,9 @@ export default function BattleGrid({
           t.id === editingTokenId ? { ...t, instanceName: editingText } : t
         )
       );
-      onTokenInstanceNameChange(editingTokenId, editingText); 
+      if (onTokenInstanceNameChange) {
+        onTokenInstanceNameChange(editingTokenId, editingText); 
+      }
       setEditingTokenId(null);
       setEditingText('');
     }
@@ -339,29 +315,17 @@ export default function BattleGrid({
     }
   }, [editingShapeId, editingShapeLabelText, setDrawnShapes]);
 
-  const calculateInitialViewBox = useCallback(() => {
-    const calculatedTotalContentWidth = numCols * cellSize;
-    const calculatedTotalContentHeight = numRows * cellSize;
-    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    const svgPadding = currentBorderWidth / 2;
+  const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const svg = svgRef.current;
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return { x: 0, y: 0 };
+    return {
+      x: (event.clientX - CTM.e) / CTM.a,
+      y: (event.clientY - CTM.f) / CTM.d,
+    };
+  }, []);
 
-    if (svgRef.current) {
-      const svg = svgRef.current;
-      const viewportWidth = svg.clientWidth;
-      const viewportHeight = svg.clientHeight;
-
-      if (viewportWidth > 0 && viewportHeight > 0 && calculatedTotalContentWidth > 0 && calculatedTotalContentHeight > 0) {
-        const scaleToFillViewportWidth = viewportWidth / (calculatedTotalContentWidth + currentBorderWidth);
-        const initialViewWidth = calculatedTotalContentWidth + currentBorderWidth;
-        const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
-        const initialViewMinX = 0 - svgPadding;
-        const initialViewMinY = (0 - svgPadding) + ((calculatedTotalContentHeight + currentBorderWidth) - initialViewHeight) / 2;
-        return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
-      }
-    }
-    return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
-  }, [numCols, numRows, cellSize, showGridLines]);
-  
   const applyZoom = useCallback((zoomIn: boolean, customScaleAmount?: number) => {
     if (!svgRef.current) return;
     const scaleAmount = customScaleAmount || ZOOM_AMOUNT;
@@ -425,6 +389,29 @@ export default function BattleGrid({
     applyZoom(zoomIn);
   }, [applyZoom, editingTokenId, editingShapeId, editingTextObjectId, isCreatingText]);
 
+  const calculateInitialViewBox = useCallback(() => {
+    const calculatedTotalContentWidth = numCols * cellSize;
+    const calculatedTotalContentHeight = numRows * cellSize;
+    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+    const svgPadding = currentBorderWidth / 2;
+
+    if (svgRef.current) {
+      const svg = svgRef.current;
+      const viewportWidth = svg.clientWidth;
+      const viewportHeight = svg.clientHeight;
+
+      if (viewportWidth > 0 && viewportHeight > 0 && calculatedTotalContentWidth > 0 && calculatedTotalContentHeight > 0) {
+        const scaleToFillViewportWidth = viewportWidth / (calculatedTotalContentWidth + currentBorderWidth);
+        const initialViewWidth = calculatedTotalContentWidth + currentBorderWidth;
+        const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
+        const initialViewMinX = 0 - svgPadding;
+        const initialViewMinY = (0 - svgPadding) + ((calculatedTotalContentHeight + currentBorderWidth) - initialViewHeight) / 2;
+        return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
+      }
+    }
+    return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
+  }, [numCols, numRows, cellSize, showGridLines]);
+
   useEffect(() => {
     setViewBox(calculateInitialViewBox());
   }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl, calculateInitialViewBox]);
@@ -472,9 +459,6 @@ export default function BattleGrid({
       setEditingShapeId(null);
       setEditingTextObjectId(null);
       if(isCreatingText) finalizeTextCreation(); 
-      setIsTokenDeleteAlertOpen(false);
-      setIsTextObjectDeleteAlertOpen(false);
-      setIsShapeDeleteAlertOpen(false);
       setHoveredTextObjectId(null);
     }
   }, [escapePressCount, finalizeTextCreation, isCreatingText]);
@@ -673,8 +657,6 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
 
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); 
-            setSelectedTokenId(null); setSelectedShapeId(null);
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 setEditingTextObjectId(clickedTextObjectForInteraction.id);
@@ -1203,7 +1185,9 @@ export default function BattleGrid({
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
       if (draggingTokenPosition) { 
-        onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+        if (onTokenMove) {
+            onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+        }
       }
       setDraggingToken(null);
       setDragOffset(null);
@@ -1285,7 +1269,7 @@ export default function BattleGrid({
         setHoveredCellWhilePaintingOrErasing(null);
     }
     if (draggingToken) {
-        if (draggingTokenPosition) { 
+        if (draggingTokenPosition && onTokenMove) { 
              onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
         }
         setDraggingToken(null);
@@ -1371,8 +1355,6 @@ export default function BattleGrid({
          const currentItem = rightClickPopoverState.item as DrawnShape;
          const updatedItem = { ...currentItem, opacity: opacityValue };
          setRightClickPopoverState(prev => prev ? ({...prev, item: updatedItem }) : null );
-         // Force re-render of popover content by changing its key if needed
-         // This ensures the buttons update their variant based on the new opacity
       }
       setDrawnShapes(prev => prev.map(s =>
           s.id === shapeId ? { ...s, opacity: opacityValue } : s
@@ -1502,7 +1484,7 @@ export default function BattleGrid({
 
             if (shape.type === 'line') {
                 labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                labelY = (shape.startPoint.y + shape.endPoint.y) / 2; 
+                labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + 10; 
             } else if (shape.type === 'circle') {
                 labelX = shape.startPoint.x;
                 labelY = shape.startPoint.y; 
@@ -1564,8 +1546,8 @@ export default function BattleGrid({
                         strokeWidth="1.25px" 
                         paintOrder="stroke" 
                         filter="url(#blurryTextDropShadow)"
-                        className={cn(activeTool === 'select' && !rightClickPopoverState && !isShapeDeleteAlertOpen ? "cursor-text" : "cursor-default", "select-none")}
-                        onClick={(e) => { if(!rightClickPopoverState && !isShapeDeleteAlertOpen) handleShapeLabelClick(e, shape) }}
+                        className={cn(activeTool === 'select' && !rightClickPopoverState ? "cursor-text" : "cursor-default", "select-none")}
+                        onClick={(e) => { if(!rightClickPopoverState) handleShapeLabelClick(e, shape) }}
                     >
                         {shape.label}
                     </text>
@@ -1762,10 +1744,10 @@ export default function BattleGrid({
                   paintOrder="stroke" 
                   filter="url(#blurryTextDropShadow)" 
                   className={cn(
-                    activeTool === 'select' && !rightClickPopoverState && !isTokenDeleteAlertOpen ? "cursor-text" : "cursor-default",
+                    activeTool === 'select' && !rightClickPopoverState ? "cursor-text" : "cursor-default",
                     "select-none" 
                   )}
-                  onClick={(e) => {if(!rightClickPopoverState && !isTokenDeleteAlertOpen) handleTokenLabelClick(e, token)}}
+                  onClick={(e) => {if(!rightClickPopoverState) handleTokenLabelClick(e, token)}}
                 >
                   {token.instanceName}
                 </text>
@@ -2006,11 +1988,6 @@ export default function BattleGrid({
                 align="center"
                 className="w-auto p-1"
                 onOpenAutoFocus={(e) => e.preventDefault()} 
-                onPointerDownOutside={(e) => {
-                    if (isTokenDeleteAlertOpen || isTextObjectDeleteAlertOpen || isShapeDeleteAlertOpen) {
-                        e.preventDefault();
-                    }
-                }}
             >
               {rightClickPopoverState.type === 'token' && (
                 <div className="w-48"> 
@@ -2053,43 +2030,22 @@ export default function BattleGrid({
                   >
                     <ImageIcon className="mr-2 h-3.5 w-3.5" /> Change Image
                   </Button>
-                  <AlertDialog open={isTokenDeleteAlertOpen} onOpenChange={setIsTokenDeleteAlertOpen}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                          variant="ghost"
-                          className={cn(
-                              "w-full justify-start h-8 px-2 text-sm flex items-center",
-                              "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          )}
-                          onClick={() => setRightClickPopoverState(null)} 
-                      >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {(rightClickPopoverState.item as TokenType)?.instanceName || 'Token'}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will remove the token from the grid.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel onClick={()=> { setIsTokenDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            if (onTokenDelete) {
-                              onTokenDelete(rightClickPopoverState.item.id);
-                            }
-                            setIsTokenDeleteAlertOpen(false);
-                            setSelectedTokenId(null); 
-                          }}
-                          className={buttonVariants({ variant: "destructive" })}
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                   <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start h-8 px-2 text-sm flex items-center",
+                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        )}
+                        onClick={() => {
+                           if (onTokenDelete) {
+                            onTokenDelete(rightClickPopoverState.item.id);
+                           }
+                           setRightClickPopoverState(null);
+                           setSelectedTokenId(null); 
+                        }}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                    </Button>
                 </div>
               )}
 
@@ -2107,41 +2063,20 @@ export default function BattleGrid({
                     >
                         <Edit3 className="mr-2 h-3.5 w-3.5" /> Edit Text
                     </Button>
-                    <AlertDialog open={isTextObjectDeleteAlertOpen} onOpenChange={setIsTextObjectDeleteAlertOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "w-full justify-start h-8 px-2 text-sm flex items-center",
-                                    "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                )}
-                               onClick={() => setRightClickPopoverState(null)}
-                            >
-                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Text
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this text bubble?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. The text "{(rightClickPopoverState.item as TextObjectType).content.substring(0,30)}{ (rightClickPopoverState.item as TextObjectType).content.length > 30 ? '...' : ''}" will be removed.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                 <AlertDialogCancel onClick={()=> {setIsTextObjectDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={() => {
-                                        setTextObjects(prev => prev.filter(to => to.id !== rightClickPopoverState.item.id));
-                                        setIsTextObjectDeleteAlertOpen(false);
-                                        setSelectedTextObjectId(null); 
-                                    }}
-                                    className={buttonVariants({ variant: "destructive" })}
-                                >
-                                    Delete
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start h-8 px-2 text-sm flex items-center",
+                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        )}
+                        onClick={() => {
+                            setTextObjects(prev => prev.filter(to => to.id !== rightClickPopoverState.item.id));
+                            setRightClickPopoverState(null);
+                            setSelectedTextObjectId(null); 
+                        }}
+                    >
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Text
+                    </Button>
                 </div>
               )}
 
@@ -2231,41 +2166,20 @@ export default function BattleGrid({
                     >
                         <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
                     </Button>
-                    <AlertDialog open={isShapeDeleteAlertOpen} onOpenChange={setIsShapeDeleteAlertOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className={cn(
-                                    "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
-                                    "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                )}
-                                onClick={() => setRightClickPopoverState(null)}
-                            >
-                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent onPointerDownOutside={(e) => e.preventDefault()}>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this shape?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. The {(rightClickPopoverState.item as DrawnShape).type} {(rightClickPopoverState.item as DrawnShape).label ? `"${(rightClickPopoverState.item as DrawnShape).label}"` : ''} will be removed.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => {setIsShapeDeleteAlertOpen(false);}}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={() => {
-                                        setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
-                                        setIsShapeDeleteAlertOpen(false);
-                                        setSelectedShapeId(null); 
-                                    }}
-                                    className={buttonVariants({ variant: "destructive" })}
-                                >
-                                    Delete
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
+                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        )}
+                        onClick={() => {
+                            setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
+                            setRightClickPopoverState(null);
+                            setSelectedShapeId(null); 
+                        }}
+                    >
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
+                    </Button>
                 </div>
               )}
             </PopoverContent>
@@ -2345,4 +2259,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
