@@ -116,7 +116,7 @@ export default function TokenPlacerPanel({
           </Button>
         </div>
       </div>
-
+      
       <div className="mb-3 pt-3 border-t border-border">
         <Card className="border-none shadow-none bg-transparent">
           <CardContent className="grid grid-cols-3 gap-2 p-0">
@@ -127,7 +127,7 @@ export default function TokenPlacerPanel({
                 key={template.name}
                 variant="outline"
                 className={cn(
-                  "aspect-square h-auto flex flex-col items-center justify-center p-1 space-y-0.5",
+                  "aspect-square h-20 flex flex-col items-center justify-center p-1 space-y-0.5", // Changed h-auto to h-20
                   "border-2 border-transparent hover:border-accent"
                 )}
                 style={{ backgroundColor: template.color }}
