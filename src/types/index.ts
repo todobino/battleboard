@@ -21,7 +21,7 @@ export interface Token {
   instanceName?: string; // Specific name for this token instance (e.g., "Player 1", "Goblin Archer")
   icon?: React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>; // Optional if customImageUrl is used
   customImageUrl?: string; // New field for custom images (data URI)
-  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
+  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic';
   size?: number; // in grid units, default 1
 }
 
@@ -56,6 +56,7 @@ export interface TokenTemplate {
   color: string;
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element);
   type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic';
+  size?: number; // Added to allow default sizes from templates if needed
 }
 
 export interface Measurement {
@@ -74,7 +75,7 @@ export interface DrawnShape {
   fillColor?: string; // Fill color for circle/rectangle
   strokeWidth: number;
   label?: string;
-  opacity?: number;
+  opacity?: number; // For fill opacity of circles/rectangles, stroke opacity for lines
 }
 
 export interface TextObjectType {
@@ -122,6 +123,7 @@ export interface BattleGridProps {
   currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
+  onChangeTokenSize?: (tokenId: string, newSize: number) => void; // New prop
   escapePressCount?: number;
 
   selectedTokenId?: string | null;
@@ -134,8 +136,8 @@ export interface BattleGridProps {
   tokenIdToFocus?: string | null;
   onFocusHandled?: () => void;
 
-  onOpenAddCombatantDialogForToken?: (token: Token) => void; // New prop
-  participants: Participant[]; // New prop
+  onOpenAddCombatantDialogForToken?: (token: Token) => void;
+  participants: Participant[];
 }
 
 export interface UndoableState {
@@ -154,8 +156,6 @@ export interface BattleBoardPageProps {
 export interface FloatingToolbarProps {
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
-  title: string;
-  Icon: React.ElementType;
   selectedColor: string;
   setSelectedColor: React.Dispatch<React.SetStateAction<string>>;
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
@@ -164,6 +164,8 @@ export interface FloatingToolbarProps {
   setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
+  showAllLabels: boolean; // Added
+  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>; // Added
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
   backgroundZoomLevel: number;
@@ -198,3 +200,5 @@ export interface InitiativeTrackerPanelProps {
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
   onFocusToken?: (tokenId: string) => void;
 }
+
+    
