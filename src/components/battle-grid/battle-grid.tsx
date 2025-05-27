@@ -246,47 +246,6 @@ export default function BattleGrid({
     return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
   }, [numCols, numRows, cellSize, showGridLines]);
 
-
-  useEffect(() => {
-    setViewBox(calculateInitialViewBox());
-  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl, calculateInitialViewBox]);
-
-  useEffect(() => {
-    if (editingTokenId && foreignObjectInputRef.current) {
-      const timerId = setTimeout(() => {
-        foreignObjectInputRef.current?.focus();
-        foreignObjectInputRef.current?.select();
-      }, 0);
-      return () => clearTimeout(timerId);
-    }
-  }, [editingTokenId]);
-
-  useEffect(() => {
-    if (isCreatingText && textInputRef.current) {
-      textInputRef.current.focus();
-    }
-  }, [isCreatingText]);
-
-  useEffect(() => {
-    if (editingTextObjectId && textObjectEditInputRef.current) {
-      const timerId = setTimeout(() => {
-        textObjectEditInputRef.current?.focus();
-        textObjectEditInputRef.current?.select();
-      }, 0);
-      return () => clearTimeout(timerId);
-    }
-  }, [editingTextObjectId]);
-
-  useEffect(() => {
-    if (editingShapeId && shapeLabelInputRef.current) {
-       const timerId = setTimeout(() => {
-        shapeLabelInputRef.current?.focus();
-        shapeLabelInputRef.current?.select();
-      }, 0);
-      return () => clearTimeout(timerId);
-    }
-  }, [editingShapeId]);
-
   const measureText = useCallback((text: string, fontSize: number) => {
     if (typeof document === 'undefined') return { width: 0, height: 0};
     const tempSpan = document.createElement('span');
@@ -373,16 +332,55 @@ export default function BattleGrid({
     }
   }, [editingShapeId, editingShapeLabelText, setDrawnShapes]);
 
-  // This useEffect handles Escape key presses. Moved after handler definitions.
+
+  useEffect(() => {
+    setViewBox(calculateInitialViewBox());
+  }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl, calculateInitialViewBox]);
+
+  useEffect(() => {
+    if (editingTokenId && foreignObjectInputRef.current) {
+      const timerId = setTimeout(() => {
+        foreignObjectInputRef.current?.focus();
+        foreignObjectInputRef.current?.select();
+      }, 0);
+      return () => clearTimeout(timerId);
+    }
+  }, [editingTokenId]);
+
+  useEffect(() => {
+    if (isCreatingText && textInputRef.current) {
+      textInputRef.current.focus();
+    }
+  }, [isCreatingText]);
+
+  useEffect(() => {
+    if (editingTextObjectId && textObjectEditInputRef.current) {
+      const timerId = setTimeout(() => {
+        textObjectEditInputRef.current?.focus();
+        textObjectEditInputRef.current?.select();
+      }, 0);
+      return () => clearTimeout(timerId);
+    }
+  }, [editingTextObjectId]);
+
+  useEffect(() => {
+    if (editingShapeId && shapeLabelInputRef.current) {
+       const timerId = setTimeout(() => {
+        shapeLabelInputRef.current?.focus();
+        shapeLabelInputRef.current?.select();
+      }, 0);
+      return () => clearTimeout(timerId);
+    }
+  }, [editingShapeId]);
+
+
   useEffect(() => {
     if (escapePressCount && escapePressCount > 0) {
       setRightClickPopoverState(null);
-      // Selections are cleared by parent BattleBoardPage
       setEditingTokenId(null);
       setEditingShapeId(null);
       setEditingTextObjectId(null);
       if(isCreatingText) finalizeTextCreation();
-      // Also close any open confirmation dialogs
       setIsDeleteAlertOpen(false);
       setTextObjectDeleteAlertOpen(false);
       setShapeDeleteAlertOpen(false);
@@ -394,7 +392,6 @@ export default function BattleGrid({
       if (editingTokenId) handleSaveTokenName();
       if (editingTextObjectId) handleFinalizeTextEdit();
       if (editingShapeId) handleSaveShapeLabel();
-      // Clear selections if tool is changed from select
       setSelectedTokenId(null);
       setSelectedShapeId(null);
       setSelectedTextObjectId(null);
@@ -463,18 +460,17 @@ export default function BattleGrid({
   };
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (event.button === 2) return; // Ignore right-clicks for this handler (handled by onContextMenu)
+    if (event.button === 2) return; 
 
     if (editingTokenId || editingTextObjectId || editingShapeId) return;
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
     const gridY = Math.floor(pos.y / cellSize);
 
-    setMouseDownPos(pos); // Used to distinguish click from drag
-    setRightClickPopoverState(null); // Close any open right-click popover on left mousedown
+    setMouseDownPos(pos); 
+    setRightClickPopoverState(null); 
 
     if (activeTool === 'select') {
-      // Token click check
       const clickedToken = tokens.find(token => {
         const tokenLeft = token.x * cellSize;
         const tokenRight = (token.x + (token.size || 1)) * cellSize;
@@ -483,17 +479,16 @@ export default function BattleGrid({
         return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
       });
       if (clickedToken) {
-        event.stopPropagation(); // Prevent SVG pan/selection clear
+        event.stopPropagation(); 
         setSelectedTokenId(clickedToken.id);
         setSelectedShapeId(null);
         setSelectedTextObjectId(null);
         setDraggingToken(clickedToken);
         setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
-        setDraggingTokenPosition(null); // Actual position updated on mouse up
+        setDraggingTokenPosition(null); 
         return;
       }
 
-      // Text object click check
       const clickedTextObject = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
       if (clickedTextObject) {
         event.stopPropagation();
@@ -505,7 +500,6 @@ export default function BattleGrid({
         return;
       }
 
-      // Shape click/drag check
       for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
         let hit = false;
@@ -534,12 +528,10 @@ export default function BattleGrid({
               originalStartPoint: shape.startPoint, originalEndPoint: shape.endPoint
             });
           }
-          // For lines, selection is enough for now, drag is not implemented for lines via this mechanism
           return;
         }
       }
 
-      // If nothing interactive clicked, deselect all and prepare for panning
       setSelectedTokenId(null);
       setSelectedShapeId(null);
       setSelectedTextObjectId(null);
@@ -552,9 +544,9 @@ export default function BattleGrid({
     if (activeTool === 'type_tool') {
         event.stopPropagation();
         if (isCreatingText) finalizeTextCreation();
-        if (editingTextObjectId) handleFinalizeTextEdit(); // Finalize if clicking to create new while editing old
-        setTimeout(() => { // setTimeout to ensure this runs after other mousedown logic
-            const newPos = getMousePosition(event); // Recalculate pos in case of view change
+        if (editingTextObjectId) handleFinalizeTextEdit(); 
+        setTimeout(() => { 
+            const newPos = getMousePosition(event); 
             setIsCreatingText({
                 id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                 x: newPos.x,
@@ -568,8 +560,7 @@ export default function BattleGrid({
     }
 
     if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) {
-      // If outside grid, allow middle-mouse pan
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { // Middle mouse or Ctrl/Cmd + Left Click
+      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
          setIsPanning(true);
          setPanStart({ x: event.clientX, y: event.clientY });
       }
@@ -596,7 +587,7 @@ export default function BattleGrid({
             const instanceNamePrefix = baseLabel || 'Token';
             const existingTokensOfTypeAndLabel = tokens.filter(t =>
               (t.type === selectedTokenTemplate.type && t.label === baseLabel) ||
-              (t.customImageUrl && t.label === baseLabel) // Consider custom image tokens with same base label
+              (t.customImageUrl && t.label === baseLabel) 
             );
             const count = existingTokensOfTypeAndLabel.length + 1;
             const instanceName = `${instanceNamePrefix} ${count}`;
@@ -606,8 +597,8 @@ export default function BattleGrid({
               x: availableSquare.x,
               y: availableSquare.y,
               instanceName: instanceName,
-              customImageUrl: selectedTokenTemplate.customImageUrl, // Carry over custom image URL
-              icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon, // Icon only if no custom image
+              customImageUrl: selectedTokenTemplate.customImageUrl, 
+              icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon, 
             };
             const newToken = {
               ...newTokenData,
@@ -644,9 +635,9 @@ export default function BattleGrid({
             type: 'line',
             startPoint: startP,
             endPoint: startP,
-            color: 'hsl(var(--accent))', // Default line color
-            strokeWidth: 2, // Default line stroke width
-            opacity: 1, // Default line opacity
+            color: 'hsl(var(--accent))', 
+            strokeWidth: 2, 
+            opacity: 1, 
           });
         }
         break;
@@ -663,10 +654,10 @@ export default function BattleGrid({
             type: isCircle ? 'circle' : 'rectangle',
             startPoint: startP,
             endPoint: startP,
-            color: 'hsl(var(--accent))',      // Stroke color
-            fillColor: 'hsl(var(--accent))', // Fill color
+            color: 'hsl(var(--accent))',      
+            fillColor: 'hsl(var(--accent))', 
             strokeWidth: 1,
-            opacity: 0.5, // Fill opacity
+            opacity: 0.5, 
           });
         }
         break;
@@ -679,7 +670,6 @@ export default function BattleGrid({
 
     const pos = getMousePosition(event);
     
-    // Token right-click check
     const rClickedToken = tokens.find(token => {
         const tokenLeft = token.x * cellSize;
         const tokenRight = (token.x + (token.size || 1)) * cellSize;
@@ -700,7 +690,6 @@ export default function BattleGrid({
         return;
     }
 
-    // Shape right-click check
     for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
         let hit = false;
@@ -726,7 +715,7 @@ export default function BattleGrid({
                 const radiusInFeet = (pixelRadius / cellSize) * FEET_PER_SQUARE;
                 setShapeRadiusInput(String(Math.round(radiusInFeet)));
             } else {
-                setShapeRadiusInput(''); // Clear if not a circle
+                setShapeRadiusInput(''); 
             }
             if (rightClickPopoverTriggerRef.current) {
                 rightClickPopoverTriggerRef.current.style.position = 'fixed';
@@ -737,7 +726,6 @@ export default function BattleGrid({
         }
     }
     
-    // Text object right-click check
     const rClickedTextObject = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
     if (rClickedTextObject) {
         setSelectedTextObjectId(rClickedTextObject.id);
@@ -752,7 +740,6 @@ export default function BattleGrid({
         return;
     }
 
-    // If right-clicked on empty grid, close popover
     setRightClickPopoverState(null);
   };
 
@@ -760,7 +747,7 @@ export default function BattleGrid({
   const handleTokenLabelClick = (event: React.MouseEvent, token: TokenType) => {
     event.stopPropagation();
     if (activeTool === 'select' && !draggingToken && !rightClickPopoverState) {
-      setSelectedTokenId(token.id); // Ensure it's selected
+      setSelectedTokenId(token.id); 
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
     }
@@ -769,7 +756,7 @@ export default function BattleGrid({
   const handleShapeLabelClick = (event: React.MouseEvent, shape: DrawnShape) => {
     event.stopPropagation();
     if (activeTool === 'select' && !rightClickPopoverState && !isActuallyDraggingShape) {
-      setSelectedShapeId(shape.id); // Ensure it's selected
+      setSelectedShapeId(shape.id); 
       setEditingShapeId(shape.id);
       setEditingShapeLabelText(shape.label || '');
     }
@@ -809,7 +796,7 @@ export default function BattleGrid({
       event.preventDefault();
       finalizeTextCreation();
     } else if (event.key === 'Escape') {
-      setIsCreatingText(null); // Cancel creation
+      setIsCreatingText(null); 
     }
   };
 
@@ -817,7 +804,7 @@ export default function BattleGrid({
     if (isCreatingText) {
       const newText = event.target.value;
       const {width: textMetricsWidth} = measureText(newText || " ", isCreatingText.fontSize);
-      const calculatedWidth = textMetricsWidth + TEXT_PADDING.x * 2 + 5; // +5 for buffer
+      const calculatedWidth = textMetricsWidth + TEXT_PADDING.x * 2 + 5; 
       setIsCreatingText(prev => {
           if (!prev) return null;
           const newFinalWidth = Math.max(MIN_NEW_TEXT_INPUT_WIDTH, calculatedWidth);
@@ -830,7 +817,7 @@ export default function BattleGrid({
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
     if (isPanning && panStart && svgRef.current) {
-      setRightClickPopoverState(null); // Close popover during pan
+      setRightClickPopoverState(null); 
       const [currentVbMinX, currentVbMinY, currentVbWidth, currentVbHeight] = viewBox.split(' ').map(Number);
       const svgContainerEl = svgRef.current;
       const svgContainerWidth = svgContainerEl.clientWidth;
@@ -838,18 +825,17 @@ export default function BattleGrid({
 
       if (svgContainerWidth === 0 || svgContainerHeight === 0 || currentVbWidth === 0 || currentVbHeight === 0) return;
 
-      const scaleXViewBoxToViewport = svgContainerWidth / currentVbWidth; // This is effectively scaleX for pan calculations
+      const scaleXViewBoxToViewport = svgContainerWidth / currentVbWidth; 
 
       const screenDeltaX = panStart.x - event.clientX;
       const screenDeltaY = panStart.y - event.clientY;
 
-      const dx_vb = screenDeltaX / scaleXViewBoxToViewport; // Convert screen delta to viewBox units
-      const dy_vb = screenDeltaY / scaleXViewBoxToViewport; // Convert screen delta to viewBox units
+      const dx_vb = screenDeltaX / scaleXViewBoxToViewport; 
+      const dy_vb = screenDeltaY / scaleXViewBoxToViewport; 
 
       let newCandidateVx = currentVbMinX + dx_vb;
       let newCandidateVy = currentVbMinY + dy_vb;
 
-      // Calculate absolute content dimensions and origin
       const calculatedTotalContentWidth = numCols * cellSize;
       const calculatedTotalContentHeight = numRows * cellSize;
       const borderWidthForOrigin = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
@@ -860,27 +846,23 @@ export default function BattleGrid({
       const absoluteContentMinX = 0 - paddingForOrigin;
       const absoluteContentMinY = 0 - paddingForOrigin;
 
-      // Max possible min-x/y for the viewBox (when content is larger than viewBox)
       const max_vb_min_x = absoluteContentMinX + absoluteContentWidth - currentVbWidth;
       const max_vb_min_y = absoluteContentMinY + absoluteContentHeight - currentVbHeight;
 
-      // Min possible min-x/y for the viewBox (usually the content's origin)
       const min_vb_min_x = absoluteContentMinX;
       const min_vb_min_y = absoluteContentMinY;
 
       let finalNewVx = newCandidateVx;
-      // If content width is less than or equal to viewBox width, center it
       if (absoluteContentWidth <= currentVbWidth) {
          finalNewVx = absoluteContentMinX + (absoluteContentWidth - currentVbWidth) / 2;
-      } else { // Otherwise, clamp within bounds
+      } else { 
          finalNewVx = Math.max(min_vb_min_x, Math.min(newCandidateVx, max_vb_min_x));
       }
 
       let finalNewVy = newCandidateVy;
-      // If content height is less than or equal to viewBox height, center it
       if (absoluteContentHeight <= currentVbHeight) {
         finalNewVy = absoluteContentMinY + (absoluteContentHeight - currentVbHeight) / 2;
-      } else { // Otherwise, clamp within bounds
+      } else { 
         finalNewVy = Math.max(min_vb_min_y, Math.min(newCandidateVy, max_vb_min_y));
       }
 
@@ -889,7 +871,7 @@ export default function BattleGrid({
       setHoveredCellWhilePaintingOrErasing(null);
 
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
-      setRightClickPopoverState(null); // Close popover during drag
+      setRightClickPopoverState(null); 
       const currentMouseSvgPos = getMousePosition(event);
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
       const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
@@ -901,70 +883,63 @@ export default function BattleGrid({
       const isTargetOccupiedByOther = isSquareOccupied(clampedGridX, clampedGridY, tokens, numCols, numRows, draggingToken.id);
 
       if (!isTargetOccupiedByOther) {
-          // Only update visual drag position if the square is not occupied
           if (!draggingTokenPosition || draggingTokenPosition.x !== clampedGridX || draggingTokenPosition.y !== clampedGridY) {
               setDraggingTokenPosition({ x: clampedGridX, y: clampedGridY });
           }
       }
-      // If occupied, draggingTokenPosition remains null or its last valid position,
-      // preventing visual snap to an invalid square.
       setHoveredCellWhilePaintingOrErasing(null);
     } else if (draggingTextObjectId && textObjectDragOffset && activeTool === 'select' && !editingTextObjectId) {
-        setRightClickPopoverState(null); // Close popover during drag
+        setRightClickPopoverState(null); 
         const newX = pos.x - textObjectDragOffset.x;
         const newY = pos.y - textObjectDragOffset.y;
         setTextObjects(prev => prev.map(obj =>
             obj.id === draggingTextObjectId ? { ...obj, x: newX, y: newY } : obj
         ));
     } else if (potentialDraggingShapeInfo && mouseDownPos && activeTool === 'select' && !editingShapeId) {
-        // Check if mouse moved enough to be considered a drag, not a click for popover
         const dxScreen = event.clientX - potentialDraggingShapeInfo.startScreenPos.x;
         const dyScreen = event.clientY - potentialDraggingShapeInfo.startScreenPos.y;
         if (dxScreen * dxScreen + dyScreen * dyScreen > CLICK_THRESHOLD_SQUARED) {
-            setRightClickPopoverState(null); // It's a drag, close any popover
+            setRightClickPopoverState(null); 
             setIsActuallyDraggingShape(true);
             setCurrentDraggingShapeId(potentialDraggingShapeInfo.id);
 
-            // Calculate drag offset based on shape type
             let initialShapeRefX, initialShapeRefY;
             if (potentialDraggingShapeInfo.type === 'circle') {
-                // For circles, drag relative to center
                 initialShapeRefX = potentialDraggingShapeInfo.originalStartPoint.x;
                 initialShapeRefY = potentialDraggingShapeInfo.originalStartPoint.y;
-            } else { // For rectangles, drag relative to top-left corner
+            } else { 
                 initialShapeRefX = Math.min(potentialDraggingShapeInfo.originalStartPoint.x, potentialDraggingShapeInfo.originalEndPoint.x);
                 initialShapeRefY = Math.min(potentialDraggingShapeInfo.originalStartPoint.y, potentialDraggingShapeInfo.originalEndPoint.y);
             }
             setShapeDragOffset({ x: mouseDownPos.x - initialShapeRefX, y: mouseDownPos.y - initialShapeRefY });
-            setPotentialDraggingShapeInfo(null); // Consume this state
+            setPotentialDraggingShapeInfo(null); 
         }
     } else if (isActuallyDraggingShape && currentDraggingShapeId && shapeDragOffset && activeTool === 'select' && !editingShapeId) {
-        setRightClickPopoverState(null); // Ensure popover is closed during drag
+        setRightClickPopoverState(null); 
         const draggedShape = drawnShapes.find(s => s.id === currentDraggingShapeId);
         if (!draggedShape) return;
 
-        // Calculate raw new reference point (e.g., top-left for rect, center for circle)
         let rawNewRefPoint = { x: pos.x - shapeDragOffset.x, y: pos.y - shapeDragOffset.y };
         let snappedNewRefPoint;
 
         let newStartPoint, newEndPoint;
 
         if (draggedShape.type === 'circle') {
-            snappedNewRefPoint = snapToCellCenter(rawNewRefPoint, cellSize); // Snap circle center
+            snappedNewRefPoint = snapToCellCenter(rawNewRefPoint, cellSize); 
             const radiusVector = {
                 x: draggedShape.endPoint.x - draggedShape.startPoint.x,
                 y: draggedShape.endPoint.y - draggedShape.startPoint.y,
             };
-            newStartPoint = snappedNewRefPoint; // New center is the snapped reference point
+            newStartPoint = snappedNewRefPoint; 
             newEndPoint = { x: newStartPoint.x + radiusVector.x, y: newStartPoint.y + radiusVector.y };
         } else if (draggedShape.type === 'rectangle') {
-            snappedNewRefPoint = snapToVertex(rawNewRefPoint, cellSize); // Snap rectangle top-left
+            snappedNewRefPoint = snapToVertex(rawNewRefPoint, cellSize); 
             const width = Math.abs(draggedShape.startPoint.x - draggedShape.endPoint.x);
             const height = Math.abs(draggedShape.startPoint.y - draggedShape.endPoint.y);
             newStartPoint = snappedNewRefPoint;
             newEndPoint = { x: newStartPoint.x + width, y: newStartPoint.y + height };
         } else {
-            return; // Only circles and rectangles are draggable for now
+            return; 
         }
 
         setDrawnShapes(prevShapes => prevShapes.map(s =>
@@ -979,7 +954,7 @@ export default function BattleGrid({
       const dySquares = endPoint.y - measurement.startPoint.y;
       const distInSquares = Math.sqrt(dxSquares*dxSquares + dySquares*dySquares);
       const distInFeet = distInSquares * FEET_PER_SQUARE;
-      const roundedDistInFeet = Math.round(distInFeet * 10) / 10; // Rounded to one decimal place
+      const roundedDistInFeet = Math.round(distInFeet * 10) / 10; 
       const resultText = measurement.type === 'distance'
         ? `Distance: ${roundedDistInFeet} ft`
         : `Radius: ${roundedDistInFeet} ft`;
@@ -1000,12 +975,12 @@ export default function BattleGrid({
         if (gridX >= 0 && gridX < numCols && gridY >= 0 && gridY < numRows) {
             setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
             setGridCells(prev => {
-                const newCells = [...prev.map(r => [...r.map(c => ({...c}))])]; // Deep copy
+                const newCells = [...prev.map(r => [...r.map(c => ({...c}))])]; 
                 if (newCells[gridY] && newCells[gridY][gridX] && newCells[gridY][gridX].color !== selectedColor) {
                     newCells[gridY][gridX].color = selectedColor;
                     return newCells;
                 }
-                return prev; // No change, return previous state to avoid unnecessary re-render
+                return prev; 
             });
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
@@ -1020,18 +995,16 @@ export default function BattleGrid({
       }
     } else if (isDrawing && currentDrawingShape && drawingStartPoint) {
         if (currentDrawingShape.type === 'circle') {
-            // Snap radius to cell increments for circles
             const rawRadiusEndPoint = pos;
             const pixelDist = Math.sqrt(dist2(drawingStartPoint, rawRadiusEndPoint));
-            const numCellsRadius = Math.max(1, Math.round(pixelDist / cellSize)); // Min 1 cell radius
+            const numCellsRadius = Math.max(1, Math.round(pixelDist / cellSize)); 
             const snappedPixelDist = numCellsRadius * cellSize;
 
-            // Maintain direction from center to mouse, but set magnitude to snapped distance
             const vectorX = rawRadiusEndPoint.x - drawingStartPoint.x;
             const vectorY = rawRadiusEndPoint.y - drawingStartPoint.y;
             const currentLength = Math.sqrt(vectorX * vectorX + vectorY * vectorY);
 
-            let unitX = 1, unitY = 0; // Default if currentLength is 0
+            let unitX = 1, unitY = 0; 
             if (currentLength > 0) {
                 unitX = vectorX / currentLength;
                 unitY = vectorY / currentLength;
@@ -1041,8 +1014,8 @@ export default function BattleGrid({
                 y: drawingStartPoint.y + unitY * snappedPixelDist,
             };
             setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: finalEndPoint } : null);
-        } else { // For lines and rectangles, snap end point to vertices or raw position
-            const snapFn = currentDrawingShape.type === 'rectangle' ? snapToVertex : (p: Point) => p; // Lines use raw position
+        } else { 
+            const snapFn = currentDrawingShape.type === 'rectangle' ? snapToVertex : (p: Point) => p; 
             const currentEndPoint = snapFn(pos, cellSize);
             setCurrentDrawingShape(prev => prev ? { ...prev, endPoint: currentEndPoint } : null);
         }
@@ -1050,58 +1023,45 @@ export default function BattleGrid({
     }
      else {
         setHoveredCellWhilePaintingOrErasing(null);
-         // This logic was for deselecting a shape if a drag started on empty space after a shape was selected.
-         // With the new click-vs-drag logic, this might need review or removal if selection clearing is handled elsewhere.
-         if (potentialDraggingShapeInfo === null && !isActuallyDraggingShape && mouseDownPos && selectedShapeId) { // Check if it was a click attempt on a shape
+         if (potentialDraggingShapeInfo === null && !isActuallyDraggingShape && mouseDownPos && selectedShapeId) { 
             const dx = pos.x - mouseDownPos.x;
             const dy = pos.y - mouseDownPos.y;
-            if (dx * dx + dy * dy >= CLICK_THRESHOLD_SQUARED) { // If mouse moved too much, it's not a click
-                setSelectedShapeId(null); // Deselect if it was a drag attempt on nothing
+            if (dx * dx + dy * dy >= CLICK_THRESHOLD_SQUARED) { 
+                setSelectedShapeId(null); 
             }
         }
     }
   };
 
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
-    // Token Drag Finalization
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
-      if (draggingTokenPosition) { // If a valid new position was determined during drag
+      if (draggingTokenPosition) { 
         onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
       }
-      // Reset token dragging states
       setDraggingToken(null);
       setDragOffset(null);
       setDraggingTokenPosition(null);
     }
 
-    // Text Object Drag Finalization
     if (draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) {
-        // Drag logic already handled by mouseMove setting new positions.
-        // Just clear dragging state.
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
     }
 
-    // Shape Drag / Click Finalization
     if (isActuallyDraggingShape) {
-        // Drag finished, shape position already updated by mouseMove.
-        // Snapping already applied during mouseMove.
     } 
-    // Clear all shape drag-related states regardless of whether it was a drag or just a potential drag that didn't meet threshold
     setPotentialDraggingShapeInfo(null);
     setIsActuallyDraggingShape(false);
     setCurrentDraggingShapeId(null);
     setShapeDragOffset(null);
-    setMouseDownPos(null); // Clear mouse down pos used for click vs drag detection
+    setMouseDownPos(null); 
 
-    // General tool state resets
     if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
     }
     if (isMeasuring) {
       setIsMeasuring(false);
-      // Measurement result is kept until cleared by user or tool change
     }
     if (isErasing) {
         setIsErasing(false);
@@ -1112,36 +1072,32 @@ export default function BattleGrid({
         setHoveredCellWhilePaintingOrErasing(null);
     }
     if (isDrawing && currentDrawingShape) {
-      let shapeToAdd = { ...currentDrawingShape }; // Clone the current drawing shape
+      let shapeToAdd = { ...currentDrawingShape }; 
 
-      // Add default labels for circles and rectangles
       if (shapeToAdd.type === 'circle' || shapeToAdd.type === 'rectangle') {
         const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
         const defaultLabel = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
         shapeToAdd.label = defaultLabel; 
       }
-      setDrawnShapes(prev => [...prev, shapeToAdd]); // Add the finalized shape
-      setCurrentDrawingShape(null); // Clear the drawing preview
+      setDrawnShapes(prev => [...prev, shapeToAdd]); 
+      setCurrentDrawingShape(null); 
       setIsDrawing(false);
       setDrawingStartPoint(null);
     }
   };
 
   const handleMouseLeave = () => {
-    // Reset panning if mouse leaves SVG while panning
     if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
     }
-    // Reset painting/erasing/placing highlights
     if (isErasing || isPainting || activeTool === 'place_token') {
         setIsErasing(false);
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
     }
-    // Finalize token drag if mouse leaves while dragging
     if (draggingToken) {
-        if (draggingTokenPosition) { // If a valid drop position was determined
+        if (draggingTokenPosition) { 
              onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
         }
         setDraggingToken(null);
@@ -1149,21 +1105,17 @@ export default function BattleGrid({
         setDraggingTokenPosition(null);
         setMouseDownPos(null);
     }
-    // Finalize text object drag
     if (draggingTextObjectId) {
         setDraggingTextObjectId(null);
         setTextObjectDragOffset(null);
     }
-    // Finalize shape drag
     if (isActuallyDraggingShape) { 
-        // Shape position is already updated by mouseMove
         setIsActuallyDraggingShape(false);
         setCurrentDraggingShapeId(null);
         setShapeDragOffset(null);
     }
-    setPotentialDraggingShapeInfo(null); // Clear potential drag info
+    setPotentialDraggingShapeInfo(null); 
 
-    // Finalize drawing if mouse leaves while drawing
     if (isDrawing && currentDrawingShape) {
         let shapeToAdd = { ...currentDrawingShape };
          if (shapeToAdd.type === 'circle' || shapeToAdd.type === 'rectangle') {
@@ -1183,12 +1135,10 @@ export default function BattleGrid({
     const scaleAmount = customScaleAmount || ZOOM_AMOUNT;
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
 
-    // Get SVG center in client coordinates
     const svgRect = svgRef.current.getBoundingClientRect();
     const clientCenterX = svgRect.left + svgRect.width / 2;
     const clientCenterY = svgRect.top + svgRect.height / 2;
 
-    // Convert client center to SVG coordinates (this is the zoom point)
     const centerPos = getMousePosition({ clientX: clientCenterX, clientY: clientCenterY } as MouseEvent);
 
     let newVw, newVh;
@@ -1198,33 +1148,27 @@ export default function BattleGrid({
       newVw = vw * scaleAmount;
     }
 
-    // Content dimensions for clamping zoom
     const calculatedTotalContentWidth = numCols * cellSize;
     const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
     const absoluteContentWidth = calculatedTotalContentWidth + currentBorderWidth;
-    const absoluteContentHeight = (numRows * cellSize) + currentBorderWidth; // Assuming numRows, cellSize define content height
+    const absoluteContentHeight = (numRows * cellSize) + currentBorderWidth; 
     const absoluteContentMinX = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
     const absoluteContentMinY = 0 - (showGridLines ? BORDER_WIDTH_WHEN_VISIBLE / 2 : 0);
 
-    // Clamp viewBox width to avoid over-zooming or under-zooming
-    const maxAllowedVw = absoluteContentWidth; // Cannot zoom out further than content width
-    const minAllowedVw = absoluteContentWidth / 10; // Example: Max zoom in 10x
+    const maxAllowedVw = absoluteContentWidth; 
+    const minAllowedVw = absoluteContentWidth / 10; 
 
     newVw = Math.max(minAllowedVw, Math.min(maxAllowedVw, newVw));
 
-    // Calculate new viewBox height maintaining aspect ratio
     if (vw !== 0) { newVh = (newVw / vw) * vh; }
-    else { newVh = (numRows / numCols) * newVw; } // Fallback if vw is zero, though unlikely
+    else { newVh = (numRows / numCols) * newVw; } 
 
-    // Calculate new viewBox minX and minY to keep zoom point (centerPos) stationary
     let newVx = centerPos.x - (centerPos.x - vx) * (newVw / vw);
     let newVy = centerPos.y - (centerPos.y - vy) * (newVh / vh);
 
-    // Clamp viewBox position
-    // If new viewBox width is greater than content width, center content in viewBox
     if (newVw >= absoluteContentWidth) {
         newVx = absoluteContentMinX + (absoluteContentWidth - newVw) / 2;
-    } else { // Otherwise, ensure viewBox doesn't pan beyond content edges
+    } else { 
         newVx = Math.max(absoluteContentMinX, Math.min(newVx, absoluteContentMinX + absoluteContentWidth - newVw));
     }
 
@@ -1247,7 +1191,6 @@ export default function BattleGrid({
     applyZoom(zoomIn, ZOOM_AMOUNT);
   };
 
-  // Memoized version for the reset button callback
   const calculateInitialViewBoxCb = useCallback(() => {
     return calculateInitialViewBox();
   }, [calculateInitialViewBox]);
@@ -1283,7 +1226,6 @@ export default function BattleGrid({
   };
 
   const handleSetShapeOpacity = (shapeId: string, opacityValue: number) => {
-      // Update the popover state if the currently right-clicked item is the one being changed
       if(rightClickPopoverState?.item.id === shapeId) {
          setRightClickPopoverState(prev => prev ? ({...prev, item: {...prev.item, opacity: opacityValue } as DrawnShape }) : null );
       }
@@ -1295,7 +1237,6 @@ export default function BattleGrid({
   const handleShapeRadiusChange = (shapeId: string, newRadiusInFeetString: string) => {
     const newRadiusInFeet = parseFloat(newRadiusInFeetString);
     if (isNaN(newRadiusInFeet) || newRadiusInFeet < (FEET_PER_SQUARE / 2)) {
-      // If input is invalid, revert to current shape's radius or a minimum
       const currentShape = drawnShapes.find(s => s.id === shapeId);
       if (currentShape && currentShape.type === 'circle') {
           const currentPixelRadius = Math.sqrt(dist2(currentShape.startPoint, currentShape.endPoint));
@@ -1308,13 +1249,10 @@ export default function BattleGrid({
 
     setDrawnShapes(prev => prev.map(s => {
       if (s.id === shapeId && s.type === 'circle') {
-        // Update endPoint based on new radius; keep startPoint (center) the same
-        // Assuming endPoint was (center.x + radius, center.y) for simplicity
         return { ...s, endPoint: { x: s.startPoint.x + newRadiusInPixels, y: s.startPoint.y } };
       }
       return s;
     }));
-    // Update popover state if the currently right-clicked item is the one being changed
     if (rightClickPopoverState?.item.id === shapeId && rightClickPopoverState.type === 'shape') {
         const updatedItem = {...rightClickPopoverState.item, endPoint: {x: (rightClickPopoverState.item as DrawnShape).startPoint.x + newRadiusInPixels, y: (rightClickPopoverState.item as DrawnShape).startPoint.y}} as DrawnShape;
         setRightClickPopoverState(prev => prev ? ({...prev, item: updatedItem }) : null);
@@ -1402,25 +1340,24 @@ export default function BattleGrid({
             const isCurrentlyEditingThisShapeLabel = editingShapeId === shape.id;
             const isShapeSelected = shape.id === selectedShapeId;
             let labelX = 0, labelY = 0;
-            const labelOffset = 15; 
+            
             if (shape.label) {
                 if (shape.type === 'line') {
                     labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + labelOffset;
+                    labelY = (shape.startPoint.y + shape.endPoint.y) / 2; // Centered on line
                 } else if (shape.type === 'circle') {
-                    labelX = shape.startPoint.x;
-                    labelY = shape.startPoint.y + Math.sqrt(dist2(shape.startPoint, shape.endPoint)) + labelOffset;
+                    labelX = shape.startPoint.x; // Center X
+                    labelY = shape.startPoint.y; // Center Y
                 } else if (shape.type === 'rectangle') {
-                    const rectBottomY = Math.max(shape.startPoint.y, shape.endPoint.y);
-                    labelX = Math.min(shape.startPoint.x, shape.endPoint.x) + Math.abs(shape.endPoint.x - shape.startPoint.x) / 2;
-                    labelY = rectBottomY + labelOffset;
+                    labelX = Math.min(shape.startPoint.x, shape.endPoint.x) + Math.abs(shape.endPoint.x - shape.startPoint.x) / 2; // Center X
+                    labelY = Math.min(shape.startPoint.y, shape.endPoint.y) + Math.abs(shape.endPoint.y - shape.startPoint.y) / 2; // Center Y
                 }
             }
 
             return (
               <g key={shape.id} className={cn(activeTool === 'select' && (shape.type === 'circle' || shape.type === 'rectangle') && !rightClickPopoverState && !isActuallyDraggingShape && 'cursor-pointer',
                                             activeTool === 'select' && isActuallyDraggingShape && currentDraggingShapeId === shape.id && 'cursor-grabbing',
-                                            activeTool === 'select' && shape.type === 'line' && !rightClickPopoverState && 'cursor-pointer' // Lines are selectable but not draggable via this mechanism
+                                            activeTool === 'select' && shape.type === 'line' && !rightClickPopoverState && 'cursor-pointer' 
                                           )}>
                 {shape.type === 'line' && (
                   <line
@@ -1428,7 +1365,7 @@ export default function BattleGrid({
                     x2={shape.endPoint.x} y2={shape.endPoint.y}
                     stroke={isShapeSelected ? 'hsl(var(--ring))' : shape.color}
                     strokeWidth={isShapeSelected ? shape.strokeWidth + 1 : shape.strokeWidth}
-                    strokeOpacity={shape.opacity ?? 1} // Lines use opacity directly for stroke
+                    strokeOpacity={shape.opacity ?? 1} 
                   />
                 )}
                 {shape.type === 'circle' && (
@@ -1437,9 +1374,9 @@ export default function BattleGrid({
                     r={Math.sqrt(dist2(shape.startPoint, shape.endPoint))}
                     stroke={isShapeSelected ? 'hsl(var(--ring))' : shape.color}
                     strokeWidth={isShapeSelected ? shape.strokeWidth + 1 : shape.strokeWidth}
-                    strokeOpacity={1} // Border always 100% opaque for circles/rects
+                    strokeOpacity={1} 
                     fill={shape.fillColor}
-                    fillOpacity={shape.opacity ?? 0.5} // Fill uses the shape's opacity
+                    fillOpacity={shape.opacity ?? 0.5} 
                   />
                 )}
                 {shape.type === 'rectangle' && (
@@ -1450,9 +1387,9 @@ export default function BattleGrid({
                     height={Math.abs(shape.endPoint.y - shape.startPoint.y)}
                     stroke={isShapeSelected ? 'hsl(var(--ring))' : shape.color}
                     strokeWidth={isShapeSelected ? shape.strokeWidth + 1 : shape.strokeWidth}
-                    strokeOpacity={1} // Border always 100% opaque
+                    strokeOpacity={1} 
                     fill={shape.fillColor}
-                    fillOpacity={shape.opacity ?? 0.5} // Fill uses the shape's opacity
+                    fillOpacity={shape.opacity ?? 0.5} 
                   />
                 )}
                  {shape.label && !isCurrentlyEditingThisShapeLabel && (
@@ -1460,14 +1397,15 @@ export default function BattleGrid({
                         x={labelX}
                         y={labelY}
                         textAnchor="middle"
+                        dominantBaseline="middle"
                         fontSize="10"
                         fontFamily="sans-serif"
                         fontWeight="bold"
                         fill="hsl(var(--foreground))"
                         stroke="black"
-                        strokeWidth="1.25px" // Make stroke thinner for less chunky look
-                        paintOrder="stroke" // Ensures stroke is behind fill
-                        filter="url(#blurryTextDropShadow)" // Soft shadow for readability
+                        strokeWidth="1.25px" 
+                        paintOrder="stroke" 
+                        filter="url(#blurryTextDropShadow)" 
                         className={cn(activeTool === 'select' && !rightClickPopoverState && !shapeDeleteAlertOpen ? "cursor-text" : "cursor-default", "select-none")}
                         onClick={(e) => { if(!rightClickPopoverState && !shapeDeleteAlertOpen) handleShapeLabelClick(e, shape) }}
                     >
@@ -1476,11 +1414,10 @@ export default function BattleGrid({
                 )}
                 {isCurrentlyEditingThisShapeLabel && (
                     <foreignObject
-                        // Position based on where the label would be, adjusting for input size
-                        x={labelX - 50} // Center the input box (100 width / 2)
-                        y={labelY - 7.5 - 10} // Adjust y to be where label was, minus half input height (22/2 approx 10-12)
-                        width={100} // Fixed width for the input
-                        height={22}  // Fixed height for the input
+                        x={labelX - 50} 
+                        y={labelY - 11} 
+                        width={100} 
+                        height={22}  
                     >
                         <input
                             ref={shapeLabelInputRef}
@@ -1490,9 +1427,9 @@ export default function BattleGrid({
                             onBlur={handleSaveShapeLabel}
                             onKeyDown={handleShapeLabelInputKeyDown}
                             style={{
-                                background: 'hsla(var(--background), 0.9)', // Semi-transparent background
+                                background: 'hsla(var(--background), 0.9)', 
                                 color: 'hsl(var(--foreground))',
-                                border: '1px solid hsl(var(--accent))', // Accent border
+                                border: '1px solid hsl(var(--accent))', 
                                 borderRadius: '4px',
                                 fontSize: '12px', 
                                 fontFamily: 'sans-serif', 
@@ -1501,10 +1438,10 @@ export default function BattleGrid({
                                 height: '100%',
                                 textAlign: 'center',
                                 outline: 'none',
-                                boxShadow: '0 0 5px hsl(var(--accent))', // Subtle glow
-                                boxSizing: 'border-box' // Ensures padding/border are inside width/height
+                                boxShadow: '0 0 5px hsl(var(--accent))', 
+                                boxSizing: 'border-box' 
                             }}
-                            onWheelCapture={(e) => e.stopPropagation()} // Prevent grid zoom while typing
+                            onWheelCapture={(e) => e.stopPropagation()} 
                         />
                     </foreignObject>
                 )}
@@ -1513,7 +1450,6 @@ export default function BattleGrid({
           })}
         </g>
 
-        {/* Preview of the shape being drawn */}
         {currentDrawingShape && isDrawing && (
           <g>
             {currentDrawingShape.type === 'line' && (
@@ -1523,7 +1459,7 @@ export default function BattleGrid({
                 stroke={currentDrawingShape.color}
                 strokeWidth={currentDrawingShape.strokeWidth}
                 strokeOpacity={currentDrawingShape.opacity ?? 1}
-                strokeDasharray="3 3" // Dashed line for preview
+                strokeDasharray="3 3" 
               />
             )}
             {currentDrawingShape.type === 'circle' && (
@@ -1532,9 +1468,9 @@ export default function BattleGrid({
                 r={Math.sqrt( dist2(currentDrawingShape.startPoint, currentDrawingShape.endPoint) )}
                 stroke={currentDrawingShape.color}
                 strokeWidth={currentDrawingShape.strokeWidth}
-                strokeOpacity={1} // Border 100%
+                strokeOpacity={1} 
                 fill={currentDrawingShape.fillColor}
-                fillOpacity={currentDrawingShape.opacity ?? 0.5} // Fill uses opacity
+                fillOpacity={currentDrawingShape.opacity ?? 0.5} 
                 strokeDasharray="3 3"
               />
             )}
@@ -1546,16 +1482,15 @@ export default function BattleGrid({
                 height={Math.abs(currentDrawingShape.endPoint.y - currentDrawingShape.startPoint.y)}
                 stroke={currentDrawingShape.color}
                 strokeWidth={currentDrawingShape.strokeWidth}
-                strokeOpacity={1} // Border 100%
+                strokeOpacity={1} 
                 fill={currentDrawingShape.fillColor}
-                fillOpacity={currentDrawingShape.opacity ?? 0.5} // Fill uses opacity
+                fillOpacity={currentDrawingShape.opacity ?? 0.5} 
                 strokeDasharray="3 3"
               />
             )}
           </g>
         )}
 
-        {/* Tokens Rendering */}
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
 
@@ -1570,21 +1505,19 @@ export default function BattleGrid({
           const iconDisplaySize = cellSize * 0.8;
           const iconOffset = (cellSize - iconDisplaySize) / 2;
 
-          const imageDisplaySize = cellSize * 0.95; // Slightly larger for custom images
+          const imageDisplaySize = cellSize * 0.95; 
           const imageOffset = (cellSize - imageDisplaySize) / 2;
 
-          // Determine background fill color
-          let backgroundFill = token.color; // Default to token's color
-            if (!token.customImageUrl) { // Only apply type-based color if no custom image
+          let backgroundFill = token.color; 
+            if (!token.customImageUrl) { 
                 switch (token.type) {
                     case 'player': backgroundFill = 'hsl(var(--player-green-bg))'; break;
                     case 'enemy': backgroundFill = 'hsl(var(--destructive))'; break;
                     case 'ally': backgroundFill = 'hsl(var(--app-blue-bg))'; break;
-                    // Item, Terrain, Generic might use their assigned token.color or a default
                     case 'item': backgroundFill = token.color || 'hsl(270, 40%, 30%)'; break;
                     case 'terrain': backgroundFill = token.color || 'hsl(var(--muted))'; break;
                     case 'generic': backgroundFill = token.color || 'hsl(var(--accent))'; break;
-                    default: backgroundFill = token.color || 'black'; // Fallback
+                    default: backgroundFill = token.color || 'black'; 
                 }
             }
 
@@ -1603,7 +1536,7 @@ export default function BattleGrid({
                 activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditingThisToken && 'cursor-grabbing',
                 isCurrentlyEditingThisToken && 'cursor-text',
                 'drop-shadow-md',
-                isTokenActiveTurn && "animate-pulse-token origin-center" // Apply pulsing animation
+                isTokenActiveTurn && "animate-pulse-token origin-center" 
               )}
             >
               <circle
@@ -1612,13 +1545,12 @@ export default function BattleGrid({
                 r={cellSize / 2}
                 fill={backgroundFill}
                 stroke={
-                  isTokenSelected ? 'hsl(200, 100%, 50%)' : // Bright blue for selected (overrides active turn border for clarity)
-                  // No special border for active turn if pulsing animation is used, or choose a subtle one
+                  isTokenSelected ? 'hsl(200, 100%, 50%)' : 
                   hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditingThisToken && !rightClickPopoverState
-                      ? 'hsl(var(--accent))' // Theme accent for hover
-                      : 'hsl(var(--primary-foreground))' // Default
+                      ? 'hsl(var(--accent))' 
+                      : 'hsl(var(--primary-foreground))' 
                 }
-                strokeWidth={isTokenSelected ? 2 : 1} // Thicker for selected
+                strokeWidth={isTokenSelected ? 2 : 1} 
               />
               {token.customImageUrl ? (
                 <>
@@ -1631,15 +1563,14 @@ export default function BattleGrid({
                     clipPath={`url(#clip-${token.id})`}
                     className={cn(!isCurrentlyEditingThisToken && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none")}
                   />
-                   {/* Optional border around custom image if needed for definition */}
                    <circle
                     cx={cellSize / 2}
                     cy={cellSize / 2}
-                    r={cellSize / 2 * 0.95} // Slightly inside the main circle
+                    r={cellSize / 2 * 0.95} 
                     fill="none"
-                    strokeWidth="1.5" // Or adjust as needed
-                    stroke={'hsl(var(--primary-foreground))'} // Example border color
-                    className="pointer-events-none" // So it doesn't interfere with clicks
+                    strokeWidth="1.5" 
+                    stroke={'hsl(var(--primary-foreground))'} 
+                    className="pointer-events-none" 
                   />
                 </>
               ) : IconComponent ? (
@@ -1656,23 +1587,22 @@ export default function BattleGrid({
                 />
               ) : null}
 
-              {/* Token Instance Name / Label */}
               {token.instanceName && !isCurrentlyEditingThisToken && (
                 <text
                   x={cellSize / 2}
-                  y={cellSize + 10} // Position below the token
+                  y={cellSize + 10} 
                   textAnchor="middle"
                   fontSize="10"
                   fontFamily="sans-serif"
                   fontWeight="bold"
                   fill="hsl(var(--foreground))"
                   stroke="black"
-                  strokeWidth="1.25px" // Thinner stroke for better readability
+                  strokeWidth="1.25px" 
                   paintOrder="stroke"
                   filter="url(#blurryTextDropShadow)"
                   className={cn(
                     activeTool === 'select' && !rightClickPopoverState && !isDeleteAlertOpen ? "cursor-text" : "cursor-default",
-                    "select-none" // Prevent text selection
+                    "select-none" 
                   )}
                   onClick={(e) => {if(!rightClickPopoverState && !isDeleteAlertOpen) handleTokenLabelClick(e, token)}}
                 >
@@ -1681,10 +1611,10 @@ export default function BattleGrid({
               )}
               {isCurrentlyEditingThisToken && (
                 <foreignObject
-                  x={-cellSize / 2} // Center the input field relative to token's (0,0)
-                  y={cellSize + 2}  // Position below the token
-                  width={cellSize * 2} // Allow more width for typing
-                  height={20}         // Standard input height
+                  x={-cellSize / 2} 
+                  y={cellSize + 2}  
+                  width={cellSize * 2} 
+                  height={20}         
                 >
                   <input
                     ref={foreignObjectInputRef}
@@ -1704,7 +1634,7 @@ export default function BattleGrid({
                       textAlign: 'center',
                       outline: 'none',
                     }}
-                    onWheelCapture={(e) => e.stopPropagation()} // Prevent grid zoom
+                    onWheelCapture={(e) => e.stopPropagation()} 
                   />
                 </foreignObject>
               )}
@@ -1712,7 +1642,6 @@ export default function BattleGrid({
           );
         })}
 
-        {/* Text Objects */}
         {textObjects.map(obj => {
           const isCurrentlyEditingThisText = editingTextObjectId === obj.id;
           const isTextObjectSelected = obj.id === selectedTextObjectId;
@@ -1721,8 +1650,8 @@ export default function BattleGrid({
                 key={`edit-${obj.id}`}
                 x={obj.x}
                 y={obj.y}
-                width={Math.max(obj.width, 150)} // Ensure a minimum width for editing
-                height={obj.height + 2} // Add a little extra for borders/focus rings
+                width={Math.max(obj.width, 150)} 
+                height={obj.height + 2} 
             >
                 <input
                     ref={textObjectEditInputRef}
@@ -1737,7 +1666,7 @@ export default function BattleGrid({
                         padding: `${TEXT_PADDING.y}px ${TEXT_PADDING.x}px`,
                         background: 'rgba(0,0,0,0.7)',
                         color: 'white',
-                        border: '1px solid hsl(var(--accent))', // Highlight with accent when editing
+                        border: '1px solid hsl(var(--accent))', 
                         borderRadius: '8px',
                         fontSize: `${obj.fontSize}px`,
                         fontFamily: 'sans-serif',
@@ -1760,7 +1689,7 @@ export default function BattleGrid({
               )}
             >
               <div
-                xmlns="http://www.w3.org/1999/xhtml" // Required for HTML content in foreignObject
+                xmlns="http://www.w3.org/1999/xhtml" 
                 style={{
                   width: '100%',
                   height: '100%',
@@ -1773,10 +1702,10 @@ export default function BattleGrid({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  whiteSpace: 'nowrap', // Prevent text wrapping inside the bubble
-                  overflow: 'hidden',    // Clip text that's too long (width is dynamic)
+                  whiteSpace: 'nowrap', 
+                  overflow: 'hidden',    
                   boxSizing: 'border-box',
-                  border: isTextObjectSelected ? '1px solid hsl(var(--ring))' : 'none', // Selection highlight
+                  border: isTextObjectSelected ? '1px solid hsl(var(--ring))' : 'none', 
                 }}
               >
                 {obj.content}
@@ -1785,9 +1714,7 @@ export default function BattleGrid({
           );
         })}
 
-        {/* Text Input for New Text Object */}
         {isCreatingText && (() => {
-          // Calculate initial height based on "M" character if text is empty
           const textForInitialHeight = isCreatingText.currentText.trim() === '' ? 'M' : isCreatingText.currentText;
           const { height: measuredContentHeight } = measureText(textForInitialHeight, isCreatingText.fontSize);
           const bubbleHeight = measuredContentHeight + TEXT_PADDING.y * 2;
@@ -1795,9 +1722,9 @@ export default function BattleGrid({
           return (
             <foreignObject
               x={isCreatingText.x}
-              y={isCreatingText.y - bubbleHeight / 2} // Center vertically
+              y={isCreatingText.y - bubbleHeight / 2} 
               width={isCreatingText.inputWidth}
-              height={bubbleHeight + 2} // +2 for border/breathing room
+              height={bubbleHeight + 2} 
             >
               <input
                 ref={textInputRef}
@@ -1805,14 +1732,14 @@ export default function BattleGrid({
                 value={isCreatingText.currentText}
                 onChange={handleTextInputChange}
                 onKeyDown={handleTextInputKeyDown}
-                onBlur={finalizeTextCreation} // Finalize on blur
+                onBlur={finalizeTextCreation} 
                 style={{
                   width: '100%',
                   height: '100%',
                   padding: `${TEXT_PADDING.y}px ${TEXT_PADDING.x}px`,
                   background: 'rgba(0,0,0,0.7)',
                   color: 'white',
-                  border: '1px solid hsl(var(--accent))', // Accent border while creating
+                  border: '1px solid hsl(var(--accent))', 
                   borderRadius: '8px',
                   fontSize: `${isCreatingText.fontSize}px`,
                   fontFamily: 'sans-serif',
@@ -1826,7 +1753,6 @@ export default function BattleGrid({
         })()}
 
 
-        {/* Measurement Overlay */}
         {measurement.startPoint && measurement.endPoint && (
           <g stroke="hsl(var(--accent))" strokeWidth="3" fill="none">
             {measurement.type === 'distance' ? (
@@ -1837,26 +1763,26 @@ export default function BattleGrid({
                 y2={measurement.endPoint.y * cellSize + cellSize/2}
                 markerEnd="url(#arrowhead)"
               />
-            ) : ( // Radius
+            ) : ( 
               <circle
                 cx={measurement.startPoint.x * cellSize + cellSize/2}
                 cy={measurement.startPoint.y * cellSize + cellSize/2}
                 r={Math.sqrt(Math.pow(measurement.endPoint.x - measurement.startPoint.x, 2) + Math.pow(measurement.endPoint.y - measurement.startPoint.y, 2)) * cellSize}
                 strokeDasharray="5 3"
-                fill="hsla(30, 80%, 85%, 0.3)" // Semi-transparent fill for radius
+                fill="hsla(30, 80%, 85%, 0.3)" 
               />
             )}
           </g>
         )}
         {isMeasuring && measurement.endPoint && measurement.result && (
           <text
-            x={measurement.endPoint.x * cellSize + cellSize / 2 + 20} // Offset from end point
+            x={measurement.endPoint.x * cellSize + cellSize / 2 + 20} 
             y={measurement.endPoint.y * cellSize + cellSize / 2 + 20}
             fill="hsl(var(--accent))"
             fontSize="20"
             paintOrder="stroke"
             stroke="hsl(var(--background))"
-            strokeWidth="4px" // Makes text pop
+            strokeWidth="4px" 
             strokeLinecap="butt"
             strokeLinejoin="miter"
             className="pointer-events-none select-none font-bold"
@@ -1864,7 +1790,7 @@ export default function BattleGrid({
             {measurement.result.replace("Distance: ", "").replace("Radius: ", "")}
           </text>
         )}
-         {measurement.startPoint && ( // Dot at measurement start
+         {measurement.startPoint && ( 
            <circle
              cx={measurement.startPoint.x * cellSize + cellSize / 2}
              cy={measurement.startPoint.y * cellSize + cellSize / 2}
@@ -1872,7 +1798,7 @@ export default function BattleGrid({
              fill="hsl(var(--accent))"
            />
          )}
-         {measurement.endPoint && measurement.result && ( // Dot at measurement end
+         {measurement.endPoint && measurement.result && ( 
            <circle
              cx={measurement.endPoint.x * cellSize + cellSize / 2}
              cy={measurement.endPoint.y * cellSize + cellSize / 2}
@@ -1882,7 +1808,6 @@ export default function BattleGrid({
          )}
       </svg>
 
-      {/* Unified Right-Click Popover */}
       <Popover
         open={!!rightClickPopoverState}
         onOpenChange={(isOpen) => {
@@ -1892,14 +1817,13 @@ export default function BattleGrid({
         }}
       >
         <PopoverTrigger asChild>
-            {/* This button is invisible and positioned dynamically for the popover anchor */}
             <button
                 ref={rightClickPopoverTriggerRef}
                 style={{
                     position: 'fixed',
                     opacity: 0,
                     pointerEvents: 'none',
-                    width: '1px', height: '1px', // Minimal size
+                    width: '1px', height: '1px', 
                 }}
                 aria-hidden="true"
             />
@@ -1908,16 +1832,14 @@ export default function BattleGrid({
             <PopoverContent
                 side="bottom"
                 align="center"
-                className="w-auto p-1" // Adjusted width to auto for better fitting
-                onOpenAutoFocus={(e) => e.preventDefault()} // Prevent popover from stealing focus
-                // Prevent closing if a nested dialog (like delete confirm) is the target of outside click
+                className="w-auto p-1" 
+                onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
                     if (isDeleteAlertOpen || textObjectDeleteAlertOpen || shapeDeleteAlertOpen) {
                         e.preventDefault();
                     }
                 }}
             >
-              {/* Token Options */}
               {rightClickPopoverState.type === 'token' && (
                 <div className="w-48">
                   <Button
@@ -1927,7 +1849,7 @@ export default function BattleGrid({
                       const token = rightClickPopoverState.item as TokenType;
                       setEditingTokenId(token.id);
                       setEditingText(token.instanceName || '');
-                      setRightClickPopoverState(null); // Close popover
+                      setRightClickPopoverState(null); 
                     }}
                   >
                     <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
@@ -1937,7 +1859,7 @@ export default function BattleGrid({
                     className="w-full justify-start h-8 px-2 text-sm flex items-center"
                     onClick={() => {
                       onTokenImageChangeRequest(rightClickPopoverState.item.id);
-                      setRightClickPopoverState(null); // Close popover
+                      setRightClickPopoverState(null); 
                     }}
                   >
                     <ImageIcon className="mr-2 h-3.5 w-3.5" /> Change Image
@@ -1966,9 +1888,9 @@ export default function BattleGrid({
                         <AlertDialogAction
                           onClick={() => {
                             onTokenDelete(rightClickPopoverState.item.id);
-                            setIsDeleteAlertOpen(false); // Close dialog
-                            setRightClickPopoverState(null); // Close popover
-                            setSelectedTokenId(null); // Deselect
+                            setIsDeleteAlertOpen(false); 
+                            setRightClickPopoverState(null); 
+                            setSelectedTokenId(null); 
                           }}
                           className={buttonVariants({ variant: "destructive" })}
                         >
@@ -1980,7 +1902,6 @@ export default function BattleGrid({
                 </div>
               )}
 
-              {/* Text Object Options */}
               {rightClickPopoverState.type === 'text' && (
                 <div className="w-48">
                     <Button
@@ -1990,7 +1911,7 @@ export default function BattleGrid({
                             const textObj = rightClickPopoverState.item as TextObjectType;
                             setEditingTextObjectId(textObj.id);
                             setEditingTextObjectContent(textObj.content);
-                            setRightClickPopoverState(null); // Close popover
+                            setRightClickPopoverState(null); 
                         }}
                     >
                         <Edit3 className="mr-2 h-3.5 w-3.5" /> Edit Text
@@ -2020,8 +1941,8 @@ export default function BattleGrid({
                                     onClick={() => {
                                         setTextObjects(prev => prev.filter(to => to.id !== rightClickPopoverState.item.id));
                                         setTextObjectDeleteAlertOpen(false);
-                                        setRightClickPopoverState(null); // Close popover
-                                        setSelectedTextObjectId(null); // Deselect
+                                        setRightClickPopoverState(null); 
+                                        setSelectedTextObjectId(null); 
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -2033,13 +1954,12 @@ export default function BattleGrid({
                 </div>
               )}
               
-              {/* Shape Options */}
               {rightClickPopoverState.type === 'shape' && (
                 <div className="w-60 p-2 space-y-2">
                     {(rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
                          <div className="space-y-1 pt-1">
                             <Label className="text-xs">Shape Opacity</Label>
-                            <div 
+                             <div 
                                 className="flex space-x-1"
                                 key={`opacity-controls-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity ?? 0.5}`}
                             >
@@ -2085,12 +2005,12 @@ export default function BattleGrid({
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput);
-                                            (e.target as HTMLInputElement).blur(); // Remove focus
+                                            (e.target as HTMLInputElement).blur(); 
                                         }
                                     }}
                                     className="h-8 text-sm text-center w-16"
-                                    min={FEET_PER_SQUARE / 2} // Min radius 2.5ft
-                                    step={FEET_PER_SQUARE} // Step by 5ft
+                                    min={FEET_PER_SQUARE / 2} 
+                                    step={FEET_PER_SQUARE} 
                                 />
                                 <Button
                                     variant="outline"
@@ -2110,12 +2030,12 @@ export default function BattleGrid({
                     )}
                      <Button
                         variant="ghost"
-                        className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" // Ensure margin top
+                        className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
                         onClick={() => {
                             const shape = rightClickPopoverState.item as DrawnShape;
                             setEditingShapeId(shape.id);
                             setEditingShapeLabelText(shape.label || '');
-                            setRightClickPopoverState(null); // Close popover
+                            setRightClickPopoverState(null); 
                         }}
                     >
                         <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
@@ -2125,7 +2045,7 @@ export default function BattleGrid({
                             <Button
                                 variant="ghost"
                                 className={cn(
-                                    "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", // Small margin
+                                    "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
                                     "text-destructive hover:bg-destructive hover:text-destructive-foreground"
                                 )}
                             >
@@ -2145,8 +2065,8 @@ export default function BattleGrid({
                                     onClick={() => {
                                         setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
                                         setShapeDeleteAlertOpen(false);
-                                        setRightClickPopoverState(null); // Close popover
-                                        setSelectedShapeId(null); // Deselect
+                                        setRightClickPopoverState(null); 
+                                        setSelectedShapeId(null); 
                                     }}
                                     className={buttonVariants({ variant: "destructive" })}
                                 >
@@ -2161,7 +2081,6 @@ export default function BattleGrid({
         )}
       </Popover>
 
-      {/* Grid Controls (Zoom, Grid Lines Toggle) */}
       <TooltipProvider delayDuration={0}>
         <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
           <Tooltip>
@@ -2173,8 +2092,8 @@ export default function BattleGrid({
                 className={cn(
                   "rounded-md shadow-lg h-10 w-10 p-2",
                   showGridLines
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90" // Active state style
-                    : "bg-card text-card-foreground hover:bg-muted" // Inactive state style
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "bg-card text-card-foreground hover:bg-muted" 
                 )}
                 aria-label={showGridLines ? "Hide Grid Lines" : "Show Grid Lines"}
               >
