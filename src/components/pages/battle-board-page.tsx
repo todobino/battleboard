@@ -140,7 +140,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [newParticipantQuantity, setNewParticipantQuantity] = useState('1');
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [newParticipantType, setNewParticipantType] = useState<'player' | 'enemy' | 'ally'>('player');
-  const [selectedAssignedTokenId, setSelectedAssignedTokenId] = useState<string | undefined>(undefined);
+  const [selectedAssignedTokenId, setSelectedAssignedTokenId] = useState<string>("none");
 
   const [croppedAvatarDataUrl, setCroppedAvatarDataUrl] = useState<string | null>(null);
   const [uncroppedAvatarImageSrc, setUncroppedAvatarImageSrc] = useState<string | null>(null);
@@ -486,7 +486,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     let finalTokenId: string | undefined = explicitTokenId;
     let newTokensCreated: Token[] = [];
 
-    if (!finalTokenId) { // No existing token assigned, need to create one
+    if (!finalTokenId || finalTokenId === "none") { // No existing token assigned, or "none" means create new
+      finalTokenId = undefined; // Ensure it's truly undefined for new token creation path
       const middleX = Math.floor(GRID_COLS / 2);
       const middleY = Math.floor(GRID_ROWS / 2);
       const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
@@ -596,14 +597,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (hpString !== '' && (isNaN(hpValue as number) || (hpValue as number) < 0) ) return;
     if (acString !== '' && (isNaN(acValue as number) || (acValue as number) < 0) ) return;
     
-    const quantity = selectedAssignedTokenId ? 1 : (parseInt(newParticipantQuantity, 10) || 1);
+    const quantity = (selectedAssignedTokenId && selectedAssignedTokenId !== "none") ? 1 : (parseInt(newParticipantQuantity, 10) || 1);
     if (quantity < 1) {
         return;
     }
 
     let allAddedSuccessfully = true;
     for (let i = 0; i < quantity; i++) {
-      const finalName = (quantity > 1 && !selectedAssignedTokenId) ? `${participantNameInput} ${i + 1}` : participantNameInput;
+      const finalName = (quantity > 1 && (selectedAssignedTokenId === "none" || !selectedAssignedTokenId)) ? `${participantNameInput} ${i + 1}` : participantNameInput;
       const newParticipantData: Omit<Participant, 'id' | 'tokenId'> = {
         name: finalName,
         initiative: initiativeValue,
@@ -613,7 +614,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       };
       
       let success;
-      if (selectedAssignedTokenId) {
+      if (selectedAssignedTokenId && selectedAssignedTokenId !== "none") {
         success = handleAddParticipantToList(newParticipantData, selectedAssignedTokenId, croppedAvatarDataUrl);
         if (success) {
             const newTypeTemplate = tokenTemplates.find(t => t.type === newParticipantType);
@@ -652,7 +653,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setNewParticipantQuantity('1');
         setIsEditingQuantity(false);
         setNewParticipantType('player');
-        setSelectedAssignedTokenId(undefined);
+        setSelectedAssignedTokenId("none");
         setCroppedAvatarDataUrl(null); 
         setDialogOpen(false);
     }
@@ -766,7 +767,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setNewParticipantAc('10');
       setNewParticipantQuantity('1');
       setNewParticipantType('player');
-      setSelectedAssignedTokenId(undefined);
+      setSelectedAssignedTokenId("none");
       setIsEditingInitiative(false);
       setIsEditingHp(false);
       setIsEditingAc(false);
@@ -943,6 +944,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div>
+                    {/* Removed Label "Type" here */}
                     <div className="flex space-x-2 mt-1">
                       {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                         const config = participantTypeButtonConfig[type];
@@ -977,9 +979,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                       <Select
                         value={selectedAssignedTokenId}
                         onValueChange={(value) => {
-                          const newSelectedId = value === 'none' ? undefined : value;
-                          setSelectedAssignedTokenId(newSelectedId);
-                          if (newSelectedId) {
+                          setSelectedAssignedTokenId(value);
+                          if (value !== "none") {
                             setNewParticipantQuantity('1');
                           }
                         }}
@@ -1004,7 +1005,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
                     {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
                     {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
-                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, !!selectedAssignedTokenId)}
+                    {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
                   </div>
                   
                   <FormDialogFooter> 
@@ -1040,6 +1041,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
