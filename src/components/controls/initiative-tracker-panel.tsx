@@ -229,153 +229,155 @@ export default function InitiativeTrackerPanel({
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
         ) : (
-          <ScrollArea className="flex-grow w-full overflow-x-hidden">
-            <ul className="space-y-2 pr-1">
-              {participants.map((p, index) => {
-                const itemIsActive = index === currentParticipantIndex;
-                const token = tokens.find(t => t.id === p.tokenId);
-                const IconComponent = token?.icon;
-                const canFocus = !!p.tokenId && !!onFocusToken;
+          <div className="flex-grow w-full overflow-x-hidden"> {/* Outer wrapper for ScrollArea */}
+            <ScrollArea className="h-full"> {/* ScrollArea now takes full height of its parent */}
+              <ul className="space-y-2 pr-1">
+                {participants.map((p, index) => {
+                  const itemIsActive = index === currentParticipantIndex;
+                  const token = tokens.find(t => t.id === p.tokenId);
+                  const IconComponent = token?.icon;
+                  const canFocus = !!p.tokenId && !!onFocusToken;
 
-                return (
-                  <li
-                    key={p.id}
-                    className={cn(
-                      "flex flex-col p-2.5 w-full rounded-md overflow-hidden transition-colors",
-                      itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
-                      canFocus && "cursor-pointer"
-                    )}
-                    onClick={() => {
-                      if (canFocus && p.tokenId && onFocusToken) {
-                        onFocusToken(p.tokenId);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center w-full">
-                       <div className="shrink-0 mr-2"> {/* Icon Container */}
-                        {token ? (
-                          token.customImageUrl ? (
-                            <div className="w-6 h-6 rounded-full overflow-hidden border border-sidebar-border">
-                              <img src={token.customImageUrl} alt={p.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : IconComponent ? (
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center border border-sidebar-border"
-                              style={{ backgroundColor: token.color }}
-                            >
-                              <IconComponent className="h-4 w-4 text-primary-foreground" />
-                            </div>
+                  return (
+                    <li
+                      key={p.id}
+                      className={cn(
+                        "flex flex-col p-2.5 w-full min-w-0 rounded-md overflow-hidden transition-colors", // Added min-w-0
+                        itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
+                        canFocus && "cursor-pointer"
+                      )}
+                      onClick={() => {
+                        if (canFocus && p.tokenId && onFocusToken) {
+                          onFocusToken(p.tokenId);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center w-full min-w-0"> {/* Added min-w-0 */}
+                         <div className="shrink-0 mr-2"> {/* Icon Container */}
+                          {token ? (
+                            token.customImageUrl ? (
+                              <div className="w-6 h-6 rounded-full overflow-hidden border border-sidebar-border">
+                                <img src={token.customImageUrl} alt={p.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : IconComponent ? (
+                              <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center border border-sidebar-border"
+                                style={{ backgroundColor: token.color }}
+                              >
+                                <IconComponent className="h-4 w-4 text-primary-foreground" />
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center border border-sidebar-border">
+                                 <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center border border-sidebar-border">
-                               <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
                             </div>
-                          )
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center border border-sidebar-border">
-                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <span className="truncate block text-base font-semibold" title={p.name}>
-                          {p.name}
-                        </span>
-                      </div>
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          className="ml-1 group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
-                          aria-label={`Remove ${p.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onRemoveParticipant) onRemoveParticipant(p.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
-                        </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full mt-1.5">
-                      <div className="flex items-center space-x-3 text-xs text-muted-foreground flex-1 min-w-0 overflow-hidden mr-1">
-                        <div className="flex items-center" title={`Initiative: ${p.initiative}`}>
-                          <Zap className="h-3.5 w-3.5 mr-0.5 text-yellow-500" />
-                          <span>{p.initiative}</span>
+                          )}
                         </div>
-                        {p.hp !== undefined && (
-                          <div className="flex items-center" title={`HP: ${p.hp}`}>
-                            <Heart className="h-3.5 w-3.5 mr-0.5 text-destructive" />
-                            <span>{p.hp}</span>
-                          </div>
-                        )}
-                        {p.ac !== undefined && (
-                          <div className="flex items-center" title={`AC: ${p.ac}`}>
-                            <ShieldIcon className="h-3.5 w-3.5 mr-0.5 text-[hsl(var(--app-blue-bg))]" />
-                           <span>{p.ac}</span>
-                          </div>
-                        )}
-                        <span className={cn(
-                          "px-1.5 py-0.5 rounded-md text-xs whitespace-nowrap",
-                          p.type === 'player' ? 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))]' :
-                          p.type === 'enemy' ? 'bg-destructive text-destructive-foreground' :
-                          p.type === 'ally' ? 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))]' :
-                          'bg-gray-500 text-white'
-                        )}>
-                          {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
-                        </span>
-                      </div>
-
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
+                        <div className="flex-1 min-w-0 overflow-hidden"> {/* Name container */}
+                          <span className="truncate block text-base font-semibold" title={p.name}>
+                            {p.name}
+                          </span>
+                        </div>
+                        <Button
                             variant="ghost"
                             size="icon"
-                            className="group/optionsButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
-                            aria-label={`Options for ${p.name}`}
-                            onClick={(e) => e.stopPropagation()}
+                            className="ml-1 group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
+                            aria-label={`Remove ${p.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onRemoveParticipant) onRemoveParticipant(p.id);
+                            }}
                           >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground group-hover/optionsButton:text-primary-foreground" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground group-hover/deleteButton:text-primary-foreground" />
                           </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-1" side="bottom" align="end">
-                          {onMoveParticipantUp && (
+                      </div>
+
+                      <div className="flex items-center justify-between w-full mt-1.5">
+                        <div className="flex items-center space-x-3 text-xs text-muted-foreground flex-1 min-w-0 overflow-hidden mr-1">
+                          <div className="flex items-center" title={`Initiative: ${p.initiative}`}>
+                            <Zap className="h-3.5 w-3.5 mr-0.5 text-yellow-500" />
+                            <span>{p.initiative}</span>
+                          </div>
+                          {p.hp !== undefined && (
+                            <div className="flex items-center" title={`HP: ${p.hp}`}>
+                              <Heart className="h-3.5 w-3.5 mr-0.5 text-destructive" />
+                              <span>{p.hp}</span>
+                            </div>
+                          )}
+                          {p.ac !== undefined && (
+                            <div className="flex items-center" title={`AC: ${p.ac}`}>
+                              <ShieldIcon className="h-3.5 w-3.5 mr-0.5 text-[hsl(var(--app-blue-bg))]" />
+                             <span>{p.ac}</span>
+                            </div>
+                          )}
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded-md text-xs whitespace-nowrap",
+                            p.type === 'player' ? 'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))]' :
+                            p.type === 'enemy' ? 'bg-destructive text-destructive-foreground' :
+                            p.type === 'ally' ? 'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))]' :
+                            'bg-gray-500 text-white'
+                          )}>
+                            {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
+                          </span>
+                        </div>
+
+                        <Popover>
+                          <PopoverTrigger asChild>
                             <Button
                               variant="ghost"
-                              className="w-full justify-start h-8 px-2 text-sm flex items-center"
-                              onClick={() => onMoveParticipantUp(p.id)}
-                              disabled={index === 0}
+                              size="icon"
+                              className="group/optionsButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
+                              aria-label={`Options for ${p.name}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <ArrowUpCircle className="mr-2 h-3.5 w-3.5" /> Move Up
+                              <MoreVertical className="h-4 w-4 text-muted-foreground group-hover/optionsButton:text-primary-foreground" />
                             </Button>
-                          )}
-                          {onMoveParticipantDown && (
-                             <Button
-                              variant="ghost"
-                              className="w-full justify-start h-8 px-2 text-sm flex items-center"
-                              onClick={() => onMoveParticipantDown(p.id)}
-                              disabled={index === participants.length - 1}
-                            >
-                              <ArrowDownCircle className="mr-2 h-3.5 w-3.5" /> Move Down
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-1" side="bottom" align="end">
+                            {onMoveParticipantUp && (
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                                onClick={() => onMoveParticipantUp(p.id)}
+                                disabled={index === 0}
+                              >
+                                <ArrowUpCircle className="mr-2 h-3.5 w-3.5" /> Move Up
+                              </Button>
+                            )}
+                            {onMoveParticipantDown && (
+                               <Button
+                                variant="ghost"
+                                className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                                onClick={() => onMoveParticipantDown(p.id)}
+                                disabled={index === participants.length - 1}
+                              >
+                                <ArrowDownCircle className="mr-2 h-3.5 w-3.5" /> Move Down
+                              </Button>
+                            )}
+                            <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleRenameClick(p)}>
+                              <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
                             </Button>
-                          )}
-                          <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleRenameClick(p)}>
-                            <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
-                          </Button>
-                          <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleChangeTokenClick(p)}>
-                            <ImagePlus className="mr-2 h-3.5 w-3.5" /> Update Image
-                          </Button>
-                          {onUpdateParticipantStats && (
-                            <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleEditStatsClick(p)}>
-                              <SlidersVertical className="mr-2 h-3.5 w-3.5" /> Edit Stats
+                            <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleChangeTokenClick(p)}>
+                              <ImagePlus className="mr-2 h-3.5 w-3.5" /> Update Image
                             </Button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </ScrollArea>
+                            {onUpdateParticipantStats && (
+                              <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleEditStatsClick(p)}>
+                                <SlidersVertical className="mr-2 h-3.5 w-3.5" /> Edit Stats
+                              </Button>
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
+          </div>
         )}
       </div>
 
@@ -489,4 +491,5 @@ export default function InitiativeTrackerPanel({
   );
 }
 
+    
     
