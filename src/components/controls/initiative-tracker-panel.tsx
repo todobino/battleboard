@@ -252,7 +252,7 @@ export default function InitiativeTrackerPanel({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center flex-grow min-w-0 overflow-hidden">
+                      <div className="flex items-center flex-1 min-w-0 mr-1 overflow-hidden">
                         {token ? (
                           token.customImageUrl ? (
                             <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 border border-sidebar-border">
@@ -275,7 +275,7 @@ export default function InitiativeTrackerPanel({
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <span className="block w-full text-base font-semibold truncate" title={p.name}>{p.name}</span>
+                        <span className="block text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
                         <Button
                           variant="ghost"
@@ -484,6 +484,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
-
-    
