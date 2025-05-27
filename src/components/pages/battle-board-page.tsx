@@ -33,7 +33,7 @@ import { tokenTemplates } from '@/config/token-templates';
 const GRID_ROWS = 40;
 const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
-const MAX_HISTORY_LENGTH = 10; // Reduced from 30
+const MAX_HISTORY_LENGTH = 10; // For in-session undo/redo
 const WELCOME_DIALOG_STORAGE_KEY = 'hasSeenWelcomeDialogV1';
 const LOCAL_STORAGE_KEY = 'battleBoardStateV2';
 
@@ -46,12 +46,13 @@ const initialGridCells = (): GridCellData[][] =>
     }))
   );
 
-const createInitialSnapshot = (): UndoableState => ({
-  gridCells: initialGridCells(),
-  tokens: [],
-  drawnShapes: [],
-  textObjects: [],
-  participants: [],
+// Helper function to create an initial snapshot, can take existing state to form the basis
+const createInitialSnapshot = (initialState?: Partial<UndoableState>): UndoableState => ({
+  gridCells: initialState?.gridCells || initialGridCells(),
+  tokens: initialState?.tokens || [],
+  drawnShapes: initialState?.drawnShapes || [],
+  textObjects: initialState?.textObjects || [],
+  participants: initialState?.participants || [],
 });
 
 
@@ -196,26 +197,29 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   // Load state from localStorage on mount
   useEffect(() => {
     const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+    let initialSnapshotForHistory: UndoableState;
+
     if (savedStateJSON) {
       try {
+        // Type assertion for the loaded state (excluding history fields)
         const loadedState = JSON.parse(savedStateJSON) as {
-          gridCells: GridCellData[][];
-          tokens: Omit<Token, 'icon'>[]; // Icons are stripped
-          drawnShapes: DrawnShape[];
-          textObjects: TextObjectType[];
-          participants: Participant[];
-          showGridLines: boolean;
-          backgroundImageUrl: string | null;
-          backgroundZoomLevel: number;
-          currentParticipantIndex: number;
-          roundCounter: number;
-          isCombatActive: boolean;
-          history: (Omit<UndoableState, 'tokens'> & { tokens: Omit<Token, 'icon'>[] })[]; // History has stripped icons
-          historyPointer: number;
+            gridCells: GridCellData[][];
+            tokens: Omit<Token, 'icon'>[]; // Icons are stripped in saved state
+            drawnShapes: DrawnShape[];
+            textObjects: TextObjectType[];
+            participants: Participant[];
+            showGridLines: boolean;
+            backgroundImageUrl: string | null;
+            backgroundZoomLevel: number;
+            currentParticipantIndex: number;
+            roundCounter: number;
+            isCombatActive: boolean;
         };
 
+        const rehydratedTokens = (loadedState.tokens || []).map(rehydrateToken);
+
         setGridCells(loadedState.gridCells || initialGridCells());
-        setTokens((loadedState.tokens || []).map(rehydrateToken));
+        setTokens(rehydratedTokens);
         setDrawnShapes(loadedState.drawnShapes || []);
         setTextObjects(loadedState.textObjects || []);
         setParticipants(loadedState.participants || []);
@@ -225,30 +229,32 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
         setRoundCounter(loadedState.roundCounter || 1);
         setIsCombatActive(loadedState.isCombatActive || false);
-
-        const rehydratedHistory = (loadedState.history || [createInitialSnapshot()]).map(snapshot => ({
-          ...snapshot,
-          tokens: (snapshot.tokens || []).map(rehydrateToken),
-        }));
-        setHistory(rehydratedHistory);
-        setHistoryPointer(loadedState.historyPointer !== undefined ? loadedState.historyPointer : (rehydratedHistory.length > 0 ? rehydratedHistory.length - 1 : 0));
+        
+        // Create the initial snapshot for in-memory history based on loaded state
+        initialSnapshotForHistory = {
+            gridCells: loadedState.gridCells || initialGridCells(),
+            tokens: rehydratedTokens, // Use rehydrated tokens for the history snapshot
+            drawnShapes: loadedState.drawnShapes || [],
+            textObjects: loadedState.textObjects || [],
+            participants: loadedState.participants || [],
+        };
 
       } catch (error) {
         console.error("Failed to load or parse saved state from localStorage:", error);
-        // If parsing fails, remove the potentially corrupted item
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        setHistory([createInitialSnapshot()]);
-        setHistoryPointer(0);
+        localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear corrupted data
+        initialSnapshotForHistory = createInitialSnapshot(); // Start fresh
       }
     } else {
-      setHistory([createInitialSnapshot()]);
-      setHistoryPointer(0);
+      // No saved state found, start fresh
+      initialSnapshotForHistory = createInitialSnapshot();
     }
+    setHistory([initialSnapshotForHistory]);
+    setHistoryPointer(0);
     setIsInitialLoadComplete(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rehydrateToken]); // rehydrateToken is stable due to useCallback
 
-  // Save state to localStorage when relevant states change
+  // Save current state to localStorage (without history)
   useEffect(() => {
     if (!isInitialLoadComplete) {
       return; // Don't save until initial load/hydration is complete
@@ -258,16 +264,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return tokensToStrip.map(({ icon, ...restOfToken }) => restOfToken);
     };
 
-    const stripIconsFromSnapshot = (snapshot: UndoableState): Omit<UndoableState, 'tokens'> & { tokens: Omit<Token, 'icon'>[] } => {
-        return {
-            ...snapshot,
-            tokens: stripTokenIcons(snapshot.tokens),
-        };
-    };
-
+    // Construct the state object to save, excluding history and historyPointer
     const stateToSave = {
       gridCells,
-      tokens: stripTokenIcons(tokens),
+      tokens: stripTokenIcons(tokens), // Save current tokens, stripped of icons
       drawnShapes,
       textObjects,
       participants,
@@ -277,8 +277,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       currentParticipantIndex,
       roundCounter,
       isCombatActive,
-      history: history.map(stripIconsFromSnapshot),
-      historyPointer,
+      // History and historyPointer are NOT saved to localStorage
     };
 
     try {
@@ -286,15 +285,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
-      // Potentially add more sophisticated error handling or user notification here
-      // For now, we'll just log it, but this is where you might clear history or reduce data
+      // This catch block is important for quota errors or other serialization issues
+      // Consider notifying the user if saving fails repeatedly.
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, backgroundImageUrl, backgroundZoomLevel,
     currentParticipantIndex, roundCounter, isCombatActive,
-    history, historyPointer,
-    isInitialLoadComplete
+    isInitialLoadComplete // Ensure this effect runs after initial load
   ]);
 
 
@@ -306,30 +304,42 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   };
 
   const getCurrentUndoableState = useCallback((): UndoableState => {
-    return JSON.parse(JSON.stringify({ // Deep clone to ensure no mutation issues
+    // Return a deep clone of the current relevant state for history
+    return JSON.parse(JSON.stringify({ 
       gridCells,
-      tokens, // Will contain icon functions here, handled by strip/rehydrate for storage/load
+      tokens, // Note: tokens here will have their icon functions, which is fine for in-memory
       drawnShapes,
       textObjects,
       participants,
     }));
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
+  // Manage in-session undo/redo history
   useEffect(() => {
     if (!isInitialLoadComplete || isUndoRedoOperation.current) {
-      if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
+      if(isUndoRedoOperation.current) isUndoRedoOperation.current = false; // Reset flag after use
       return;
     }
+    // This check is to prevent an infinite loop if history is empty and pointer is -1 during init.
     if (historyPointer === -1 && history.length === 0) {
-        const initialSnapshot = createInitialSnapshot();
+        const initialSnapshot = createInitialSnapshot({gridCells, tokens, drawnShapes, textObjects, participants});
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
         return;
     }
-    if (historyPointer === -1) return; // Should ideally not happen if initialized properly
+     if (historyPointer === -1 && history.length > 0) { // Should ideally not be -1 if history has items.
+        setHistoryPointer(0); // Attempt to recover by pointing to the first item.
+        return;
+    }
+
 
     const newSnapshot = getCurrentUndoableState();
 
+    // Prevent adding identical snapshot to history if no actual change occurred
+    if (history.length > 0 && JSON.stringify(history[historyPointer]) === JSON.stringify(newSnapshot)) {
+      return;
+    }
+    
     const newHistoryBase = history.slice(0, historyPointer + 1);
     const updatedHistory = [...newHistoryBase, newSnapshot].slice(-MAX_HISTORY_LENGTH);
 
@@ -337,11 +347,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(updatedHistory.length - 1);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridCells, tokens, drawnShapes, textObjects, participants, isInitialLoadComplete]); // getCurrentUndoableState ensures stability
+  }, [gridCells, tokens, drawnShapes, textObjects, participants, isInitialLoadComplete]); // getCurrentUndoableState is stable
 
   const restoreStateFromSnapshot = useCallback((snapshot: UndoableState) => {
     setGridCells(snapshot.gridCells);
-    setTokens(snapshot.tokens.map(rehydrateToken)); // Rehydrate tokens from history snapshot
+    // Tokens from history snapshots might also need rehydration if they were stringified 
+    // and icons were lost (though getCurrentUndoableState keeps them for in-memory)
+    // Assuming `snapshot.tokens` contains full Token objects for in-memory history.
+    setTokens(snapshot.tokens.map(rehydrateToken)); 
     setDrawnShapes(snapshot.drawnShapes);
     setTextObjects(snapshot.textObjects);
     setParticipants(snapshot.participants);
@@ -359,7 +372,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [history, historyPointer, toast, restoreStateFromSnapshot]);
 
   const handleRedo = useCallback(() => {
-    if (historyPointer >= history.length - 1 || historyPointer < 0) {
+    if (historyPointer >= history.length - 1 || historyPointer < 0) { // Ensure pointer is valid
       toast({ title: "Nothing to redo", duration: 2000 });
       return;
     }
@@ -370,11 +383,19 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [history, historyPointer, toast, restoreStateFromSnapshot]);
 
   const handleResetBoard = useCallback(() => {
-    setGridCells(initialGridCells());
-    setTokens([]);
-    setDrawnShapes([]);
-    setTextObjects([]);
-    setParticipants([]);
+    isUndoRedoOperation.current = true; // Prevent immediate history save of reset state
+
+    const defaultGridCells = initialGridCells();
+    const defaultTokens: Token[] = [];
+    const defaultDrawnShapes: DrawnShape[] = [];
+    const defaultTextObjects: TextObjectType[] = [];
+    const defaultParticipants: Participant[] = [];
+
+    setGridCells(defaultGridCells);
+    setTokens(defaultTokens);
+    setDrawnShapes(defaultDrawnShapes);
+    setTextObjects(defaultTextObjects);
+    setParticipants(defaultParticipants);
     setBackgroundImageUrl(null);
     setBackgroundZoomLevel(1);
     setMeasurement({type: null});
@@ -382,15 +403,42 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setRoundCounter(1);
     setIsCombatActive(false);
 
-    const initialSnapshot = createInitialSnapshot();
-    setHistory([initialSnapshot]);
+    const freshSnapshot = createInitialSnapshot({ // Create snapshot with default empty states
+        gridCells: defaultGridCells,
+        tokens: defaultTokens,
+        drawnShapes: defaultDrawnShapes,
+        textObjects: defaultTextObjects,
+        participants: defaultParticipants,
+    });
+    setHistory([freshSnapshot]);
     setHistoryPointer(0);
-    isUndoRedoOperation.current = false;
-
+    
+    // Clear localStorage and save the fresh empty state
     if (typeof window !== 'undefined') {
         localStorage.removeItem(LOCAL_STORAGE_KEY);
+        const stateToSave = {
+            gridCells: defaultGridCells,
+            tokens: [], // Empty stripped tokens
+            drawnShapes: defaultDrawnShapes,
+            textObjects: defaultTextObjects,
+            participants: defaultParticipants,
+            showGridLines: true, 
+            backgroundImageUrl: null,
+            backgroundZoomLevel: 1,
+            currentParticipantIndex: -1,
+            roundCounter: 1,
+            isCombatActive: false,
+        };
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+        } catch (error) {
+            console.error("Failed to save reset state to localStorage:", error);
+        }
     }
     toast({ title: "Battle Board Cleared", description: "Everything has been reset." });
+    
+    // Allow history saving again after a brief delay
+    setTimeout(() => { isUndoRedoOperation.current = false; }, 0);
   }, [toast]);
 
 
@@ -401,17 +449,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       if (event.key === 'Escape') {
         if (isInputFocused) {
-          // Allow default behavior for inputs (e.g., blur, cancel edit)
           return;
         }
         event.preventDefault();
         setActiveTool('select');
-        setEscapePressCount(prev => prev + 1); // Increment to trigger effects in child components
-        return; // Stop further processing for Escape key here
+        setEscapePressCount(prev => prev + 1); 
+        return; 
       }
 
       if (isInputFocused) {
-        return; // Don't process other hotkeys if an input is focused
+        return; 
       }
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -736,6 +783,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
                   icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
                   customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined),
+                  label: isAvatarProvided ? 'Custom Avatar' : (newTypeTemplate ? newTypeTemplate.name : t.label), // Update label based on type
                 };
             }
             return t;
@@ -775,14 +823,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if (participantToRemove.tokenId) {
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
-            const baseTemplate = tokenTemplates.find(t => t.type === token.type) || tokenTemplates.find(t => t.type === 'generic');
+            // Revert token to a more generic state, or its original template if identifiable
+            const baseTemplate = tokenTemplates.find(t => t.type === token.type) || 
+                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback
             return {
               ...token,
-              instanceName: undefined, // Clear specific instance name
-              customImageUrl: undefined, // Clear custom image if it was from this participant
-              // Revert to base template icon and color unless it's a generic token that should retain its specific visual
+              instanceName: undefined, 
+              customImageUrl: undefined, 
               icon: baseTemplate?.icon,
               color: baseTemplate?.color || 'hsl(var(--accent))',
+              label: baseTemplate?.name || 'Generic',
             };
           }
           return token;
@@ -796,30 +846,25 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
-      if (isCombatActive) setRoundCounter(1); // Reset round if combat was active and list is now empty
-      setIsCombatActive(false); // End combat if no participants left
+      if (isCombatActive) setRoundCounter(1); 
+      setIsCombatActive(false); 
     } else {
       let newIndex = currentParticipantIndex;
       const removedIndex = participants.findIndex(p => p.id === participantId);
 
       if (newIndex === removedIndex) {
-        // If current was removed, try to keep index same (next person takes over)
-        // If it was the last one, move to 0 (or -1 if empty)
-        newIndex = (newIndex >= updatedParticipants.length) ? 0 : newIndex;
+        newIndex = (newIndex >= updatedParticipants.length && updatedParticipants.length > 0) ? 0 : newIndex;
       } else if (newIndex > removedIndex) {
-        // If removed participant was before current, decrement current index
         newIndex = Math.max(0, newIndex - 1);
       }
-      // If current is -1 or current becomes invalid after removal, reset to 0 if list not empty
+      
       if (newIndex >= updatedParticipants.length || newIndex < 0 ) {
           newIndex = updatedParticipants.length > 0 ? 0 : -1;
       }
       setCurrentParticipantIndex(newIndex);
-      // Specific edge case: if the one removed was the *last* in a round,
-      // and current was already 0 (meaning next round just started),
-      // then currentParticipantIndex should remain 0. The round counter should not change here.
+      
       if(updatedParticipants.length > 0 && currentParticipantIndex === 0 && newIndex === 0 && roundCounter > 1 && removedIndex === participants.length -1) {
-        // No change to roundCounter needed here, as the next turn was already the start of a new round
+        // No change to roundCounter needed here
       }
     }
     toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
@@ -852,9 +897,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               else {
                 const num = parseInt(value, 10);
                 if (isNaN(num) || (!optional && num < 0) || (optional && num < 0 && value.trim() !== '')) {
-                    setValue('10'); // Default to 10 if invalid non-optional or invalid negative optional
+                    setValue('10'); 
                 } else if (optional && num < 0 && value.trim() !== '') {
-                    setValue('0'); // Default to 0 if invalid negative optional (but was explicitly entered)
+                    setValue('0'); 
                 }
               }
             }
@@ -870,7 +915,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 if(disabled) return;
                 const currentValue = parseInt(value, 10) || 0;
                 const isQuantityField = idPrefix === 'participant-quantity-dialog';
-                const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0); // Allow negative for optional stats if desired, else 0
+                const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0); 
                 setValue(String(Math.max(minValue, currentValue - 1)));
             }}
             disabled={disabled}>
@@ -928,7 +973,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleDialogClose = (isOpen: boolean) => {
     setDialogOpen(isOpen);
     if (!isOpen) {
-      // Reset form fields when dialog closes
       setNewParticipantName('');
       setNewParticipantInitiative('10');
       setNewParticipantHp('10');
@@ -949,7 +993,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleAvatarImageUploadChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: 'Upload Error',
           description: 'Avatar image file size exceeds 2MB limit.',
@@ -961,7 +1005,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       reader.onloadend = () => {
         setUncroppedAvatarImageSrc(reader.result as string);
         setIsAvatarCropDialogOpen(true);
-        if (event.target) event.target.value = ''; // Reset file input
+        if (event.target) event.target.value = ''; 
       };
       reader.readAsDataURL(file);
     }
@@ -1109,7 +1153,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div className="space-y-1">
-                      {/* Label for Type section removed */}
+                     
                       <div className="flex space-x-2">
                       {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                           const config = participantTypeButtonConfig[type];
@@ -1203,3 +1247,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+
+
+    
