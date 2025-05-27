@@ -131,13 +131,16 @@ export interface BattleGridProps {
   selectedTextObjectId?: string | null;
   setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
 
-  tokenIdToFocus?: string | null; // New prop to signal focus on a token
-  onFocusHandled?: () => void;    // New callback to reset focus signal
+  tokenIdToFocus?: string | null;
+  onFocusHandled?: () => void;
+
+  onOpenAddCombatantDialogForToken?: (token: Token) => void; // New prop
+  participants: Participant[]; // New prop
 }
 
 export interface UndoableState {
   gridCells: GridCellData[][];
-  tokens: Omit<Token, 'icon'>[];
+  tokens: Omit<Token, 'icon'>[]; // Icons are stripped for storage
   drawnShapes: DrawnShape[];
   textObjects: TextObjectType[];
   participants: Participant[];
@@ -193,5 +196,5 @@ export interface InitiativeTrackerPanelProps {
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
-  onFocusToken?: (tokenId: string) => void; // New prop
+  onFocusToken?: (tokenId: string) => void;
 }

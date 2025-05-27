@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { LandPlot, Plus, Minus, ArrowRight, Camera } from 'lucide-react';
+import { LandPlot, Plus, Minus, ArrowRight, Camera, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon, GenericTokenIcon } from '@/components/icons';
@@ -202,12 +202,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedStateJSON) {
         try {
-          const loadedState = JSON.parse(savedStateJSON) as {
-              gridCells: GridCellData[][];
-              tokens: Omit<Token, 'icon'>[];
-              drawnShapes: DrawnShape[];
-              textObjects: TextObjectType[];
-              participants: Participant[];
+          const loadedState = JSON.parse(savedStateJSON) as UndoableState & { // History is not saved, other direct states are
               showGridLines: boolean;
               showAllLabels: boolean;
               backgroundImageUrl: string | null;
@@ -232,27 +227,24 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           setRoundCounter(loadedState.roundCounter || 1);
           setIsCombatActive(loadedState.isCombatActive || false);
           
-          // Initialize history with the loaded state as the first snapshot
-          const initialSnapshot = createInitialSnapshot({
+          const initialSnapshotForSession = createInitialSnapshot({
             gridCells: loadedState.gridCells || initialGridCells(),
             tokens: rehydratedTokens, 
             drawnShapes: loadedState.drawnShapes || [],
             textObjects: loadedState.textObjects || [],
             participants: loadedState.participants || [],
           });
-          setHistory([initialSnapshot]);
+          setHistory([initialSnapshotForSession]);
           setHistoryPointer(0);
 
         } catch (error) {
           console.error("Failed to load or parse saved state from localStorage:", error);
-          localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear corrupted state
-          // Initialize with default empty state for history
+          localStorage.removeItem(LOCAL_STORAGE_KEY); 
           const initialSnapshot = createInitialSnapshot({tokens: []});
           setHistory([initialSnapshot]);
           setHistoryPointer(0);
         }
       } else {
-        // No saved state, initialize with default empty state for history
         const initialSnapshot = createInitialSnapshot({tokens: []});
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
@@ -262,17 +254,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [rehydrateToken]); 
 
   useEffect(() => {
-    if (!isInitialLoadComplete) {
-      return;
+    if (!isInitialLoadComplete || isUndoRedoOperation.current) {
+      return; // Don't save until initial load is done, or if it's an undo/redo
     }
 
-    const stripTokenIcons = (tokensToStrip: Token[]): Omit<Token, 'icon'>[] => {
-        return tokensToStrip.map(({ icon, ...restOfToken }) => restOfToken);
+    const stripIconsForStorage = (currentTokens: Token[]): Omit<Token, 'icon'>[] => {
+        return currentTokens.map(({ icon, ...rest }) => rest);
     };
 
     const stateToSave = {
       gridCells,
-      tokens: stripTokenIcons(tokens), // Only current tokens, not history
+      tokens: stripIconsForStorage(tokens),
       drawnShapes,
       textObjects,
       participants,
@@ -291,13 +283,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
-      // Potentially add more sophisticated error handling or user notification here
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
     currentParticipantIndex, roundCounter, isCombatActive,
-    isInitialLoadComplete
+    isInitialLoadComplete 
   ]);
 
 
@@ -326,17 +317,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
       return;
     }
-     // Ensure history is initialized if it's empty and load is complete
      if (history.length === 0 && isInitialLoadComplete) {
         const initialSnapshot = getCurrentUndoableState();
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
-        return; // Exit after initializing history
+        return; 
     }
     
     const newSnapshot = getCurrentUndoableState();
 
-    // Prevent adding duplicate states
     if (history.length > 0 && history[historyPointer] && JSON.stringify(history[historyPointer]) === JSON.stringify(newSnapshot)) {
       return;
     }
@@ -350,6 +339,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [gridCells, tokens, drawnShapes, textObjects, participants, isInitialLoadComplete, history, historyPointer, getCurrentUndoableState]);
 
   const restoreStateFromSnapshot = useCallback((snapshot: UndoableState) => {
+    isUndoRedoOperation.current = true;
     setGridCells(snapshot.gridCells);
     setTokens(snapshot.tokens.map(rehydrateToken)); 
     setDrawnShapes(snapshot.drawnShapes);
@@ -362,7 +352,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       toast({ title: "Nothing to undo", duration: 2000 });
       return;
     }
-    isUndoRedoOperation.current = true;
     const newPointer = historyPointer - 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
@@ -373,7 +362,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       toast({ title: "Nothing to redo", duration: 2000 });
       return;
     }
-    isUndoRedoOperation.current = true;
     const newPointer = historyPointer + 1;
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
@@ -840,14 +828,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if (participantToRemove.tokenId) {
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
+            // Reset the token to its base template appearance if it was linked
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) || 
-                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback to generic
+                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback
             const wasParticipantSpecificAvatar = token.customImageUrl && token.instanceName === participantToRemove.name;
+
             return {
               ...token,
               instanceName: undefined, 
               customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, 
-              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : token.icon,
+              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
               color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
               label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label,
             };
@@ -870,27 +860,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const removedIndex = participants.findIndex(p => p.id === participantId);
 
       if (newIndex === removedIndex) {
-        // If the active participant was removed, try to stay at the same index if possible,
-        // or move to the new end of the list if the last one was removed, or to 0 if list shrank.
         newIndex = (newIndex >= updatedParticipants.length && updatedParticipants.length > 0) ? 0 : newIndex;
       } else if (newIndex > removedIndex) {
-        // If an earlier participant was removed, decrement the current index.
         newIndex = Math.max(0, newIndex - 1);
       }
-      // If newIndex is still out of bounds (e.g. -1 and list is not empty), set to 0
       if (newIndex >= updatedParticipants.length || newIndex < 0 ) {
           newIndex = updatedParticipants.length > 0 ? 0 : -1;
       }
       setCurrentParticipantIndex(newIndex);
-      
-      // Check if the round needs to change (only if the last participant of a round was removed, and combat was active)
-      if(isCombatActive && removedIndex === participants.length -1 && currentParticipantIndex >= updatedParticipants.length && updatedParticipants.length > 0){
-        // This case is tricky - if the last person was removed, and they were the active turn,
-        // the next turn should go to the new first person (index 0) of the *same* round if others remain,
-        // or advance to the next round if the list became empty (handled by updatedParticipants.length === 0 check).
-        // The current logic for advancing turn in handleAdvanceTurn already handles round increment.
-        // Here, we mainly need to ensure currentParticipantIndex is valid.
-      }
     }
     toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
   }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
@@ -898,6 +875,25 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleFocusToken = useCallback((tokenId: string) => {
     setSelectedTokenId(tokenId);
     setTokenIdToFocus(tokenId);
+  }, []);
+
+  const handleOpenAddCombatantDialogForToken = useCallback((token: Token) => {
+    setNewParticipantName(token.instanceName || token.label || 'Unnamed Token');
+    if (['player', 'enemy', 'ally'].includes(token.type)) {
+      setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
+    } else {
+      setNewParticipantType('generic' as 'player'); // Fallback if token type isn't a combatant type
+    }
+    setSelectedAssignedTokenId(token.id);
+    setCroppedAvatarDataUrl(null); // Clear any previously set avatar in dialog
+    
+    // Reset stats to default or leave them for user to fill
+    setNewParticipantInitiative('10');
+    setNewParticipantHp('10');
+    setNewParticipantAc('10');
+    setNewParticipantQuantity('1'); // Quantity will be forced to 1 due to token assignment
+
+    setDialogOpen(true);
   }, []);
 
 
@@ -1084,6 +1080,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             selectedTextObjectId={selectedTextObjectId} setSelectedTextObjectId={setSelectedTextObjectId}
             tokenIdToFocus={tokenIdToFocus}
             onFocusHandled={() => setTokenIdToFocus(null)}
+            onOpenAddCombatantDialogForToken={handleOpenAddCombatantDialogForToken}
+            participants={participants}
           />
           <FloatingToolbar
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -1190,7 +1188,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div className="space-y-1">
-                      {/* Type selection moved to the top */}
                       <div className="flex space-x-2">
                       {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                           const config = participantTypeButtonConfig[type];
@@ -1200,14 +1197,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                           <Button
                               key={type}
                               type="button"
-                              variant={isSelected ? undefined : 'outline'} // Use undefined variant for selected to rely on custom classes
+                              variant={isSelected ? undefined : 'outline'}
                               onClick={() => setNewParticipantType(type)}
                               className={cn(
                               "flex-1 flex items-center justify-center gap-2",
                               isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
                               )}
                           >
-                              <IconComponent className="h-4 w-4" /> {/* Icon color will be inherited */}
+                              <IconComponent className="h-4 w-4" />
                               {config.label}
                           </Button>
                           );
@@ -1227,7 +1224,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         onValueChange={(value) => {
                           setSelectedAssignedTokenId(value);
                           if (value !== "none") {
-                            setNewParticipantQuantity('1'); // Reset quantity to 1 if an existing token is selected
+                            setNewParticipantQuantity('1'); 
                           }
                         }}
                       >
