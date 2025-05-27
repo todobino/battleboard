@@ -276,9 +276,11 @@ export default function InitiativeTrackerPanel({
                           </div>
                         )}
                       </div>
-                      <span className="flex-1 block min-w-0 text-base font-semibold truncate" title={p.name}>
-                        {p.name}
-                      </span>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <span className="block text-base font-semibold truncate" title={p.name}>
+                          {p.name}
+                        </span>
+                      </div>
                       <Button
                           variant="ghost"
                           size="icon"
@@ -486,6 +488,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
-
-    
