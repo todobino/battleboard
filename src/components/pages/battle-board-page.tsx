@@ -621,12 +621,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             if (t.id === selectedAssignedTokenId) {
                 const isAvatarProvided = !!croppedAvatarDataUrl; 
                 return {
-                ...t,
-                instanceName: finalName,
-                type: newParticipantType, 
-                color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
-                icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
-                customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined), // Keep existing if no new avatar
+                  ...t,
+                  instanceName: finalName,
+                  type: newParticipantType, 
+                  color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
+                  icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
+                  customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined), // Keep existing if no new avatar
                 };
             }
             return t;
@@ -943,7 +943,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
                   <div>
-                    <Label>Type</Label>
                     <div className="flex space-x-2 mt-1">
                       {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                         const config = participantTypeButtonConfig[type];
@@ -974,7 +973,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                       <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
                     </div>
                     <div className="flex-1 space-y-1">
-                      <Label htmlFor="assign-token-select">Assign To Token (Optional)</Label>
+                      <Label htmlFor="assign-token-select">Assign Token</Label>
                       <Select
                         value={selectedAssignedTokenId}
                         onValueChange={(value) => {
@@ -1041,6 +1040,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
