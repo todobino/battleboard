@@ -297,6 +297,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
+      // Potentially add more sophisticated error handling or user notification here
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
@@ -674,9 +675,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       const updatedTokens = [...prevTokens];
       updatedTokens[tokenIndex] = { ...tokenToResize, size: newSize };
-      setTimeout(() => {
-        toast({ title: "Token Resized", description: `Token set to ${newSize}x${newSize}.`});
-      },0);
+      
       return updatedTokens;
     });
   }, [toast]);
@@ -732,7 +731,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (finalTokenId) {
         const existingToken = tokens.find(t => t.id === finalTokenId);
         if (existingToken) tokenSize = existingToken.size || 1;
-    } else if (selectedTokenTemplate) { // This branch might not be relevant if we always assign or create new
+    } else if (selectedTokenTemplate) { 
         tokenSize = selectedTokenTemplate.size || 1;
     }
 
@@ -901,18 +900,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
-                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback to generic
+                                 tokenTemplates.find(t => t.type === 'generic'); 
             const wasParticipantSpecificAvatar = token.customImageUrl &&
                                                 token.instanceName === participantToRemove.name &&
                                                 participantToRemove.customImageUrl === token.customImageUrl;
 
             return {
               ...token,
-              instanceName: undefined, // Clear instance name
-              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, // Clear avatar only if it was specific
+              instanceName: undefined, 
+              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, 
               icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
               color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
-              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label, // Reset label if specific
+              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label, 
             };
           }
           return token;
@@ -940,9 +939,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
                 setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
             } else if (currentParticipantIndex >= updatedParticipants.length) {
-                 setCurrentParticipantIndex(0); // Cycle to the start if active was last
+                 setCurrentParticipantIndex(0); 
             }
-            // Ensure index is valid after adjustments
+            
             if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
                 setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
             }
@@ -964,10 +963,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (['player', 'enemy', 'ally'].includes(token.type)) {
       setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
     } else {
-      setNewParticipantType('generic' as 'player'); // Fallback, should ideally not happen for combatant types
+      setNewParticipantType('player'); 
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(null); // Do not pre-fill avatar; user can upload a new one
+    setCroppedAvatarDataUrl(null); 
 
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
@@ -1352,7 +1351,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
+                 
                   <div className="space-y-1">
+                    {/* Removed Type label */}
                     <div className="flex space-x-2">
                     {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                         const config = participantTypeButtonConfig[type];
@@ -1376,7 +1377,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     })}
                     </div>
                   </div>
-                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
                       <Label htmlFor="participant-name-dialog">Name</Label>
                       <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
