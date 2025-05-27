@@ -967,35 +967,39 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                       })}
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="participant-name-dialog">Name</Label>
-                    <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
+
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="participant-name-dialog">Name</Label>
+                      <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Label htmlFor="assign-token-select">Assign To Token (Optional)</Label>
+                      <Select
+                        value={selectedAssignedTokenId}
+                        onValueChange={(value) => {
+                          const newSelectedId = value === 'none' ? undefined : value;
+                          setSelectedAssignedTokenId(newSelectedId);
+                          if (newSelectedId) {
+                            setNewParticipantQuantity('1');
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="assign-token-select">
+                          <SelectValue placeholder="Select existing token..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None (Create new token)</SelectItem>
+                          {unassignedTokens.map(token => (
+                            <SelectItem key={token.id} value={token.id}>
+                              {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="assign-token-select">Assign To Token (Optional)</Label>
-                    <Select
-                      value={selectedAssignedTokenId}
-                      onValueChange={(value) => {
-                        const newSelectedId = value === 'none' ? undefined : value;
-                        setSelectedAssignedTokenId(newSelectedId);
-                        if (newSelectedId) {
-                          setNewParticipantQuantity('1');
-                        }
-                      }}
-                    >
-                      <SelectTrigger id="assign-token-select">
-                        <SelectValue placeholder="Select existing token..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None (Create new token)</SelectItem>
-                        {unassignedTokens.map(token => (
-                          <SelectItem key={token.id} value={token.id}>
-                            {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
 
                   <div className="flex flex-col sm:flex-row gap-3">
                     {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
@@ -1037,6 +1041,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     
 
     
+
 
 
 
