@@ -217,7 +217,7 @@ export default function InitiativeTrackerPanel({
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       <div className="pb-3 mb-3 border-b border-sidebar-border">
         <div className="text-lg flex justify-between items-center text-sidebar-foreground">
           <span className="font-semibold">Turn Order</span>
@@ -225,13 +225,13 @@ export default function InitiativeTrackerPanel({
         </div>
       </div>
 
-      <div className="flex flex-col flex-grow overflow-hidden">
+      <div className="flex flex-col flex-grow overflow-hidden min-w-0">
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
         ) : (
-          <div className="flex-grow w-full overflow-x-hidden"> {/* Outer wrapper for ScrollArea */}
-            <ScrollArea className="h-full"> {/* ScrollArea now takes full height of its parent */}
-              <ul className="space-y-2 pr-1">
+          <div className="flex-grow w-full overflow-x-hidden min-w-0">
+            <ScrollArea className="h-full w-full min-w-0">
+              <ul className="space-y-2 pr-1 max-w-full overflow-x-hidden min-w-0">
                 {participants.map((p, index) => {
                   const itemIsActive = index === currentParticipantIndex;
                   const token = tokens.find(t => t.id === p.tokenId);
@@ -242,7 +242,7 @@ export default function InitiativeTrackerPanel({
                     <li
                       key={p.id}
                       className={cn(
-                        "flex flex-col p-2.5 w-full min-w-0 rounded-md overflow-hidden transition-colors", // Added min-w-0
+                        "flex flex-col p-2.5 w-full max-w-full min-w-0 rounded-md overflow-hidden transition-colors",
                         itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
                         canFocus && "cursor-pointer"
                       )}
@@ -252,7 +252,7 @@ export default function InitiativeTrackerPanel({
                         }
                       }}
                     >
-                      <div className="flex items-center w-full min-w-0"> {/* Added min-w-0 */}
+                      <div className="flex items-center w-full min-w-0 overflow-hidden">
                          <div className="shrink-0 mr-2"> {/* Icon Container */}
                           {token ? (
                             token.customImageUrl ? (
@@ -277,7 +277,7 @@ export default function InitiativeTrackerPanel({
                             </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 overflow-hidden"> {/* Name container */}
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <span className="truncate block text-base font-semibold" title={p.name}>
                             {p.name}
                           </span>
@@ -490,6 +490,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-
-    
-    
