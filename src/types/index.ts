@@ -48,14 +48,14 @@ export type ActiveTool =
   | 'draw_line'
   | 'draw_circle'
   | 'draw_rectangle'
-  | 'type_tool'; // Added type_tool
+  | 'type_tool';
 
 
 export interface TokenTemplate {
   name: string;
   color: string;
   icon?: React.FC<LucideProps> | ((props: { className?: string; color?: string }) => JSX.Element);
-  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic'; // Added 'ally'
+  type: 'player' | 'enemy' | 'ally' | 'item' | 'terrain' | 'generic';
 }
 
 export interface Measurement {
@@ -73,8 +73,8 @@ export interface DrawnShape {
   color: string; // Stroke color for line, border color for circle/rectangle
   fillColor?: string; // Fill color for circle/rectangle
   strokeWidth: number;
-  label?: string; // Optional text label for the shape
-  opacity?: number; // Optional opacity for the shape (0 to 1)
+  label?: string;
+  opacity?: number;
 }
 
 export interface TextObjectType {
@@ -116,21 +116,33 @@ export interface BattleGridProps {
   onTokenInstanceNameChange: (tokenId: string, newName: string) => void;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
-  activeTokenId?: string | null;
-  currentTextFontSize: number; // Font size for new text objects
+  activeTurnTokenId?: string | null; // Renamed from activeTokenId for clarity
+  currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   escapePressCount?: number;
+
+  // New selection props
+  selectedTokenId?: string | null;
+  setSelectedTokenId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedShapeId?: string | null;
+  setSelectedShapeId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedTextObjectId?: string | null;
+  setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-// For Undo/Redo functionality
+// For Undo/Redo functionality - This structure should remain simple for localStorage
 export interface UndoableState {
   gridCells: GridCellData[][];
-  tokens: Token[]; // Note: Icon functions won't serialize properly with JSON.stringify
+  tokens: Omit<Token, 'icon'>[]; // Icons stripped for storage
   drawnShapes: DrawnShape[];
   textObjects: TextObjectType[];
   participants: Participant[];
+  // Note: selection states (selectedTokenId etc.) are typically transient UI states
+  // and might not be part of undo/redo history or persisted state unless specifically required.
+  // For now, they are not included in UndoableState.
 }
+
 
 // Props for BattleBoardPage
 export interface BattleBoardPageProps {
@@ -159,7 +171,7 @@ export interface FloatingToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  onResetBoard: () => void; // Added reset board callback
+  onResetBoard: () => void;
   defaultBattlemaps: DefaultBattleMap[];
   escapePressCount?: number;
 }
@@ -179,10 +191,12 @@ export interface GridSettingsPanelProps {
 // Props for InitiativeTrackerPanel
 export interface InitiativeTrackerPanelProps {
   participantsProp?: Participant[];
-  tokens: Token[]; // Added tokens prop
+  tokens: Token[];
   currentParticipantIndex: number;
   roundCounter: number;
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
 }
+
+    
