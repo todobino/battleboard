@@ -11,8 +11,9 @@ const ScrollArea = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
     // Adding specific data attribute for welcome dialog styling
     'data-welcome-scroll-area'?: boolean;
+    viewportClassName?: string; // New prop for viewport styling
   }
->(({ className, children, 'data-welcome-scroll-area': dataWelcomeScrollArea, ...props }, ref) => (
+>(({ className, children, 'data-welcome-scroll-area': dataWelcomeScrollArea, viewportClassName, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn(
@@ -23,7 +24,7 @@ const ScrollArea = React.forwardRef<
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    <ScrollAreaPrimitive.Viewport className={cn("h-full w-full rounded-[inherit]", viewportClassName)}>
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />

@@ -230,8 +230,8 @@ export default function InitiativeTrackerPanel({
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
         ) : (
           <div className="flex-grow w-full overflow-x-hidden min-w-0">
-            <ScrollArea className="h-full w-full min-w-0">
-              <ul className="space-y-2 pr-1 max-w-full overflow-x-hidden min-w-0">
+            <ScrollArea className="h-full w-full" viewportClassName="w-full h-full min-w-0 overflow-x-hidden">
+              <ul className="space-y-2 pr-1 min-w-0 overflow-x-hidden">
                 {participants.map((p, index) => {
                   const itemIsActive = index === currentParticipantIndex;
                   const token = tokens.find(t => t.id === p.tokenId);
@@ -490,3 +490,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
