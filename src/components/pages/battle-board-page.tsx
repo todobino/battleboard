@@ -48,7 +48,7 @@ const initialGridCells = (): GridCellData[][] =>
 
 const createInitialSnapshot = (initialState?: Partial<Omit<UndoableState, 'tokens'> & { tokens: Token[] }>): UndoableState => ({
   gridCells: initialState?.gridCells || initialGridCells(),
-  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })), // Strip icons for history snapshot base
+  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })),
   drawnShapes: initialState?.drawnShapes || [],
   textObjects: initialState?.textObjects || [],
   participants: initialState?.participants || [],
@@ -121,6 +121,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [participants, setParticipants] = useState<Participant[]>([]);
 
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
+  const [showAllLabels, setShowAllLabels] = useState<boolean>(true); // New state for label visibility
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
   const [backgroundZoomLevel, setBackgroundZoomLevel] = useState<number>(1);
 
@@ -154,8 +155,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isAvatarCropDialogOpen, setIsAvatarCropDialogOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [history, setHistory] = useState<UndoableState[]>(() => [createInitialSnapshot({ tokens })]);
-  const [historyPointer, setHistoryPointer] = useState<number>(0);
+  const [history, setHistory] = useState<UndoableState[]>([]);
+  const [historyPointer, setHistoryPointer] = useState<number>(-1);
   const isUndoRedoOperation = useRef<boolean>(false);
 
   const [tokenToChangeImage, setTokenToChangeImage] = useState<string | null>(null);
@@ -167,7 +168,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
 
-  // New selection states
   const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [selectedTextObjectId, setSelectedTextObjectId] = useState<string | null>(null);
@@ -209,6 +209,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             textObjects: TextObjectType[];
             participants: Participant[];
             showGridLines: boolean;
+            showAllLabels: boolean; // Load showAllLabels
             backgroundImageUrl: string | null;
             backgroundZoomLevel: number;
             currentParticipantIndex: number;
@@ -224,6 +225,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setTextObjects(loadedState.textObjects || []);
         setParticipants(loadedState.participants || []);
         setShowGridLines(loadedState.showGridLines !== undefined ? loadedState.showGridLines : true);
+        setShowAllLabels(loadedState.showAllLabels !== undefined ? loadedState.showAllLabels : true); // Set showAllLabels
         setBackgroundImageUrl(loadedState.backgroundImageUrl || null);
         setBackgroundZoomLevel(loadedState.backgroundZoomLevel || 1);
         setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
@@ -267,6 +269,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       textObjects,
       participants,
       showGridLines,
+      showAllLabels, // Save showAllLabels
       backgroundImageUrl,
       backgroundZoomLevel,
       currentParticipantIndex,
@@ -282,7 +285,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
-    showGridLines, backgroundImageUrl, backgroundZoomLevel,
+    showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
     currentParticipantIndex, roundCounter, isCombatActive,
     isInitialLoadComplete
   ]);
@@ -301,7 +304,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     };
     return JSON.parse(JSON.stringify({ 
       gridCells,
-      tokens: stripIconsForHistory(tokens), // Store tokens without icons in history
+      tokens: stripIconsForHistory(tokens),
       drawnShapes,
       textObjects,
       participants,
@@ -384,6 +387,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setParticipants(defaultParticipants);
     setBackgroundImageUrl(null);
     setBackgroundZoomLevel(1);
+    setShowGridLines(true);
+    setShowAllLabels(true); // Reset showAllLabels
     setMeasurement({type: null});
     setCurrentParticipantIndex(-1);
     setRoundCounter(1);
@@ -410,6 +415,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             textObjects: defaultTextObjects,
             participants: defaultParticipants,
             showGridLines: true, 
+            showAllLabels: true, // Persist reset showAllLabels
             backgroundImageUrl: null,
             backgroundZoomLevel: 1,
             currentParticipantIndex: -1,
@@ -479,7 +485,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (currentDrawingShape && !['draw_line', 'draw_circle', 'draw_rectangle'].includes(activeTool)) {
       setCurrentDrawingShape(null);
     }
-    // Clear selections if tool changes from 'select'
     if (activeTool !== 'select') {
         setSelectedTokenId(null);
         setSelectedShapeId(null);
@@ -583,9 +588,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
       const activeParticipant = prev[currentParticipantIndex];
       if (activeParticipant && activeParticipant.tokenId === tokenId) {
-        // If the deleted token was for the active participant, update their tokenId
         const updatedCurrentParticipant = { ...activeParticipant, tokenId: undefined };
-        // Find the index of this participant in the new list
         const idx = newParticipants.findIndex(p => p.id === activeParticipant.id);
         if (idx !== -1) {
           newParticipants[idx] = updatedCurrentParticipant;
@@ -593,7 +596,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newParticipants;
     });
-    if (selectedTokenId === tokenId) setSelectedTokenId(null); // Deselect if deleted
+    if (selectedTokenId === tokenId) setSelectedTokenId(null);
     toast({ title: "Token Deleted" });
   }, [currentParticipantIndex, toast, selectedTokenId]);
 
@@ -667,11 +670,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     avatarUrl?: string | null
   ) => {
     const participantName = participantData.name.trim();
-    let finalTokenId: string | undefined = explicitTokenId;
+    let finalTokenId: string | undefined = explicitTokenId !== "none" ? explicitTokenId : undefined;
     let newTokensCreated: Token[] = [];
 
-    if (!finalTokenId || finalTokenId === "none") {
-      finalTokenId = undefined; // Ensure it's truly undefined if "none"
+    if (!finalTokenId) {
       const middleX = Math.floor(GRID_COLS / 2);
       const middleY = Math.floor(GRID_ROWS / 2);
       const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
@@ -831,13 +833,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           if (token.id === participantToRemove.tokenId) {
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) || 
                                  tokenTemplates.find(t => t.type === 'generic');
+            const wasParticipantSpecificAvatar = token.customImageUrl && token.instanceName === participantToRemove.name;
             return {
               ...token,
               instanceName: undefined, 
-              customImageUrl: token.customImageUrl && participantToRemove.name === token.instanceName ? undefined : token.customImageUrl, // Clear avatar only if it was specific to this participant
-              icon: token.customImageUrl && participantToRemove.name === token.instanceName ? baseTemplate?.icon : token.icon,
-              color: token.customImageUrl && participantToRemove.name === token.instanceName ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
-              label: token.customImageUrl && participantToRemove.name === token.instanceName ? (baseTemplate?.name || 'Generic') : token.label,
+              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, 
+              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : token.icon,
+              color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
+              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label,
             };
           }
           return token;
@@ -1039,6 +1042,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             textObjects={textObjects} setTextObjects={setTextObjects}
             showGridLines={showGridLines}
             setShowGridLines={setShowGridLines}
+            showAllLabels={showAllLabels}
+            setShowAllLabels={setShowAllLabels}
             backgroundImageUrl={backgroundImageUrl}
             backgroundZoomLevel={backgroundZoomLevel}
             activeTool={activeTool} setActiveTool={setActiveTool}
@@ -1253,5 +1258,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-
-    

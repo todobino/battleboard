@@ -106,6 +106,8 @@ export interface BattleGridProps {
   setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
+  showAllLabels: boolean; // New prop
+  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>; // New prop
   backgroundImageUrl: string | null;
   backgroundZoomLevel?: number;
   activeTool: ActiveTool;
@@ -116,13 +118,12 @@ export interface BattleGridProps {
   onTokenInstanceNameChange: (tokenId: string, newName: string) => void;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
-  activeTurnTokenId?: string | null; // Renamed from activeTokenId for clarity
+  activeTurnTokenId?: string | null;
   currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   escapePressCount?: number;
 
-  // New selection props
   selectedTokenId?: string | null;
   setSelectedTokenId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedShapeId?: string | null;
@@ -131,25 +132,19 @@ export interface BattleGridProps {
   setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-// For Undo/Redo functionality - This structure should remain simple for localStorage
 export interface UndoableState {
   gridCells: GridCellData[][];
-  tokens: Omit<Token, 'icon'>[]; // Icons stripped for storage
+  tokens: Omit<Token, 'icon'>[];
   drawnShapes: DrawnShape[];
   textObjects: TextObjectType[];
   participants: Participant[];
-  // Note: selection states (selectedTokenId etc.) are typically transient UI states
-  // and might not be part of undo/redo history or persisted state unless specifically required.
-  // For now, they are not included in UndoableState.
 }
 
 
-// Props for BattleBoardPage
 export interface BattleBoardPageProps {
   defaultBattlemaps: DefaultBattleMap[];
 }
 
-// Props for FloatingToolbar
 export interface FloatingToolbarProps {
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
@@ -176,7 +171,6 @@ export interface FloatingToolbarProps {
   escapePressCount?: number;
 }
 
-// Props for GridSettingsPanel
 export interface GridSettingsPanelProps {
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
@@ -188,7 +182,6 @@ export interface GridSettingsPanelProps {
   defaultBattlemaps: DefaultBattleMap[];
 }
 
-// Props for InitiativeTrackerPanel
 export interface InitiativeTrackerPanelProps {
   participantsProp?: Participant[];
   tokens: Token[];
@@ -198,5 +191,3 @@ export interface InitiativeTrackerPanelProps {
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
 }
-
-    
