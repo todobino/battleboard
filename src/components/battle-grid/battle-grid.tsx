@@ -666,9 +666,9 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); 
-            setSelectedTokenId(null);
-            setSelectedShapeId(null);
+            // setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Single click does not select with type tool anymore
+            // setSelectedTokenId(null);
+            // setSelectedShapeId(null);
 
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
@@ -686,8 +686,9 @@ export default function BattleGrid({
             setSelectedTextObjectId(null);
 
             setTimeout(() => {
+                // Ensure we re-check conditions inside setTimeout as state might change
                 if (activeTool === 'type_tool' && !editingTextObjectId && !isCreatingText) { 
-                    const newPos = getMousePosition(event); 
+                    const newPos = getMousePosition(event); // Re-fetch position in case of slight delay
                     setIsCreatingText({
                         id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         x: newPos.x,
@@ -839,10 +840,10 @@ export default function BattleGrid({
 
     for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
+        if (shape.type === 'line') continue; // Skip lines for right-click popover
+
         let hit = false;
-        if (shape.type === 'line') {
-          hit = distanceToLineSegment(pos.x, pos.y, shape.startPoint.x, shape.startPoint.y, shape.endPoint.x, shape.endPoint.y) <= SHAPE_CLICK_THRESHOLD;
-        } else if (shape.type === 'circle') {
+        if (shape.type === 'circle') {
           const radius = Math.sqrt(dist2(shape.startPoint, shape.endPoint));
           hit = isPointInCircle(pos, shape.startPoint, radius);
         } else if (shape.type === 'rectangle') {
@@ -1522,7 +1523,7 @@ export default function BattleGrid({
                     x2={shape.endPoint.x} y2={shape.endPoint.y}
                     stroke={isShapeSelected ? 'hsl(var(--ring))' : shape.color}
                     strokeWidth={isShapeSelected ? shape.strokeWidth + 1 : shape.strokeWidth} 
-                    strokeOpacity={shape.type === 'line' ? (shape.opacity ?? 1) : 1}
+                    strokeOpacity={shape.opacity ?? 1}
                   />
                 )}
                 {shape.type === 'circle' && (
@@ -2009,7 +2010,8 @@ export default function BattleGrid({
                 onOpenAutoFocus={(e) => e.preventDefault()} 
             >
               {rightClickPopoverState.type === 'token' && (() => {
-                const currentToken = tokens.find(t => t.id === rightClickPopoverState.item.id) || rightClickPopoverState.item as TokenType;
+                const currentTokenFromGrid = tokens.find(t => t.id === (rightClickPopoverState.item as TokenType).id);
+                const currentToken = currentTokenFromGrid || (rightClickPopoverState.item as TokenType);
                 const tokenSize = currentToken.size || 1;
                 const isLinked = participants.some(p => p.tokenId === currentToken.id);
                 return (
