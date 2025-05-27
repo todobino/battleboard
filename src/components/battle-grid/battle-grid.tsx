@@ -666,10 +666,6 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
-            // setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Single click does not select with type tool anymore
-            // setSelectedTokenId(null);
-            // setSelectedShapeId(null);
-
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 setEditingTextObjectId(clickedTextObjectForInteraction.id);
@@ -840,7 +836,13 @@ export default function BattleGrid({
 
     for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
-        if (shape.type === 'line') continue; // Skip lines for right-click popover
+        if (shape.type === 'line') { // Lines do not have a popover
+           setSelectedShapeId(shape.id);
+           setSelectedTokenId(null);
+           setSelectedTextObjectId(null);
+           setRightClickPopoverState(null); // Ensure no popover for lines
+           return;
+        }
 
         let hit = false;
         if (shape.type === 'circle') {
@@ -1218,6 +1220,8 @@ export default function BattleGrid({
         const dxScreen = event.clientX - potentialDraggingShapeInfo.startScreenPos.x;
         const dyScreen = event.clientY - potentialDraggingShapeInfo.startScreenPos.y;
         if (dxScreen * dxScreen + dyScreen * dyScreen < CLICK_THRESHOLD_SQUARED) { 
+            // This was a click, not a drag for shape movement
+            // Popover opening is handled by right-click (handleContextMenu)
         }
     }
     setPotentialDraggingShapeInfo(null); 
@@ -1253,7 +1257,7 @@ export default function BattleGrid({
               return; 
           }
           const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
-          const defaultLabel = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+          const defaultLabel = `Circle ${typeCount + 1}`;
           shapeToAdd.label = defaultLabel;
       } else if (shapeToAdd.type === 'rectangle') {
           const width = Math.abs(shapeToAdd.startPoint.x - shapeToAdd.endPoint.x);
@@ -1265,7 +1269,7 @@ export default function BattleGrid({
               return; 
           }
           const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
-          const defaultLabel = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+          const defaultLabel = `Rectangle ${typeCount + 1}`;
           shapeToAdd.label = defaultLabel;
       }
 
@@ -1314,7 +1318,7 @@ export default function BattleGrid({
                 setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return; 
             }
             const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
-            shapeToAdd.label = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+            shapeToAdd.label = `Circle ${typeCount + 1}`;
         } else if (shapeToAdd.type === 'rectangle') {
             const width = Math.abs(shapeToAdd.startPoint.x - shapeToAdd.endPoint.x);
             const height = Math.abs(shapeToAdd.startPoint.y - shapeToAdd.endPoint.y);
@@ -1322,7 +1326,7 @@ export default function BattleGrid({
                 setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return;
             }
             const typeCount = drawnShapes.filter(s => s.type === shapeToAdd.type).length;
-            shapeToAdd.label = `${shapeToAdd.type.charAt(0).toUpperCase() + shapeToAdd.type.slice(1)} ${typeCount + 1}`;
+            shapeToAdd.label = `Rectangle ${typeCount + 1}`;
         }
         setDrawnShapes(prev => [...prev, shapeToAdd]);
         setCurrentDrawingShape(null);
@@ -1685,6 +1689,9 @@ export default function BattleGrid({
           const isTokenSelectedByClick = token.id === selectedTokenId;
           const isTokenLabelVisible = showAllLabels || isTokenSelectedByClick;
 
+          const fixedInputWidth = cellSize * 4; // Example: 120px if cellSize is 30
+          const fixedInputHeight = 20;
+
           return (
             <g
               key={token.id}
@@ -1772,10 +1779,10 @@ export default function BattleGrid({
               )}
               {isCurrentlyEditingThisToken && (
                 <foreignObject
-                  x={((tokenActualSize * cellSize) / 2) - (cellSize * Math.max(1, tokenActualSize/2))} 
+                  x={(tokenActualSize * cellSize / 2) - (fixedInputWidth / 2)}
                   y={tokenActualSize * cellSize + 2} 
-                  width={tokenActualSize * cellSize * 2} 
-                  height={20} 
+                  width={fixedInputWidth} 
+                  height={fixedInputHeight} 
                 >
                   <input
                     ref={foreignObjectInputRef}
@@ -2006,7 +2013,7 @@ export default function BattleGrid({
                 side="bottom"
                 align="center"
                 className="w-auto p-1" 
-                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (tokens.find(t => t.id === rightClickPopoverState.item.id)?.size)) || (rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item as DrawnShape).opacity)}`}
+                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (tokens.find(t => t.id === (rightClickPopoverState.item as TokenType).id)?.size)) || (rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item as DrawnShape).opacity)}`}
                 onOpenAutoFocus={(e) => e.preventDefault()} 
             >
               {rightClickPopoverState.type === 'token' && (() => {
