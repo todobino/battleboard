@@ -201,4 +201,5 @@ export interface InitiativeTrackerPanelProps {
   onFocusToken?: (tokenId: string) => void;
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
+  onUpdateParticipantStats?: (participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => void;
 }

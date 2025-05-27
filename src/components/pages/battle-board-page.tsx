@@ -279,7 +279,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const stateToSave = {
       gridCells,
-      tokens: stripIconsForStorage(tokens),
+      tokens: stripIconsForStorage(tokens), // Only current tokens are saved
       drawnShapes,
       textObjects,
       participants,
@@ -297,7 +297,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
-      // Potentially add more sophisticated error handling or user notification here
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
@@ -332,7 +331,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if(isUndoRedoOperation.current) isUndoRedoOperation.current = false;
       return;
     }
-     if (history.length === 0 && isInitialLoadComplete) {
+     if (history.length === 0 && isInitialLoadComplete) { // Ensure history isn't empty when starting
         const initialSnapshot = getCurrentUndoableState();
         setHistory([initialSnapshot]);
         setHistoryPointer(0);
@@ -341,6 +340,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     const newSnapshot = getCurrentUndoableState();
 
+    // Prevent adding identical snapshots to history
     if (history.length > 0 && history[historyPointer] && JSON.stringify(history[historyPointer]) === JSON.stringify(newSnapshot)) {
       return;
     }
@@ -420,9 +420,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setHistoryPointer(0);
 
     if (typeof window !== 'undefined') {
-        const stateToSave = {
+        const stateToSave = { // Save the reset state
             gridCells: defaultGridCells,
-            tokens: [],
+            tokens: [], // Stripped tokens
             drawnShapes: defaultDrawnShapes,
             textObjects: defaultTextObjects,
             participants: defaultParticipants,
@@ -892,17 +892,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if (participantToRemove.tokenId) {
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
-            // Reset token to a more generic state if it was specifically tied to this participant
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
-                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback
+                                 tokenTemplates.find(t => t.type === 'generic');
             const wasParticipantSpecificAvatar = token.customImageUrl &&
                                                 token.instanceName === participantToRemove.name &&
-                                                participantToRemove.type === token.type;
+                                                participantToRemove.type === token.type &&
+                                                participantToRemove.customImageUrl === token.customImageUrl; // Check if avatar was specific
 
             return {
               ...token,
-              instanceName: undefined, // Clear instance name
-              // If avatar was specific to this participant, remove it; otherwise, keep custom image
+              instanceName: undefined,
               customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl,
               icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
               color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
@@ -923,29 +922,24 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
-      if (isCombatActive) setRoundCounter(1); // Reset round if combat was active and no one is left
-      setIsCombatActive(false); // End combat if no participants
+      if (isCombatActive) setRoundCounter(1);
+      setIsCombatActive(false);
     } else if (isCombatActive && activeParticipantIdBeforeRemove) {
-        // Try to find the previously active participant in the new list
         const newActiveIndex = updatedParticipants.findIndex(p => p.id === activeParticipantIdBeforeRemove);
         if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
         } else {
-            // If the active participant was removed, adjust the index.
-            // This logic attempts to keep the turn sensible.
             const removedIndex = participants.findIndex(p => p.id === participantId);
             if (currentParticipantIndex >= removedIndex && currentParticipantIndex > 0) {
                 setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
             } else if (currentParticipantIndex >= updatedParticipants.length) {
-                 setCurrentParticipantIndex(0); // Loop to start if last was removed
+                 setCurrentParticipantIndex(0);
             }
-            // If currentParticipantIndex is still out of bounds after adjustment, set to 0
             if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
                 setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
             }
         }
     } else if (!isCombatActive) {
-        // If combat not active, just ensure index is valid or -1
         setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
     }
 
@@ -965,13 +959,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setNewParticipantType('generic' as 'player'); // Fallback, though ideally token.type is one of the three
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(null); // Don't prefill avatar, let user upload new one for this combatant
+    setCroppedAvatarDataUrl(token.customImageUrl || null); // Pre-fill avatar if token has one
 
-    // Reset other fields to defaults
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
     setNewParticipantAc('10');
-    setNewParticipantQuantity('1'); // Always 1 when assigning to existing token
+    setNewParticipantQuantity('1');
 
     setDialogOpen(true);
   }, []);
@@ -983,11 +976,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       let newInitiative: number;
       if (direction === 'up') {
-        if (currentIndex === 0) return prevParticipants; // Already at the top
+        if (currentIndex === 0) return prevParticipants;
         const participantAbove = prevParticipants[currentIndex - 1];
         newInitiative = participantAbove.initiative + 1;
-      } else { // direction === 'down'
-        if (currentIndex === prevParticipants.length - 1) return prevParticipants; // Already at the bottom
+      } else {
+        if (currentIndex === prevParticipants.length - 1) return prevParticipants;
         const participantBelow = prevParticipants[currentIndex + 1];
         newInitiative = participantBelow.initiative - 1;
       }
@@ -1016,6 +1009,47 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const handleMoveParticipantDown = useCallback((participantId: string) => {
     handleMoveParticipant(participantId, 'down');
   }, [handleMoveParticipant]);
+
+  const handleUpdateParticipantStats = useCallback((participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => {
+    setParticipants(prevParticipants => {
+      let participantUpdated = false;
+      const updatedParticipantsList = prevParticipants.map(p => {
+        if (p.id === participantId) {
+          participantUpdated = true;
+          return {
+            ...p,
+            initiative: newStats.initiative !== undefined ? newStats.initiative : p.initiative,
+            hp: newStats.hp !== undefined ? newStats.hp : p.hp,
+            ac: newStats.ac !== undefined ? newStats.ac : p.ac,
+          };
+        }
+        return p;
+      });
+
+      if (!participantUpdated) return prevParticipants; // Should not happen if ID is valid
+
+      // Re-sort if initiative changed
+      if (newStats.initiative !== undefined) {
+        updatedParticipantsList.sort((a, b) => b.initiative - a.initiative);
+        // Update currentParticipantIndex if combat is active
+        if (isCombatActive) {
+          const activeParticipant = prevParticipants[currentParticipantIndex];
+          if (activeParticipant) {
+            const newActiveIndex = updatedParticipantsList.findIndex(p => p.id === activeParticipant.id);
+            if (newActiveIndex !== -1) {
+              setCurrentParticipantIndex(newActiveIndex);
+            } else { // Active participant somehow removed or ID changed - reset
+              setCurrentParticipantIndex(updatedParticipantsList.length > 0 ? 0 : -1);
+            }
+          } else {
+             setCurrentParticipantIndex(updatedParticipantsList.length > 0 ? 0 : -1);
+          }
+        }
+      }
+      toast({ title: "Stats Updated", description: `Stats for ${updatedParticipantsList.find(p=>p.id === participantId)?.name} updated.`});
+      return updatedParticipantsList;
+    });
+  }, [isCombatActive, currentParticipantIndex, toast]);
 
 
   const renderNumericInput = (
@@ -1060,7 +1094,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
             onClick={() => {
                 if(disabled) return;
-                const currentValue = parseInt(value, 10) || 0;
+                const currentValue = parseInt(value, 10) || (idPrefix === 'participant-quantity-dialog' ? 1 : (optional && value === '' ? 0 : 0));
                 const isQuantityField = idPrefix === 'participant-quantity-dialog';
                 const minValue = isQuantityField ? 1 : (optional ? -Infinity : 0);
                 setValue(String(Math.max(minValue, currentValue - 1)));
@@ -1271,6 +1305,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               onFocusToken={handleFocusToken}
               onMoveParticipantUp={handleMoveParticipantUp}
               onMoveParticipantDown={handleMoveParticipantDown}
+              onUpdateParticipantStats={handleUpdateParticipantStats}
             />
           </SidebarContent>
 
@@ -1311,7 +1346,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-                <div className="space-y-1">
+                  <div className="space-y-1">
                     <div className="flex space-x-2">
                     {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                         const config = participantTypeButtonConfig[type];
