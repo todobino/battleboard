@@ -45,6 +45,15 @@ const initialGridCells = (): GridCellData[][] =>
     }))
   );
 
+const createInitialSnapshot = (): UndoableState => ({
+  gridCells: initialGridCells(),
+  tokens: [],
+  drawnShapes: [],
+  textObjects: [],
+  participants: [],
+});
+
+
 // Helper to check if a square is occupied by a token (local to BattleBoardPage)
 function isSquareOccupiedLocal(
   x: number,
@@ -147,8 +156,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isAvatarCropDialogOpen, setIsAvatarCropDialogOpen] = useState(false);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [history, setHistory] = useState<UndoableState[]>([]);
-  const [historyPointer, setHistoryPointer] = useState<number>(-1);
+  const [history, setHistory] = useState<UndoableState[]>([createInitialSnapshot()]);
+  const [historyPointer, setHistoryPointer] = useState<number>(0);
   const isUndoRedoOperation = useRef<boolean>(false);
 
   const [tokenToChangeImage, setTokenToChangeImage] = useState<string | null>(null);
@@ -187,25 +196,19 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
   useEffect(() => {
-    const initialSnapshot = {
-      gridCells: initialGridCells(),
-      tokens: [],
-      drawnShapes: [],
-      textObjects: [],
-      participants: [],
-    };
-    setHistory([initialSnapshot]);
-    setHistoryPointer(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (isUndoRedoOperation.current) {
       isUndoRedoOperation.current = false;
       return;
     }
 
+    if (historyPointer === -1 && history.length === 0) { // Initial setup case
+        const initialSnapshot = createInitialSnapshot();
+        setHistory([initialSnapshot]);
+        setHistoryPointer(0);
+        return;
+    }
     if (historyPointer === -1) return;
+
 
     const newSnapshot = getCurrentUndoableState();
     const currentHistoryState = history[historyPointer];
@@ -257,6 +260,28 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     restoreStateFromSnapshot(history[newPointer]);
     setHistoryPointer(newPointer);
   }, [history, historyPointer, toast]);
+
+  const handleResetBoard = useCallback(() => {
+    setGridCells(initialGridCells());
+    setTokens([]);
+    setDrawnShapes([]);
+    setTextObjects([]);
+    setParticipants([]);
+    setBackgroundImageUrl(null);
+    setBackgroundZoomLevel(1);
+    setMeasurement({type: null});
+    setCurrentParticipantIndex(-1);
+    setRoundCounter(1);
+    setIsCombatActive(false);
+
+    const initialSnapshot = createInitialSnapshot();
+    setHistory([initialSnapshot]);
+    setHistoryPointer(0);
+    isUndoRedoOperation.current = false; // Ensure this flag is reset
+
+    toast({ title: "Battle Board Cleared", description: "Everything has been reset." });
+  }, [toast]);
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -398,20 +423,26 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         return prevParticipants; 
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tokens]); // Added tokens to dependency array
+  }, [tokens, toast]); // Removed 'participants' from deps as it causes loop with setParticipants
 
   const handleTokenDelete = useCallback((tokenId: string) => {
     setTokens(prev => prev.filter(t => t.id !== tokenId));
     setParticipants(prev => {
       const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
-      if (participants[currentParticipantIndex]?.tokenId === tokenId) {
-        const updatedCurrentParticipant = { ...participants[currentParticipantIndex], tokenId: undefined };
-        newParticipants[currentParticipantIndex] = updatedCurrentParticipant;
+      // Check if the currently active participant's token was the one deleted
+      const activeParticipant = prev[currentParticipantIndex];
+      if (activeParticipant && activeParticipant.tokenId === tokenId) {
+        const updatedCurrentParticipant = { ...activeParticipant, tokenId: undefined };
+        // Update the participant in the new list
+        const idx = newParticipants.findIndex(p => p.id === activeParticipant.id);
+        if (idx !== -1) {
+          newParticipants[idx] = updatedCurrentParticipant;
+        }
       }
       return newParticipants;
     });
     toast({ title: "Token Deleted" });
-  }, [toast, participants, currentParticipantIndex]);
+  }, [toast, currentParticipantIndex]); // Removed participants from here too to avoid loop
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
     setTokenToChangeImage(tokenId); 
@@ -486,15 +517,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     let finalTokenId: string | undefined = explicitTokenId;
     let newTokensCreated: Token[] = [];
 
-    if (!finalTokenId || finalTokenId === "none") { // No existing token assigned, or "none" means create new
-      finalTokenId = undefined; // Ensure it's truly undefined for new token creation path
+    if (!finalTokenId || finalTokenId === "none") { 
+      finalTokenId = undefined; 
       const middleX = Math.floor(GRID_COLS / 2);
       const middleY = Math.floor(GRID_ROWS / 2);
       const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
 
       if (!availableSquare) {
         toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
-        return false; // Indicate failure to add participant
+        return false; 
       }
       
       const template = tokenTemplates.find(t => t.type === participantData.type);
@@ -542,41 +573,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       return newList;
     });
-    return true; // Indicate success
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCombatActive, currentParticipantIndex, tokens, toast]); // Added tokens and toast to dependencies
+    return true; 
+  }, [isCombatActive, currentParticipantIndex, tokens, toast]); 
 
-
-  const handleRemoveParticipantFromList = (idToRemove: string) => {
-    setParticipants(prevParticipants => {
-      const isRemovingCurrentTurn = prevParticipants[currentParticipantIndex]?.id === idToRemove;
-      const newList = prevParticipants.filter(p => p.id !== idToRemove);
-
-      if (newList.length === 0) {
-        setCurrentParticipantIndex(-1);
-      } else if (isRemovingCurrentTurn) {
-        setCurrentParticipantIndex(currentParticipantIndex % newList.length);
-      } else {
-        const oldActiveParticipantId = prevParticipants[currentParticipantIndex]?.id;
-        const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-        if (newActiveIndex !== -1) {
-          setCurrentParticipantIndex(newActiveIndex);
-        } else {
-          setCurrentParticipantIndex(currentParticipantIndex >= newList.length ? Math.max(0, newList.length -1) : currentParticipantIndex);
-        }
-      }
-      return newList;
-    });
-  };
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isAutoAdvanceOn && isCombatActive && participants.length > 0 && currentParticipantIndex !== -1) {
-      timer = setTimeout(() => { handleAdvanceTurn(); }, 5000);
-    }
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAutoAdvanceOn, isCombatActive, currentParticipantIndex, participants]);
 
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -627,7 +626,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   type: newParticipantType, 
                   color: isAvatarProvided ? (t.customImageUrl ? t.color : 'hsl(var(--muted))') : (newTypeTemplate ? newTypeTemplate.color : t.color),
                   icon: isAvatarProvided ? undefined : (newTypeTemplate ? newTypeTemplate.icon : t.icon),
-                  customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined), // Keep existing if no new avatar
+                  customImageUrl: isAvatarProvided ? croppedAvatarDataUrl! : (t.customImageUrl || undefined),
                 };
             }
             return t;
@@ -658,6 +657,55 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setDialogOpen(false);
     }
   };
+
+  const handleRemoveParticipantFromList = useCallback((participantId: string) => {
+    const participantToRemove = participants.find(p => p.id === participantId);
+    if (!participantToRemove) return;
+
+    let newTokens = [...tokens];
+    if (participantToRemove.tokenId) {
+      newTokens = newTokens.map(token => {
+        if (token.id === participantToRemove.tokenId) {
+          // Reset token properties
+          const baseTemplate = tokenTemplates.find(t => t.type === token.type) || tokenTemplates.find(t => t.type === 'generic');
+          return {
+            ...token,
+            instanceName: undefined, 
+            customImageUrl: undefined, // Clear custom image if it was linked
+            icon: baseTemplate?.icon, // Revert to base icon
+            color: baseTemplate?.color || 'hsl(var(--accent))', // Revert to base color
+          };
+        }
+        return token;
+      });
+      setTokens(newTokens);
+    }
+
+    const updatedParticipants = participants.filter(p => p.id !== participantId);
+    setParticipants(updatedParticipants); // Update participants list
+
+    // Adjust currentParticipantIndex
+    if (updatedParticipants.length === 0) {
+      setCurrentParticipantIndex(-1);
+      setRoundCounter(1); // Reset round if no one is left
+      setIsCombatActive(false); // End combat if no one is left
+    } else {
+      if (currentParticipantIndex >= updatedParticipants.length) {
+        setCurrentParticipantIndex(updatedParticipants.length - 1);
+      } else if (participantToRemove && participants.indexOf(participantToRemove) < currentParticipantIndex) {
+        setCurrentParticipantIndex(prevIndex => Math.max(0, prevIndex - 1));
+      }
+      // If the current participant was removed and it's not the last one, 
+      // the index might naturally point to the next one or needs adjustment.
+      // If it was the active one and not the last, index should ideally remain,
+      // letting the "next" participant effectively take its place.
+      // The current logic might need slight refinement based on desired behavior when active is removed.
+      // For now, this ensures index is valid.
+    }
+    
+    toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
+  }, [participants, currentParticipantIndex, tokens, toast]);
+
 
   const renderNumericInput = (
     value: string,
@@ -852,6 +900,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             canRedo={historyPointer < history.length - 1 && historyPointer !== -1}
             defaultBattlemaps={defaultBattlemaps}
             escapePressCount={escapePressCount}
+            onResetBoard={handleResetBoard}
           />
       </div>
 
@@ -943,31 +992,33 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-                  <div>
-                    {/* Removed Label "Type" here */}
-                    <div className="flex space-x-2 mt-1">
-                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                        const config = participantTypeButtonConfig[type];
-                        const isSelected = newParticipantType === type;
-                        const IconComponent = config.icon;
-                        return (
-                          <Button
-                            key={type}
-                            type="button"
-                            variant={isSelected ? undefined : 'outline'}
-                            onClick={() => setNewParticipantType(type)}
-                            className={cn(
-                              "flex-1 flex items-center justify-center gap-2",
-                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
-                            )}
-                          >
-                            <IconComponent className="h-4 w-4" />
-                            {config.label}
-                          </Button>
-                        );
-                      })}
+                  
+                    <div className="space-y-1">
+                        {/* Label removed as per previous request */}
+                        <div className="flex space-x-2">
+                        {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                            const config = participantTypeButtonConfig[type];
+                            const isSelected = newParticipantType === type;
+                            const IconComponent = config.icon;
+                            return (
+                            <Button
+                                key={type}
+                                type="button"
+                                variant={isSelected ? undefined : 'outline'}
+                                onClick={() => setNewParticipantType(type)}
+                                className={cn(
+                                "flex-1 flex items-center justify-center gap-2",
+                                isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                                )}
+                            >
+                                <IconComponent className="h-4 w-4" />
+                                {config.label}
+                            </Button>
+                            );
+                        })}
+                        </div>
                     </div>
-                  </div>
+                  
 
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
@@ -986,7 +1037,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         }}
                       >
                         <SelectTrigger id="assign-token-select">
-                          <SelectValue placeholder="Select existing token..." />
+                          <SelectValue placeholder="None (Create new token)" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None (Create new token)</SelectItem>
@@ -1039,20 +1090,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   );
 }
     
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

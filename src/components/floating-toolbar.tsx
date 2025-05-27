@@ -4,20 +4,30 @@
 import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types'; // Added DefaultBattleMap and imported existing props type
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Circle, Square as SquareIcon, LineChart, Ruler, Type, Undo2, Redo2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
 import MeasurementToolPanel from '@/components/controls/measurement-tool-panel';
 import TokenPlacerPanel from '@/components/controls/token-placer-panel';
 import ShapeToolPanel from '@/components/controls/shape-tool-panel';
 
-// Re-define props here if not using the imported type directly, or ensure the imported one is correctly structured
-// For clarity, using the imported type:
+
 interface FloatingToolbarProps extends FloatingToolbarPropsType {}
 
 
@@ -32,9 +42,10 @@ interface ToolButtonProps {
   variantOverride?: "default" | "outline";
   isActive?: boolean;
   disabled?: boolean;
+  className?: string; // Added className for custom styling
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled }) => {
+const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled, className }) => {
   let isButtonActive = isActive;
   if (isButtonActive === undefined && tool && currentActiveTool) {
     isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
@@ -48,8 +59,9 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
           size="icon"
           onClick={onClick}
           className={cn(
-            'rounded-md shadow-lg h-10 w-10 p-2', // Changed from h-12 w-12 p-2.5
-            (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted'
+            'rounded-md shadow-lg h-10 w-10 p-2', 
+            (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted',
+            className 
           )}
           aria-label={label}
           asChild={asChild}
@@ -74,8 +86,9 @@ export default function FloatingToolbar({
   measurement, setMeasurement,
   backgroundZoomLevel, setBackgroundZoomLevel,
   onUndo, onRedo, canUndo, canRedo,
+  onResetBoard,
   defaultBattlemaps,
-  escapePressCount, // Added new prop
+  escapePressCount, 
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -83,6 +96,8 @@ export default function FloatingToolbar({
   const [isTokenPlacerPopoverOpen, setIsTokenPlacerPopoverOpen] = useState(false);
   const [isColorPainterPopoverOpen, setIsColorPainterPopoverOpen] = useState(false);
   const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
+  const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
+
 
   useEffect(() => {
     if (escapePressCount && escapePressCount > 0) {
@@ -91,6 +106,7 @@ export default function FloatingToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
+      setIsResetAlertOpen(false); // Close reset alert as well
     }
   }, [escapePressCount]);
 
@@ -128,7 +144,6 @@ export default function FloatingToolbar({
   return (
     <TooltipProvider delayDuration={0}>
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
-        {/* Title and Icon removed from here */}
         <ToolButton
           label="Select/Pan"
           icon={MousePointerSquareDashed}
@@ -142,10 +157,9 @@ export default function FloatingToolbar({
             label="Map Tool"
             icon={Map}
             onClick={() => {
-                // handleToolClick('map_tool'); // Do not change active tool, just open popover
                 setIsMapSettingsPopoverOpen(prev => !prev);
             }}
-            isActive={isMapSettingsPopoverOpen} // Active only if its own popover is open
+            isActive={isMapSettingsPopoverOpen} 
             asChild
           >
             <PopoverTrigger asChild>
@@ -165,7 +179,7 @@ export default function FloatingToolbar({
               setShowGridLines={setShowGridLines}
               backgroundImageUrl={backgroundImageUrl}
               setBackgroundImageUrl={setBackgroundImageUrl}
-              setActiveTool={setActiveTool} // Pass setActiveTool for internal use if needed by panel
+              setActiveTool={setActiveTool} 
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
               defaultBattlemaps={defaultBattlemaps}
@@ -178,7 +192,6 @@ export default function FloatingToolbar({
             label="Measurement Tools"
             icon={DraftingCompass}
             onClick={() => {
-                // Do not change active tool, just open popover
                 setIsMeasurementPopoverOpen(prev => !prev);
             }}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
@@ -211,7 +224,6 @@ export default function FloatingToolbar({
             label="Tokens Tool"
             icon={Users}
              onClick={() => {
-                // Do not change active tool, just open popover
                 setIsTokenPlacerPopoverOpen(prev => !prev);
             }}
             isActive={isTokenPlacerPopoverOpen || activeTool === 'place_token'}
@@ -242,7 +254,6 @@ export default function FloatingToolbar({
             label="Paint Tool"
             icon={Paintbrush}
             onClick={() => {
-                // Do not change active tool, just open popover
                 setIsColorPainterPopoverOpen(prev => !prev);
             }}
             isActive={isColorPainterPopoverOpen || activeTool === 'paint_cell'}
@@ -275,7 +286,6 @@ export default function FloatingToolbar({
             label="Shapes Tool"
             icon={Shapes}
             onClick={() => {
-              // Do not change active tool, just open popover
               setIsShapeToolPopoverOpen(prev => !prev);
             }}
             isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle'}
@@ -330,6 +340,49 @@ export default function FloatingToolbar({
           onClick={onRedo}
           disabled={!canRedo}
         />
+
+        <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "rounded-md shadow-lg h-10 w-10 p-2",
+                    "border-destructive text-destructive bg-destructive/20 hover:bg-destructive/30 hover:text-destructive-foreground"
+                  )}
+                  aria-label="Reset Board"
+                >
+                  <Power className="h-5 w-5" />
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">
+              <p>Reset Board</p>
+            </TooltipContent>
+          </Tooltip>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset Entire Board?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to clear everything? This includes all tokens, shapes, text, the background map, and initiative order. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  onResetBoard();
+                  setIsResetAlertOpen(false); 
+                }}
+                className={buttonVariants({ variant: "destructive" })}
+              >
+                Reset Board
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         
       </div>
     </TooltipProvider>

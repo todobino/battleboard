@@ -47,7 +47,8 @@ export type ActiveTool =
   | 'shapes_tool' // Parent tool for shapes popover
   | 'draw_line'
   | 'draw_circle'
-  | 'draw_rectangle'; // Changed from 'draw_square'
+  | 'draw_rectangle'
+  | 'type_tool'; // Added type_tool
 
 
 export interface TokenTemplate {
@@ -66,7 +67,7 @@ export interface Measurement {
 
 export interface DrawnShape {
   id:string;
-  type: 'line' | 'circle' | 'rectangle'; // Changed from 'square'
+  type: 'line' | 'circle' | 'rectangle';
   startPoint: Point; // For line: start; for circle: center; for rectangle: top-left
   endPoint: Point;   // For line: end; for circle: point on circumference; for rectangle: bottom-right
   color: string; // Stroke color for line, border color for circle/rectangle
@@ -158,6 +159,7 @@ export interface FloatingToolbarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  onResetBoard: () => void; // Added reset board callback
   defaultBattlemaps: DefaultBattleMap[];
   escapePressCount?: number;
 }
