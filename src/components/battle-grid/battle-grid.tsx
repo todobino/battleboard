@@ -5,24 +5,13 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users, CircleDotDashed, VenetianMask } from 'lucide-react';
+import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users, CircleDotDashed, VenetianMask, SlidersVertical, ImagePlus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Slider } from '@/components/ui/slider';
 
 
@@ -677,7 +666,7 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Select on single click
+            setSelectedTextObjectId(clickedTextObjectForInteraction.id); 
             setSelectedTokenId(null);
             setSelectedShapeId(null);
 
@@ -1512,7 +1501,7 @@ export default function BattleGrid({
             let labelX = 0, labelY = 0;
             if (shape.type === 'line') {
                 labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + (cellSize * 0.4); // Offset for bottom
+                labelY = (shape.startPoint.y + shape.endPoint.y) / 2; 
             } else if (shape.type === 'circle') {
                 labelX = shape.startPoint.x; 
                 labelY = shape.startPoint.y; 
@@ -1533,7 +1522,7 @@ export default function BattleGrid({
                     x2={shape.endPoint.x} y2={shape.endPoint.y}
                     stroke={isShapeSelected ? 'hsl(var(--ring))' : shape.color}
                     strokeWidth={isShapeSelected ? shape.strokeWidth + 1 : shape.strokeWidth} 
-                    strokeOpacity={shape.opacity ?? 1}
+                    strokeOpacity={shape.type === 'line' ? (shape.opacity ?? 1) : 1}
                   />
                 )}
                 {shape.type === 'circle' && (
@@ -2016,11 +2005,11 @@ export default function BattleGrid({
                 side="bottom"
                 align="center"
                 className="w-auto p-1" 
-                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (rightClickPopoverState.item as TokenType).size) || (rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item as DrawnShape).opacity)}`}
+                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (tokens.find(t => t.id === rightClickPopoverState.item.id)?.size)) || (rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item as DrawnShape).opacity)}`}
                 onOpenAutoFocus={(e) => e.preventDefault()} 
             >
               {rightClickPopoverState.type === 'token' && (() => {
-                const currentToken = rightClickPopoverState.item as TokenType;
+                const currentToken = tokens.find(t => t.id === rightClickPopoverState.item.id) || rightClickPopoverState.item as TokenType;
                 const tokenSize = currentToken.size || 1;
                 const isLinked = participants.some(p => p.tokenId === currentToken.id);
                 return (
