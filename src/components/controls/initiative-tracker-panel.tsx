@@ -270,7 +270,7 @@ export default function InitiativeTrackerPanel({
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <span className="text-base font-semibold truncate" title={p.name}>{p.name}</span>
+                        <span className="block text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
                         <Button
                           variant="ghost"
@@ -479,3 +479,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
