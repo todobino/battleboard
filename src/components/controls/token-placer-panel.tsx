@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { tokenTemplates } from '@/config/token-templates';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, Plus, Minus } from 'lucide-react';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input'; // For hidden file input
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface TokenPlacerPanelProps {
   setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
@@ -28,6 +29,7 @@ export default function TokenPlacerPanel({
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentTokenSize, setCurrentTokenSize] = useState(1);
 
   const handleSelectTokenTemplate = (template: typeof tokenTemplates[number]) => {
     setSelectedTokenTemplate({
@@ -35,8 +37,8 @@ export default function TokenPlacerPanel({
       icon: template.icon,
       type: template.type,
       label: template.name,
-      size: 1,
-      customImageUrl: undefined, // Ensure customImageUrl is not carried over from a previous custom selection
+      size: currentTokenSize,
+      customImageUrl: undefined,
     });
     setActiveTool('place_token');
     onTokenTemplateSelect?.();
@@ -57,7 +59,7 @@ export default function TokenPlacerPanel({
       reader.onloadend = () => {
         setUncroppedImageSrc(reader.result as string);
         setIsCropDialogOpen(true);
-        if (event.target) event.target.value = ''; // Reset file input
+        if (event.target) event.target.value = '';
       };
       reader.readAsDataURL(file);
     }
@@ -66,17 +68,17 @@ export default function TokenPlacerPanel({
   const handleCropConfirmForToken = (croppedDataUrl: string) => {
     setSelectedTokenTemplate({
       customImageUrl: croppedDataUrl,
-      type: 'generic', // Default type
-      label: 'Custom Token', // Default label
-      color: 'hsl(var(--muted))', // Default background for transparent parts
-      size: 1,
-      icon: undefined, // Explicitly no Lucide icon for custom image tokens
+      type: 'generic',
+      label: 'Custom Token',
+      color: 'hsl(var(--muted))',
+      size: currentTokenSize,
+      icon: undefined,
     });
     setActiveTool('place_token');
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
     toast({ title: 'Custom Token Ready', description: 'Click on the grid to place your custom token.' });
-    onTokenTemplateSelect?.(); // Close the popover
+    onTokenTemplateSelect?.();
   };
 
   const handleCropCancelForToken = () => {
@@ -95,7 +97,7 @@ export default function TokenPlacerPanel({
               key={template.name}
               variant="outline"
               className={cn(
-                "aspect-square h-auto flex flex-col items-center justify-center p-1 space-y-0.5", // Reduced padding and space
+                "aspect-square h-auto flex flex-col items-center justify-center p-1 space-y-0.5",
                 "border-2 border-transparent hover:border-accent"
               )}
               style={{ backgroundColor: template.color }}
@@ -109,6 +111,35 @@ export default function TokenPlacerPanel({
           })}
         </CardContent>
       </Card>
+
+      <div className="mt-3 pt-3 border-t border-border">
+        <Label className="text-sm font-medium">Token Size</Label>
+        <div className="flex items-center justify-between mt-1 space-x-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentTokenSize(prev => Math.max(1, prev - 1))}
+            disabled={currentTokenSize === 1}
+            aria-label="Decrease token size"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold w-16 text-center tabular-nums">
+            {currentTokenSize}x{currentTokenSize}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setCurrentTokenSize(prev => Math.min(9, prev + 1))}
+            disabled={currentTokenSize === 9}
+            aria-label="Increase token size"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
       <div className="mt-3 pt-3 border-t border-border">
         <Button

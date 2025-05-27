@@ -48,7 +48,7 @@ const initialGridCells = (): GridCellData[][] =>
 
 const createInitialSnapshot = (initialState?: Partial<Omit<UndoableState, 'tokens'> & { tokens: Token[] }>): UndoableState => ({
   gridCells: initialState?.gridCells || initialGridCells(),
-  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })), // Icons are stripped for storage
+  tokens: (initialState?.tokens || []).map(t => ({ ...t, icon: undefined })), 
   drawnShapes: initialState?.drawnShapes || [],
   textObjects: initialState?.textObjects || [],
   participants: initialState?.participants || [],
@@ -56,63 +56,68 @@ const createInitialSnapshot = (initialState?: Partial<Omit<UndoableState, 'token
 
 
 function isSquareOccupiedLocal(
-  x: number,
-  y: number,
+  targetX: number,
+  targetY: number,
+  tokenSizeToCheck: number,
   tokens: Token[],
   numCols: number,
   numRows: number,
   excludeTokenId?: string
 ): boolean {
-  if (x < 0 || x >= numCols || y < 0 || y >= numRows) return true;
-  return tokens.some(
-    (token) =>
-      token.id !== excludeTokenId &&
-      Math.floor(token.x) === Math.floor(x) && // Compare floored grid positions
-      Math.floor(token.y) === Math.floor(y)
-  );
+  if (targetX < 0 || targetX + tokenSizeToCheck > numCols || targetY < 0 || targetY + tokenSizeToCheck > numRows) {
+    return true;
+  }
+  for (const token of tokens) {
+    if (token.id === excludeTokenId) continue;
+    const existingTokenSize = token.size || 1;
+    const overlapX = Math.max(0, Math.min(targetX + tokenSizeToCheck, token.x + existingTokenSize) - Math.max(targetX, token.x));
+    const overlapY = Math.max(0, Math.min(targetY + tokenSizeToCheck, token.y + existingTokenSize) - Math.max(targetY, token.y));
+    if (overlapX > 0 && overlapY > 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function findAvailableSquareLocal(
   preferredX: number,
   preferredY: number,
+  tokenSizeToPlace: number,
   tokens: Token[],
   numCols: number,
   numRows: number,
   excludeTokenId?: string
 ): Point | null {
   const checkOccupied = (cx: number, cy: number) =>
-    isSquareOccupiedLocal(cx, cy, tokens, numCols, numRows, excludeTokenId);
+    isSquareOccupiedLocal(cx, cy, tokenSizeToPlace, tokens, numCols, numRows, excludeTokenId);
 
-  // Check if the preferred square is within bounds and unoccupied
-  if (preferredX >= 0 && preferredX < numCols && preferredY >= 0 && preferredY < numRows &&
-      !checkOccupied(preferredX, preferredY)) {
+  if (!checkOccupied(preferredX, preferredY)) {
     return { x: preferredX, y: preferredY };
   }
 
-  // Spiral search for an available square
   let currentX = 0;
   let currentY = 0;
   let dx = 0;
   let dy = -1;
-  const maxSearchRadius = Math.max(numCols, numRows); // Max search distance
+  const maxSearchRadius = Math.max(numCols, numRows);
 
   for (let i = 0; i < Math.pow(maxSearchRadius * 2 + 1, 2); i++) {
     const checkGridX = preferredX + currentX;
     const checkGridY = preferredY + currentY;
 
-    if (checkGridX >= 0 && checkGridX < numCols && checkGridY >= 0 && checkGridY < numRows) {
+    if (checkGridX >= 0 && checkGridX + tokenSizeToPlace <= numCols && 
+        checkGridY >= 0 && checkGridY + tokenSizeToPlace <= numRows) {
       if (!checkOccupied(checkGridX, checkGridY)) {
         return { x: checkGridX, y: checkGridY };
       }
     }
-    // Spiral logic
     if (currentX === currentY || (currentX < 0 && currentX === -currentY) || (currentX > 0 && currentX === 1 - currentY)) {
-      [dx, dy] = [-dy, dx]; // Change direction
+      [dx, dy] = [-dy, dx];
     }
     currentX += dx;
     currentY += dy;
   }
-  return null; // No available square found
+  return null;
 }
 
 
@@ -202,7 +207,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedStateJSON) {
         try {
-          const loadedState = JSON.parse(savedStateJSON) as UndoableState & { // History is not saved, other direct states are
+          const loadedState = JSON.parse(savedStateJSON) as Omit<UndoableState, 'tokens' | 'history' | 'historyPointer'> & {
+              tokens: Omit<Token, 'icon'>[];
               showGridLines: boolean;
               showAllLabels: boolean;
               backgroundImageUrl: string | null;
@@ -255,7 +261,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
   useEffect(() => {
     if (!isInitialLoadComplete || isUndoRedoOperation.current) {
-      return; // Don't save until initial load is done, or if it's an undo/redo
+      return; 
     }
 
     const stripIconsForStorage = (currentTokens: Token[]): Omit<Token, 'icon'>[] => {
@@ -275,7 +281,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       currentParticipantIndex,
       roundCounter,
       isCombatActive,
-      // History and historyPointer are NOT saved to localStorage
     };
 
     try {
@@ -552,7 +557,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         } else {
             const middleX = Math.floor(GRID_COLS / 2);
             const middleY = Math.floor(GRID_ROWS / 2);
-            const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
+            const availableSquare = findAvailableSquareLocal(middleX, middleY, 1, tokens, GRID_COLS, GRID_ROWS); // Assume size 1 for now
             if (!availableSquare) {
                 toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
                 return prevParticipants;
@@ -666,14 +671,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     explicitTokenId?: string,
     avatarUrl?: string | null
   ) => {
-    const participantName = participantData.name.trim();
+    const participantNameInput = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId !== "none" ? explicitTokenId : undefined;
     let newTokensCreated: Token[] = [];
+    const tokenSize = (selectedTokenTemplate?.size || 1);
+
 
     if (!finalTokenId) {
       const middleX = Math.floor(GRID_COLS / 2);
       const middleY = Math.floor(GRID_ROWS / 2);
-      const availableSquare = findAvailableSquareLocal(middleX, middleY, tokens, GRID_COLS, GRID_ROWS);
+      const availableSquare = findAvailableSquareLocal(middleX, middleY, tokenSize, tokens, GRID_COLS, GRID_ROWS);
 
       if (!availableSquare) {
         toast({ title: "Cannot Add Token", description: "No available space on the grid for the new token.", variant: "destructive"});
@@ -690,8 +697,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         color: avatarUrl ? 'hsl(var(--muted))' : (template?.color || 'hsl(var(--accent))'),
         type: participantData.type,
         label: avatarUrl ? 'Custom Avatar' : (template?.name || 'Generic'),
-        instanceName: participantName,
-        size: 1,
+        instanceName: participantNameInput,
+        size: tokenSize,
       };
       newTokensCreated.push(newToken);
       finalTokenId = newToken.id;
@@ -702,7 +709,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const newParticipant: Participant = {
       ...participantData,
       id: `participant-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      name: participantName,
+      name: participantNameInput,
       tokenId: finalTokenId,
     };
 
@@ -726,7 +733,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       return newList;
     });
     return true;
-  }, [isCombatActive, currentParticipantIndex, tokens, toast]);
+  }, [isCombatActive, currentParticipantIndex, tokens, toast, selectedTokenTemplate]);
 
 
   const handleAddCombatantFormSubmit = (e: React.FormEvent) => {
@@ -828,10 +835,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       if (participantToRemove.tokenId) {
         return prevTokens.map(token => {
           if (token.id === participantToRemove.tokenId) {
-            // Reset the token to its base template appearance if it was linked
             const baseTemplate = tokenTemplates.find(t => t.type === token.type) || 
-                                 tokenTemplates.find(t => t.type === 'generic'); // Fallback
-            const wasParticipantSpecificAvatar = token.customImageUrl && token.instanceName === participantToRemove.name;
+                                 tokenTemplates.find(t => t.type === 'generic'); 
+            const wasParticipantSpecificAvatar = token.customImageUrl && token.instanceName === participantToRemove.name && participantToRemove.type === token.type;
 
             return {
               ...token,
@@ -882,16 +888,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (['player', 'enemy', 'ally'].includes(token.type)) {
       setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
     } else {
-      setNewParticipantType('generic' as 'player'); // Fallback if token type isn't a combatant type
+      setNewParticipantType('generic' as 'player'); 
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(null); // Clear any previously set avatar in dialog
+    setCroppedAvatarDataUrl(null); 
     
-    // Reset stats to default or leave them for user to fill
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
     setNewParticipantAc('10');
-    setNewParticipantQuantity('1'); // Quantity will be forced to 1 due to token assignment
+    setNewParticipantQuantity('1'); 
 
     setDialogOpen(true);
   }, []);
@@ -991,7 +996,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   };
 
   const unassignedTokens = useMemo(() => tokens.filter(token =>
-    ['player', 'enemy', 'ally'].includes(token.type) &&
+    ['player', 'enemy', 'ally', 'generic'].includes(token.type) && // Allow generic tokens to be assigned
     !participants.some(p => p.tokenId === token.id)
   ), [tokens, participants]);
 
@@ -1187,32 +1192,32 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-                  <div className="space-y-1">
-                      <div className="flex space-x-2">
-                      {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                          const config = participantTypeButtonConfig[type];
-                          const isSelected = newParticipantType === type;
-                          const IconComponent = config.icon;
-                          return (
-                          <Button
-                              key={type}
-                              type="button"
-                              variant={isSelected ? undefined : 'outline'}
-                              onClick={() => setNewParticipantType(type)}
-                              className={cn(
-                              "flex-1 flex items-center justify-center gap-2",
-                              isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
-                              )}
-                          >
-                              <IconComponent className="h-4 w-4" />
-                              {config.label}
-                          </Button>
-                          );
-                      })}
-                      </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-4">
+                <div className="space-y-1">
+                    {/* Label removed from here */}
+                    <div className="flex space-x-2">
+                    {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                        const config = participantTypeButtonConfig[type];
+                        const isSelected = newParticipantType === type;
+                        const IconComponent = config.icon;
+                        return (
+                        <Button
+                            key={type}
+                            type="button"
+                            variant={isSelected ? undefined : 'outline'}
+                            onClick={() => setNewParticipantType(type)}
+                            className={cn(
+                            "flex-1 flex items-center justify-center gap-2",
+                            isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                            )}
+                        >
+                            <IconComponent className="h-4 w-4" />
+                            {config.label}
+                        </Button>
+                        );
+                    })}
+                    </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 space-y-1">
                       <Label htmlFor="participant-name-dialog">Name</Label>
                       <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />

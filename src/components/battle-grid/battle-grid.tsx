@@ -30,8 +30,8 @@ const BORDER_WIDTH_WHEN_VISIBLE = 1;
 const FEET_PER_SQUARE = 5;
 const ZOOM_AMOUNT = 1.1;
 const TEXT_PADDING = { x: 8, y: 4 };
-const CLICK_THRESHOLD_SQUARED = 25; // Pixels squared, for distinguishing click from drag
-const SHAPE_CLICK_THRESHOLD = 8; // For clicking on shapes
+const CLICK_THRESHOLD_SQUARED = 25; 
+const SHAPE_CLICK_THRESHOLD = 8; 
 const MIN_NEW_TEXT_INPUT_WIDTH = 150;
 const DOUBLE_CLICK_THRESHOLD_MS = 300;
 
@@ -46,11 +46,9 @@ const snapToVertex = (pos: Point, cellSize: number): Point => ({
   y: Math.round(pos.y / cellSize) * cellSize,
 });
 
-// Helper function for distance squared (avoids Math.sqrt)
 function sqr(x: number) { return x * x; }
 function dist2(v: Point, w: Point) { return sqr(v.x - w.x) + sqr(v.y - w.y); }
 
-// Helper function for distance from point to line segment squared
 function distToSegmentSquared(p: Point, v: Point, w: Point) {
   const l2 = dist2(v, w);
   if (l2 === 0) return dist2(p, v);
@@ -72,64 +70,72 @@ function isPointInRectangle(point: Point, rectX: number, rectY: number, rectWidt
 }
 
 function isSquareOccupied(
-  x: number,
-  y: number,
+  targetX: number,
+  targetY: number,
+  tokenSizeToCheck: number,
   tokens: TokenType[],
   numCols: number,
   numRows: number,
   excludeTokenId?: string
 ): boolean {
-  if (x < 0 || x >= numCols || y < 0 || y >= numRows) return true; // Out of bounds is "occupied"
-  return tokens.some(
-    (token) =>
-      token.id !== excludeTokenId &&
-      Math.floor(token.x) === Math.floor(x) && // Compare floored grid positions
-      Math.floor(token.y) === Math.floor(y)
-  );
+  if (targetX < 0 || targetX + tokenSizeToCheck > numCols || targetY < 0 || targetY + tokenSizeToCheck > numRows) {
+    return true; 
+  }
+
+  for (const token of tokens) {
+    if (token.id === excludeTokenId) continue;
+
+    const existingTokenSize = token.size || 1;
+    const overlapX = Math.max(0, Math.min(targetX + tokenSizeToCheck, token.x + existingTokenSize) - Math.max(targetX, token.x));
+    const overlapY = Math.max(0, Math.min(targetY + tokenSizeToCheck, token.y + existingTokenSize) - Math.max(targetY, token.y));
+
+    if (overlapX > 0 && overlapY > 0) {
+      return true; 
+    }
+  }
+  return false; 
 }
+
 
 function findAvailableSquare(
   preferredX: number,
   preferredY: number,
+  tokenSizeToPlace: number,
   tokens: TokenType[],
   numCols: number,
   numRows: number,
   excludeTokenId?: string
 ): Point | null {
-  // Check if the preferred square is within bounds and unoccupied
   const checkOccupied = (cx: number, cy: number) =>
-    isSquareOccupied(cx, cy, tokens, numCols, numRows, excludeTokenId);
+    isSquareOccupied(cx, cy, tokenSizeToPlace, tokens, numCols, numRows, excludeTokenId);
 
-  if (preferredX >= 0 && preferredX < numCols && preferredY >= 0 && preferredY < numRows &&
-      !checkOccupied(preferredX, preferredY)) {
+  if (!checkOccupied(preferredX, preferredY)) {
     return { x: preferredX, y: preferredY };
   }
 
-  // Spiral search for an available square
-  // (Simplified version - can be optimized for large grids)
   let currentX = 0;
   let currentY = 0;
   let dx = 0;
   let dy = -1;
-  const maxSearchRadius = Math.max(numCols, numRows); // Max search distance
+  const maxSearchRadius = Math.max(numCols, numRows); 
 
   for (let i = 0; i < Math.pow(maxSearchRadius * 2 + 1, 2); i++) {
     const checkGridX = preferredX + currentX;
     const checkGridY = preferredY + currentY;
 
-    if (checkGridX >= 0 && checkGridX < numCols && checkGridY >= 0 && checkGridY < numRows) {
+    if (checkGridX >= 0 && checkGridX + tokenSizeToPlace <= numCols && 
+        checkGridY >= 0 && checkGridY + tokenSizeToPlace <= numRows) {
       if (!checkOccupied(checkGridX, checkGridY)) {
         return { x: checkGridX, y: checkGridY };
       }
     }
-    // Spiral logic
     if (currentX === currentY || (currentX < 0 && currentX === -currentY) || (currentX > 0 && currentX === 1 - currentY)) {
-      [dx, dy] = [-dy, dx]; // Change direction
+      [dx, dy] = [-dy, dx];
     }
     currentX += dx;
     currentY += dy;
   }
-  return null; // No available square found
+  return null;
 }
 
 
@@ -168,8 +174,8 @@ export default function BattleGrid({
   selectedTextObjectId, setSelectedTextObjectId,
   tokenIdToFocus, 
   onFocusHandled, 
-  onOpenAddCombatantDialogForToken, // New prop
-  participants, // New prop
+  onOpenAddCombatantDialogForToken,
+  participants,
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const { toast } = useToast();
@@ -187,27 +193,23 @@ export default function BattleGrid({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
 
-  // Token dragging state
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
-  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null); // For distinguishing click vs drag
+  const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null);
 
-  // Tool-specific states
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
   const [hoveredCellWhilePaintingOrErasing, setHoveredCellWhilePaintingOrErasing] = useState<Point | null>(null);
-  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null); // For hover effects on tokens
+  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingStartPoint, setDrawingStartPoint] = useState<Point | null>(null);
 
-  // Token label editing state
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
   const foreignObjectInputRef = useRef<HTMLInputElement>(null);
 
-  // Text object creation and editing state
   const [isCreatingText, setIsCreatingText] = useState<{ id: string; x: number; y: number; currentText: string; fontSize: number; inputWidth: number; } | null>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const [draggingTextObjectId, setDraggingTextObjectId] = useState<string | null>(null);
@@ -219,20 +221,16 @@ export default function BattleGrid({
   const [lastTextClickInfo, setLastTextClickInfo] = useState<{ id: string | null; time: number }>({ id: null, time: 0 });
   const [hoveredTextObjectId, setHoveredTextObjectId] = useState<string | null>(null);
 
-
-  // Shape editing state
   const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
   const [editingShapeLabelText, setEditingShapeLabelText] = useState<string>('');
   const shapeLabelInputRef = useRef<HTMLInputElement>(null);
-  const [shapeRadiusInput, setShapeRadiusInput] = useState<string>(''); // For circle radius input
+  const [shapeRadiusInput, setShapeRadiusInput] = useState<string>('');
 
-  // Shape dragging state
   const [potentialDraggingShapeInfo, setPotentialDraggingShapeInfo] = useState<{ id: string; type: DrawnShape['type']; startScreenPos: Point; originalStartPoint: Point; originalEndPoint: Point; } | null>(null);
   const [isActuallyDraggingShape, setIsActuallyDraggingShape] = useState(false);
   const [currentDraggingShapeId, setCurrentDraggingShapeId] = useState<string | null>(null);
   const [shapeDragOffset, setShapeDragOffset] = useState<Point | null>(null);
 
-  // Right-click popover state
   const [rightClickPopoverState, setRightClickPopoverState] = useState<{
     type: 'token' | 'shape' | 'text';
     item: TokenType | DrawnShape | TextObjectType;
@@ -241,35 +239,20 @@ export default function BattleGrid({
   } | null>(null);
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // Delete confirmation dialog states
   const [isTokenDeleteAlertOpen, setIsTokenDeleteAlertOpen] = useState(false);
   const [isTextObjectDeleteAlertOpen, setIsTextObjectDeleteAlertOpen] = useState(false);
   const [isShapeDeleteAlertOpen, setIsShapeDeleteAlertOpen] = useState(false);
 
-
-  const calculateInitialViewBox = useCallback(() => {
-    const calculatedTotalContentWidth = numCols * cellSize;
-    const calculatedTotalContentHeight = numRows * cellSize;
-    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
-    const svgPadding = currentBorderWidth / 2;
-
-    if (svgRef.current) {
-      const svg = svgRef.current;
-      const viewportWidth = svg.clientWidth;
-      const viewportHeight = svg.clientHeight;
-
-      if (viewportWidth > 0 && viewportHeight > 0 && calculatedTotalContentWidth > 0 && calculatedTotalContentHeight > 0) {
-        const scaleToFillViewportWidth = viewportWidth / (calculatedTotalContentWidth + currentBorderWidth);
-        const initialViewWidth = calculatedTotalContentWidth + currentBorderWidth;
-        const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
-        const initialViewMinX = 0 - svgPadding;
-        const initialViewMinY = (0 - svgPadding) + ((calculatedTotalContentHeight + currentBorderWidth) - initialViewHeight) / 2;
-        return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
-      }
-    }
-    return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
-  }, [numCols, numRows, cellSize, showGridLines]);
-
+  const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const svg = svgRef.current;
+    const CTM = svg.getScreenCTM();
+    if (!CTM) return { x: 0, y: 0 };
+    return {
+      x: (event.clientX - CTM.e) / CTM.a,
+      y: (event.clientY - CTM.f) / CTM.d,
+    };
+  }, []);
 
   const measureText = useCallback((text: string, fontSize: number) => {
     if (typeof document === 'undefined') return { width: 0, height: 0}; 
@@ -331,7 +314,6 @@ export default function BattleGrid({
     setEditingTextObjectContent('');
   }, [editingTextObjectId, editingTextObjectContent, textObjects, setTextObjects, measureText]);
 
-
   const handleSaveTokenName = useCallback(() => {
     if (editingTokenId) {
       setTokens(prevTokens =>
@@ -357,17 +339,29 @@ export default function BattleGrid({
     }
   }, [editingShapeId, editingShapeLabelText, setDrawnShapes]);
 
-  const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
-    if (!svgRef.current) return { x: 0, y: 0 };
-    const svg = svgRef.current;
-    const CTM = svg.getScreenCTM();
-    if (!CTM) return { x: 0, y: 0 };
-    return {
-      x: (event.clientX - CTM.e) / CTM.a,
-      y: (event.clientY - CTM.f) / CTM.d,
-    };
-  }, []);
+  const calculateInitialViewBox = useCallback(() => {
+    const calculatedTotalContentWidth = numCols * cellSize;
+    const calculatedTotalContentHeight = numRows * cellSize;
+    const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
+    const svgPadding = currentBorderWidth / 2;
 
+    if (svgRef.current) {
+      const svg = svgRef.current;
+      const viewportWidth = svg.clientWidth;
+      const viewportHeight = svg.clientHeight;
+
+      if (viewportWidth > 0 && viewportHeight > 0 && calculatedTotalContentWidth > 0 && calculatedTotalContentHeight > 0) {
+        const scaleToFillViewportWidth = viewportWidth / (calculatedTotalContentWidth + currentBorderWidth);
+        const initialViewWidth = calculatedTotalContentWidth + currentBorderWidth;
+        const initialViewHeight = viewportHeight / scaleToFillViewportWidth;
+        const initialViewMinX = 0 - svgPadding;
+        const initialViewMinY = (0 - svgPadding) + ((calculatedTotalContentHeight + currentBorderWidth) - initialViewHeight) / 2;
+        return `${initialViewMinX} ${initialViewMinY} ${initialViewWidth} ${initialViewHeight}`;
+      }
+    }
+    return `${0 - svgPadding} ${0 - svgPadding} ${Math.max(1, calculatedTotalContentWidth + currentBorderWidth)} ${Math.max(1, calculatedTotalContentHeight + currentBorderWidth)}`;
+  }, [numCols, numRows, cellSize, showGridLines]);
+  
   const applyZoom = useCallback((zoomIn: boolean, customScaleAmount?: number) => {
     if (!svgRef.current) return;
     const scaleAmount = customScaleAmount || ZOOM_AMOUNT;
@@ -431,7 +425,6 @@ export default function BattleGrid({
     applyZoom(zoomIn);
   }, [applyZoom, editingTokenId, editingShapeId, editingTextObjectId, isCreatingText]);
 
-
   useEffect(() => {
     setViewBox(calculateInitialViewBox());
   }, [showGridLines, cellSize, numCols, numRows, backgroundImageUrl, calculateInitialViewBox]);
@@ -472,7 +465,6 @@ export default function BattleGrid({
     }
   }, [editingShapeId]);
 
-
   useEffect(() => {
     if (escapePressCount && escapePressCount > 0) {
       setRightClickPopoverState(null);
@@ -486,7 +478,6 @@ export default function BattleGrid({
       setHoveredTextObjectId(null);
     }
   }, [escapePressCount, finalizeTextCreation, isCreatingText]);
-
 
   useEffect(() => {
     if (activeTool !== 'select') {
@@ -508,10 +499,11 @@ export default function BattleGrid({
     if (tokenIdToFocus && svgRef.current) {
       const token = tokens.find(t => t.id === tokenIdToFocus);
       if (token) {
+        const tokenActualSize = (token.size || 1);
         const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
         
-        const tokenSvgX = token.x * cellSize + (token.size || 1) * cellSize / 2;
-        const tokenSvgY = token.y * cellSize + (token.size || 1) * cellSize / 2;
+        const tokenSvgX = token.x * cellSize + tokenActualSize * cellSize / 2;
+        const tokenSvgY = token.y * cellSize + tokenActualSize * cellSize / 2;
 
         let newVx = tokenSvgX - currentVw / 2;
         let newVy = tokenSvgY - currentVh / 2;
@@ -555,9 +547,9 @@ export default function BattleGrid({
       return newCells;
     });
     setTokens(prev => prev.filter(token => {
-      const tokenCenterX = token.x + (token.size || 1) / 2;
-      const tokenCenterY = token.y + (token.size || 1) / 2;
-      return !(Math.floor(tokenCenterX) === gridX && Math.floor(tokenCenterY) === gridY);
+      const tokenSize = token.size || 1;
+      return !(gridX >= token.x && gridX < token.x + tokenSize &&
+               gridY >= token.y && gridY < token.y + tokenSize);
     }));
 
     const cellCenterX = gridX * cellSize + cellSize / 2;
@@ -604,10 +596,11 @@ export default function BattleGrid({
 
     if (activeTool === 'select') {
       const clickedToken = tokens.find(token => {
+        const tokenActualSize = (token.size || 1);
         const tokenLeft = token.x * cellSize;
-        const tokenRight = (token.x + (token.size || 1)) * cellSize;
+        const tokenRight = (token.x + tokenActualSize) * cellSize;
         const tokenTop = token.y * cellSize;
-        const tokenBottom = (token.y + (token.size || 1)) * cellSize;
+        const tokenBottom = (token.y + tokenActualSize) * cellSize;
         return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
       });
       if (clickedToken) {
@@ -672,7 +665,6 @@ export default function BattleGrid({
       return;
     }
 
-
     if (activeTool === 'type_tool') {
         event.stopPropagation();
         if (isCreatingText) finalizeTextCreation();
@@ -715,7 +707,6 @@ export default function BattleGrid({
         return;
     }
 
-
     if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) {
       if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {
          setIsPanning(true);
@@ -738,7 +729,8 @@ export default function BattleGrid({
         break;
       case 'place_token':
         if (selectedTokenTemplate) {
-          const availableSquare = findAvailableSquare(gridX, gridY, tokens, numCols, numRows);
+          const tokenSize = selectedTokenTemplate.size || 1;
+          const availableSquare = findAvailableSquare(gridX, gridY, tokenSize, tokens, numCols, numRows);
           if (availableSquare) {
             const baseLabel = selectedTokenTemplate.label || selectedTokenTemplate.type;
             const instanceNamePrefix = baseLabel || 'Token';
@@ -756,6 +748,7 @@ export default function BattleGrid({
               instanceName: instanceName,
               customImageUrl: selectedTokenTemplate.customImageUrl,
               icon: selectedTokenTemplate.customImageUrl ? undefined : selectedTokenTemplate.icon, 
+              size: tokenSize,
             };
             const newToken = {
               ...newTokenData,
@@ -828,10 +821,11 @@ export default function BattleGrid({
     const pos = getMousePosition(event);
 
     const rClickedToken = tokens.find(token => {
+        const tokenActualSize = (token.size || 1);
         const tokenLeft = token.x * cellSize;
-        const tokenRight = (token.x + (token.size || 1)) * cellSize;
+        const tokenRight = (token.x + tokenActualSize) * cellSize;
         const tokenTop = token.y * cellSize;
-        const tokenBottom = (token.y + (token.size || 1)) * cellSize;
+        const tokenBottom = (token.y + tokenActualSize) * cellSize;
         return pos.x >= tokenLeft && pos.x <= tokenRight && pos.y >= tokenTop && pos.y <= tokenBottom;
     });
     if (rClickedToken) {
@@ -843,7 +837,7 @@ export default function BattleGrid({
             rightClickPopoverTriggerRef.current.style.position = 'fixed';
             rightClickPopoverTriggerRef.current.style.left = `${event.clientX}px`;
             rightClickPopoverTriggerRef.current.style.top = `${event.clientY}px`;
-            rightClickPopoverTriggerRef.current.click(); // Programmatically open the popover
+            rightClickPopoverTriggerRef.current.click();
         }
         return;
     }
@@ -950,7 +944,6 @@ export default function BattleGrid({
     }
   };
 
-
   const handleTextInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault(); 
@@ -1030,13 +1023,15 @@ export default function BattleGrid({
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       setRightClickPopoverState(null);
       const currentMouseSvgPos = getMousePosition(event);
+      const tokenActualSize = draggingToken.size || 1;
       const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
       const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
       const gridX = Math.floor(newTargetTokenOriginX / cellSize);
       const gridY = Math.floor(newTargetTokenOriginY / cellSize);
-      const clampedGridX = Math.max(0, Math.min(gridX, numCols - (draggingToken.size || 1)));
-      const clampedGridY = Math.max(0, Math.min(gridY, numRows - (draggingToken.size || 1)));
-      const isTargetOccupiedByOther = isSquareOccupied(clampedGridX, clampedGridY, tokens, numCols, numRows, draggingToken.id);
+      const clampedGridX = Math.max(0, Math.min(gridX, numCols - tokenActualSize));
+      const clampedGridY = Math.max(0, Math.min(gridY, numRows - tokenActualSize));
+      
+      const isTargetOccupiedByOther = isSquareOccupied(clampedGridX, clampedGridY, tokenActualSize, tokens, numCols, numRows, draggingToken.id);
 
       if (!isTargetOccupiedByOther) {
           if (!draggingTokenPosition || draggingTokenPosition.x !== clampedGridX || draggingTokenPosition.y !== clampedGridY) {
@@ -1139,11 +1134,15 @@ export default function BattleGrid({
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
         }
-    } else if (activeTool === 'place_token') {
+    } else if (activeTool === 'place_token' && selectedTokenTemplate) {
+      const tokenSize = selectedTokenTemplate.size || 1;
       const gridX = Math.floor(pos.x / cellSize);
       const gridY = Math.floor(pos.y / cellSize);
-      if (gridX >= 0 && gridX < numCols && gridY >= 0 && gridY < numRows) {
-        setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
+      const clampedGridX = Math.max(0, Math.min(gridX, numCols - tokenSize));
+      const clampedGridY = Math.max(0, Math.min(gridY, numRows - tokenSize));
+
+      if (clampedGridX >= 0 && clampedGridX + tokenSize <= numCols && clampedGridY >= 0 && clampedGridY + tokenSize <= numRows) {
+        setHoveredCellWhilePaintingOrErasing({ x: clampedGridX, y: clampedGridY });
       } else {
         setHoveredCellWhilePaintingOrErasing(null);
       }
@@ -1338,7 +1337,6 @@ export default function BattleGrid({
     return calculateInitialViewBox();
   }, [calculateInitialViewBox]);
 
-
   const handleResetView = useCallback(() => {
     setViewBox(calculateInitialViewBoxCb());
   }, [calculateInitialViewBoxCb]);
@@ -1371,7 +1369,10 @@ export default function BattleGrid({
   const handleSetShapeOpacity = (shapeId: string, opacityValue: number) => {
       if(rightClickPopoverState?.type === 'shape' && rightClickPopoverState.item.id === shapeId) {
          const currentItem = rightClickPopoverState.item as DrawnShape;
-         setRightClickPopoverState(prev => prev ? ({...prev, item: {...currentItem, opacity: opacityValue } }) : null );
+         const updatedItem = { ...currentItem, opacity: opacityValue };
+         setRightClickPopoverState(prev => prev ? ({...prev, item: updatedItem }) : null );
+         // Force re-render of popover content by changing its key if needed
+         // This ensures the buttons update their variant based on the new opacity
       }
       setDrawnShapes(prev => prev.map(s =>
           s.id === shapeId ? { ...s, opacity: opacityValue } : s
@@ -1421,13 +1422,18 @@ export default function BattleGrid({
         data-ai-hint="battle grid tactical map"
       >
         <defs>
-          {tokens.map(token =>
-            token.customImageUrl ? (
+          {tokens.map(token => {
+            const tokenActualSize = (token.size || 1);
+            return token.customImageUrl ? (
               <clipPath key={`clip-${token.id}`} id={`clip-${token.id}`}>
-                <circle cx={cellSize / 2} cy={cellSize / 2} r={cellSize / 2 * 0.95} /> 
+                <circle 
+                    cx={tokenActualSize * cellSize / 2} 
+                    cy={tokenActualSize * cellSize / 2} 
+                    r={tokenActualSize * cellSize / 2 * 0.95} 
+                /> 
               </clipPath>
             ) : null
-          )}
+          })}
           <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
             <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
           </marker>
@@ -1449,9 +1455,16 @@ export default function BattleGrid({
         <g shapeRendering="crispEdges"> 
           {gridCells.flatMap((row, y) =>
             row.map((cell, x) => {
-              const isHighlightActive = (isPainting && activeTool === 'paint_cell') ||
-                                      (isErasing && activeTool === 'eraser_tool') ||
-                                      (activeTool === 'place_token');
+              let isHighlightActive = false;
+              let highlightSize = 1;
+
+              if (activeTool === 'place_token' && selectedTokenTemplate) {
+                isHighlightActive = true;
+                highlightSize = selectedTokenTemplate.size || 1;
+              } else if ((isPainting && activeTool === 'paint_cell') || (isErasing && activeTool === 'eraser_tool')) {
+                isHighlightActive = true;
+              }
+              
               const isHighlighted = isHighlightActive &&
                                   hoveredCellWhilePaintingOrErasing &&
                                   hoveredCellWhilePaintingOrErasing.x === x &&
@@ -1461,8 +1474,8 @@ export default function BattleGrid({
                 key={cell.id}
                 x={x * cellSize}
                 y={y * cellSize}
-                width={cellSize}
-                height={cellSize}
+                width={isHighlighted && activeTool === 'place_token' ? cellSize * highlightSize : cellSize}
+                height={isHighlighted && activeTool === 'place_token' ? cellSize * highlightSize : cellSize}
                 fill={cell.color || 'transparent'} 
                 stroke={
                   isHighlighted
@@ -1484,12 +1497,12 @@ export default function BattleGrid({
           {drawnShapes.map(shape => {
             const isCurrentlyEditingThisShapeLabel = editingShapeId === shape.id;
             const isShapeSelected = shape.id === selectedShapeId;
-            const isLabelVisible = showAllLabels || (shape.id === selectedShapeId);
+            const isLabelVisible = showAllLabels || isShapeSelected;
             let labelX = 0, labelY = 0;
 
             if (shape.type === 'line') {
                 labelX = (shape.startPoint.x + shape.endPoint.x) / 2;
-                labelY = (shape.startPoint.y + shape.endPoint.y) / 2 + 12; 
+                labelY = (shape.startPoint.y + shape.endPoint.y) / 2; 
             } else if (shape.type === 'circle') {
                 labelX = shape.startPoint.x;
                 labelY = shape.startPoint.y; 
@@ -1638,6 +1651,7 @@ export default function BattleGrid({
 
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
+          const tokenActualSize = token.size || 1;
 
           let currentX = token.x;
           let currentY = token.y;
@@ -1647,11 +1661,11 @@ export default function BattleGrid({
             currentY = draggingTokenPosition.y;
           }
 
-          const iconDisplaySize = cellSize * 0.8; 
-          const iconOffset = (cellSize - iconDisplaySize) / 2;
+          const iconDisplaySize = tokenActualSize * cellSize * 0.8; 
+          const iconOffset = (tokenActualSize * cellSize - iconDisplaySize) / 2;
 
-          const imageDisplaySize = cellSize * 0.95; 
-          const imageOffset = (cellSize - imageDisplaySize) / 2;
+          const imageDisplaySize = tokenActualSize * cellSize * 0.95; 
+          const imageOffset = (tokenActualSize * cellSize - imageDisplaySize) / 2;
 
           let backgroundFill = token.color; 
             if (!token.customImageUrl) {
@@ -1669,7 +1683,7 @@ export default function BattleGrid({
           const isCurrentlyEditingThisToken = editingTokenId === token.id;
           const isTokenActiveTurn = token.id === activeTurnTokenId;
           const isTokenSelected = token.id === selectedTokenId;
-          const isTokenLabelVisible = showAllLabels || (token.id === selectedTokenId);
+          const isTokenLabelVisible = showAllLabels || isTokenSelected;
 
           return (
             <g
@@ -1686,9 +1700,9 @@ export default function BattleGrid({
               )}
             >
               <circle
-                cx={cellSize / 2}
-                cy={cellSize / 2}
-                r={cellSize / 2}
+                cx={tokenActualSize * cellSize / 2}
+                cy={tokenActualSize * cellSize / 2}
+                r={tokenActualSize * cellSize / 2}
                 fill={backgroundFill}
                 stroke={
                   isTokenSelected ? 'hsl(200, 100%, 50%)' : 
@@ -1710,9 +1724,9 @@ export default function BattleGrid({
                     className={cn(!isCurrentlyEditingThisToken && activeTool === 'select' ? "pointer-events-auto" : "pointer-events-none")}
                   />
                    <circle
-                    cx={cellSize / 2}
-                    cy={cellSize / 2}
-                    r={cellSize / 2 * 0.95} 
+                    cx={tokenActualSize * cellSize / 2}
+                    cy={tokenActualSize * cellSize / 2}
+                    r={tokenActualSize * cellSize / 2 * 0.95} 
                     fill="none"
                     strokeWidth="1.5" 
                     stroke={'hsl(var(--primary-foreground))'} 
@@ -1735,8 +1749,8 @@ export default function BattleGrid({
 
               {token.instanceName && !isCurrentlyEditingThisToken && isTokenLabelVisible && (
                 <text
-                  x={cellSize / 2}
-                  y={cellSize + 10} 
+                  x={tokenActualSize * cellSize / 2}
+                  y={tokenActualSize * cellSize + 10} 
                   textAnchor="middle"
                   dominantBaseline="hanging"
                   fontSize="10"
@@ -1758,9 +1772,9 @@ export default function BattleGrid({
               )}
               {isCurrentlyEditingThisToken && ( 
                 <foreignObject
-                  x={-cellSize / 2} 
-                  y={cellSize + 2} 
-                  width={cellSize * 2} 
+                  x={((tokenActualSize * cellSize) / 2) - (cellSize * Math.max(1, tokenActualSize/2))}
+                  y={tokenActualSize * cellSize + 2} 
+                  width={tokenActualSize * cellSize * 2}
                   height={20} 
                 >
                   <input
@@ -1990,7 +2004,7 @@ export default function BattleGrid({
             <PopoverContent
                 side="bottom"
                 align="center"
-                className="w-auto p-1 z-[60]" 
+                className="w-auto p-1"
                 onOpenAutoFocus={(e) => e.preventDefault()} 
                 onPointerDownOutside={(e) => {
                     if (isTokenDeleteAlertOpen || isTextObjectDeleteAlertOpen || isShapeDeleteAlertOpen) {
@@ -2132,7 +2146,7 @@ export default function BattleGrid({
               )}
 
               {rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
-                <div className="w-60 p-2 space-y-2"> 
+                <div className="w-60 p-2 space-y-2" key={`shape-popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity}`}> 
                     {(rightClickPopoverState.item.type === 'circle' || rightClickPopoverState.item.type === 'rectangle') && (
                          <div className="space-y-1 pt-1">
                             <Label className="text-xs">Shape Opacity</Label>
