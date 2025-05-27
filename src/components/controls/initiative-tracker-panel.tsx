@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon } from 'lucide-react';
+import { Trash2, MoreVertical, UploadCloud, HelpCircle, Zap, Heart, Shield as ShieldIcon, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 import {
   Dialog,
@@ -38,7 +38,9 @@ export default function InitiativeTrackerPanel({
   onRemoveParticipant,
   onRenameParticipant,
   onChangeParticipantTokenImage,
-  onFocusToken, // New prop
+  onFocusToken,
+  onMoveParticipantUp,
+  onMoveParticipantDown,
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp;
 
@@ -135,7 +137,7 @@ export default function InitiativeTrackerPanel({
                       canFocus && "cursor-pointer"
                     )}
                     onClick={() => {
-                      if (canFocus && p.tokenId) {
+                      if (canFocus && p.tokenId && onFocusToken) {
                         onFocusToken(p.tokenId);
                       }
                     }}
@@ -224,6 +226,26 @@ export default function InitiativeTrackerPanel({
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-48 p-1" side="bottom" align="end">
+                          {onMoveParticipantUp && (
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                              onClick={() => onMoveParticipantUp(p.id)}
+                              disabled={index === 0}
+                            >
+                              <ArrowUpCircle className="mr-2 h-3.5 w-3.5" /> Move Up
+                            </Button>
+                          )}
+                          {onMoveParticipantDown && (
+                             <Button
+                              variant="ghost"
+                              className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                              onClick={() => onMoveParticipantDown(p.id)}
+                              disabled={index === participants.length - 1}
+                            >
+                              <ArrowDownCircle className="mr-2 h-3.5 w-3.5" /> Move Down
+                            </Button>
+                          )}
                           <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm" onClick={() => handleRenameClick(p)}>
                             Rename
                           </Button>
@@ -326,4 +348,3 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
-

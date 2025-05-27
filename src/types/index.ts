@@ -123,7 +123,7 @@ export interface BattleGridProps {
   currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
-  onChangeTokenSize?: (tokenId: string, newSize: number) => void; // New prop
+  onChangeTokenSize?: (tokenId: string, newSize: number) => void;
   escapePressCount?: number;
 
   selectedTokenId?: string | null;
@@ -164,8 +164,8 @@ export interface FloatingToolbarProps {
   setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
   showGridLines: boolean;
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
-  showAllLabels: boolean; // Added
-  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>; // Added
+  showAllLabels: boolean;
+  setShowAllLabels: React.Dispatch<React.SetStateAction<boolean>>;
   measurement: Measurement;
   setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
   backgroundZoomLevel: number;
@@ -199,6 +199,6 @@ export interface InitiativeTrackerPanelProps {
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
   onFocusToken?: (tokenId: string) => void;
+  onMoveParticipantUp?: (participantId: string) => void;
+  onMoveParticipantDown?: (participantId: string) => void;
 }
-
-    
