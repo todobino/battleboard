@@ -252,32 +252,34 @@ export default function InitiativeTrackerPanel({
                     }}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center flex-1 min-w-0 mr-1 overflow-hidden">
+                       <div className="flex items-center shrink-0">
                         {token ? (
                           token.customImageUrl ? (
-                            <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 border border-sidebar-border">
+                            <div className="w-6 h-6 rounded-full overflow-hidden mr-2 border border-sidebar-border">
                               <img src={token.customImageUrl} alt={p.name} className="w-full h-full object-cover" />
                             </div>
                           ) : IconComponent ? (
                             <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center mr-2 shrink-0 border border-sidebar-border"
+                              className="w-6 h-6 rounded-full flex items-center justify-center mr-2 border border-sidebar-border"
                               style={{ backgroundColor: token.color }}
                             >
                               <IconComponent className="h-4 w-4 text-primary-foreground" />
                             </div>
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 shrink-0 border border-sidebar-border">
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 border border-sidebar-border">
                                <HelpCircle className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )
                         ) : (
-                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 shrink-0 border border-sidebar-border">
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 border border-sidebar-border">
                             <HelpCircle className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                        <span className="block text-base font-semibold truncate" title={p.name}>{p.name}</span>
                       </div>
-                        <Button
+                      <span className="flex-1 block min-w-0 text-base font-semibold truncate mr-1" title={p.name}>
+                        {p.name}
+                      </span>
+                      <Button
                           variant="ghost"
                           size="icon"
                           className="group/deleteButton h-7 w-7 shrink-0 hover:bg-sidebar-accent"
@@ -484,3 +486,4 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
