@@ -229,7 +229,7 @@ export default function InitiativeTrackerPanel({
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
         ) : (
-          <ScrollArea className="flex-grow">
+          <ScrollArea className="flex-grow w-full overflow-x-hidden">
             <ul className="space-y-2 pr-1">
               {participants.map((p, index) => {
                 const itemIsActive = index === currentParticipantIndex;
@@ -241,7 +241,7 @@ export default function InitiativeTrackerPanel({
                   <li
                     key={p.id}
                     className={cn(
-                      "flex flex-col p-2.5 rounded-md transition-colors",
+                      "flex flex-col p-2.5 w-full rounded-md overflow-hidden transition-colors",
                       itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "hover:bg-muted/50",
                       canFocus && "cursor-pointer"
                     )}
@@ -277,7 +277,7 @@ export default function InitiativeTrackerPanel({
                         )}
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <span className="block text-base font-semibold truncate" title={p.name}>
+                        <span className="truncate block text-base font-semibold" title={p.name}>
                           {p.name}
                         </span>
                       </div>
@@ -488,3 +488,5 @@ export default function InitiativeTrackerPanel({
     </div>
   );
 }
+
+    
