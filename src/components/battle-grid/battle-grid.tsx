@@ -24,6 +24,8 @@ const CLICK_THRESHOLD_SQUARED = 25; // Threshold for differentiating click from 
 const SHAPE_CLICK_THRESHOLD = 8; // pixels for clicking near a shape
 const MIN_NEW_TEXT_INPUT_WIDTH = 150;
 const DOUBLE_CLICK_THRESHOLD_MS = 300;
+const PAN_TO_TOKEN_DURATION = 300; // ms for smooth pan
+const FLOURISH_ANIMATION_DURATION = 500; // ms for token flourish
 
 
 const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
@@ -161,7 +163,7 @@ export default function BattleGrid({
   activeTurnTokenId,
   currentTextFontSize,
   onTokenDelete,
-  onTokenErasedOnGrid, // Added new prop
+  onTokenErasedOnGrid,
   onTokenImageChangeRequest,
   escapePressCount,
   selectedTokenId, setSelectedTokenId,
@@ -234,6 +236,9 @@ export default function BattleGrid({
     y: number;
   } | null>(null);
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const animationFrameId = useRef<number | null>(null);
+  const [flourishingTokenId, setFlourishingTokenId] = useState<string | null>(null);
 
 
   const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
@@ -494,14 +499,19 @@ export default function BattleGrid({
     if (tokenIdToFocus && svgRef.current) {
       const token = tokens.find(t => t.id === tokenIdToFocus);
       if (token) {
-        const tokenActualSize = (token.size || 1);
-        const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
+        if (animationFrameId.current) {
+          cancelAnimationFrame(animationFrameId.current);
+        }
+        setFlourishingTokenId(token.id);
+        setTimeout(() => setFlourishingTokenId(null), FLOURISH_ANIMATION_DURATION);
 
+        const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
+        const tokenActualSize = token.size || 1;
         const tokenSvgX = token.x * cellSize + tokenActualSize * cellSize / 2;
         const tokenSvgY = token.y * cellSize + tokenActualSize * cellSize / 2;
 
-        let newVx = tokenSvgX - currentVw / 2;
-        let newVy = tokenSvgY - currentVh / 2;
+        let targetVx = tokenSvgX - currentVw / 2;
+        let targetVy = tokenSvgY - currentVh / 2;
 
         const currentBorderWidth = showGridLines ? BORDER_WIDTH_WHEN_VISIBLE : 0;
         const svgPadding = currentBorderWidth / 2;
@@ -511,26 +521,60 @@ export default function BattleGrid({
         const absoluteContentHeight = numRows * cellSize + currentBorderWidth;
 
         if (currentVw >= absoluteContentWidth) {
-          newVx = absoluteContentMinX + (absoluteContentWidth - currentVw) / 2;
+          targetVx = absoluteContentMinX + (absoluteContentWidth - currentVw) / 2;
         } else {
-          newVx = Math.max(absoluteContentMinX, Math.min(newVx, absoluteContentMinX + absoluteContentWidth - currentVw));
+          targetVx = Math.max(absoluteContentMinX, Math.min(targetVx, absoluteContentMinX + absoluteContentWidth - currentVw));
         }
 
         if (currentVh >= absoluteContentHeight) {
-          newVy = absoluteContentMinY + (absoluteContentHeight - currentVh) / 2;
+          targetVy = absoluteContentMinY + (absoluteContentHeight - currentVh) / 2;
         } else {
-          newVy = Math.max(absoluteContentMinY, Math.min(newVy, absoluteContentMinY + absoluteContentHeight - currentVh));
+          targetVy = Math.max(absoluteContentMinY, Math.min(targetVy, absoluteContentMinY + absoluteContentHeight - currentVh));
         }
 
-        setViewBox(`${newVx} ${newVy} ${currentVw} ${currentVh}`);
-        if (onFocusHandled) {
-          onFocusHandled();
-        }
+        const startViewBoxState = { vx: currentVx, vy: currentVy, vw: currentVw, vh: currentVh };
+        const targetViewBoxState = { vx: targetVx, vy: targetVy, vw: currentVw, vh: currentVh };
+
+        let startTime: number | null = null;
+
+        const animatePan = (timestamp: number) => {
+          if (!startTime) startTime = timestamp;
+          const elapsedTime = timestamp - startTime;
+          const progress = Math.min(elapsedTime / PAN_TO_TOKEN_DURATION, 1);
+          const easedProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+
+          const nextVx = startViewBoxState.vx + (targetViewBoxState.vx - startViewBoxState.vx) * easedProgress;
+          const nextVy = startViewBoxState.vy + (targetViewBoxState.vy - startViewBoxState.vy) * easedProgress;
+          
+          setViewBox(`${nextVx} ${nextVy} ${startViewBoxState.vw} ${startViewBoxState.vh}`);
+
+          if (progress < 1) {
+            animationFrameId.current = requestAnimationFrame(animatePan);
+          } else {
+            setViewBox(`${targetViewBoxState.vx} ${targetViewBoxState.vy} ${targetViewBoxState.vw} ${targetViewBoxState.vh}`);
+            if (onFocusHandled) onFocusHandled();
+          }
+        };
+        animationFrameId.current = requestAnimationFrame(animatePan);
+
       } else if (onFocusHandled) {
-        onFocusHandled(); 
+        onFocusHandled();
+      }
+    } else { // tokenIdToFocus is null or svgRef.current is null
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
       }
     }
   }, [tokenIdToFocus, tokens, viewBox, cellSize, numCols, numRows, showGridLines, setViewBox, onFocusHandled]);
+
+  // Cleanup effect for animation frame
+  useEffect(() => {
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, []);
 
 
   const eraseContentAtCell = useCallback((gridX: number, gridY: number) => {
@@ -543,7 +587,7 @@ export default function BattleGrid({
     });
 
     const tokensToBeErasedByThisCellAction: string[] = [];
-    tokens.forEach(token => { // Use the `tokens` prop (current state from BattleBoardPage)
+    tokens.forEach(token => { 
         const tokenSize = token.size || 1;
         const tokenIsInThisEraseCell = gridX >= token.x && gridX < token.x + tokenSize &&
                                  gridY >= token.y && gridY < token.y + tokenSize;
@@ -592,7 +636,7 @@ export default function BattleGrid({
         return !(cellCenterX >= obj.x && cellCenterX <= obj.x + obj.width &&
                  cellCenterY >= obj.y && cellCenterY <= obj.y + obj.height);
     }));
-  }, [setGridCells, tokens, setTokens, setDrawnShapes, setTextObjects, cellSize, onTokenErasedOnGrid]); // Added dependencies
+  }, [setGridCells, tokens, setTokens, setDrawnShapes, setTextObjects, cellSize, onTokenErasedOnGrid]);
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
     if (event.button === 2) return; 
@@ -732,7 +776,6 @@ export default function BattleGrid({
       case 'paint_cell':
         setIsPainting(true);
         setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-        // Initialize pending cells for the stroke
         const initialPendingCells = gridCells.map(row => row.map(cell => ({ ...cell })));
         if (initialPendingCells[gridY]?.[gridX]) {
             initialPendingCells[gridY][gridX].color = selectedColor;
@@ -1130,17 +1173,17 @@ export default function BattleGrid({
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
         }
-    } else if (isPainting && activeTool === 'paint_cell') {
+    } else if (isPainting && activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
         const gridX = Math.floor(pos.x / cellSize);
         const gridY = Math.floor(pos.y / cellSize);
         if (gridX >= 0 && gridX < numCols && gridY >= 0 && gridY < numRows) {
             setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-            if (pendingGridCellsDuringPaint &&
-                pendingGridCellsDuringPaint[gridY]?.[gridX]?.color !== selectedColor) {
-                const updatedPendingCells = pendingGridCellsDuringPaint.map(row => row.map(cell => ({ ...cell })));
-                if (updatedPendingCells[gridY]?.[gridX]) {
-                   updatedPendingCells[gridY][gridX].color = selectedColor;
-                }
+            if (pendingGridCellsDuringPaint[gridY]?.[gridX]?.color !== selectedColor) {
+                const updatedPendingCells = pendingGridCellsDuringPaint.map((row, rIdx) => 
+                    row.map((cell, cIdx) => 
+                        (rIdx === gridY && cIdx === gridX) ? { ...cell, color: selectedColor } : cell
+                    )
+                );
                 setPendingGridCellsDuringPaint(updatedPendingCells);
             }
         } else {
@@ -1256,7 +1299,7 @@ export default function BattleGrid({
     }
     if (isPainting) {
         if (activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
-            setGridCells(pendingGridCellsDuringPaint);
+            setGridCells(pendingGridCellsDuringPaint); // Commit the entire stroke
             setPendingGridCellsDuringPaint(null);
         }
         setIsPainting(false);
@@ -1303,9 +1346,9 @@ export default function BattleGrid({
       setPanStart(null);
     }
     
-    if (isErasing || isPainting || activeTool === 'place_token') {
+    if (isErasing || (isPainting && activeTool === 'paint_cell') || activeTool === 'place_token') {
         if (isPainting && activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
-            setGridCells(pendingGridCellsDuringPaint);
+            setGridCells(pendingGridCellsDuringPaint); // Commit stroke on mouse leave
             setPendingGridCellsDuringPaint(null);
         }
         setIsErasing(false);
@@ -1716,8 +1759,9 @@ export default function BattleGrid({
           const isTokenActiveTurn = token.id === activeTurnTokenId;
           const isTokenSelectedByClick = token.id === selectedTokenId;
           const isTokenLabelVisible = showAllLabels || isTokenSelectedByClick;
+          const isFlourishing = token.id === flourishingTokenId;
 
-          const fixedInputWidth = cellSize * 4; // Example: 120px if cellSize is 30
+          const fixedInputWidth = cellSize * 4; 
           const fixedInputHeight = 20;
 
           return (
@@ -1727,11 +1771,13 @@ export default function BattleGrid({
               onMouseEnter={() => setHoveredTokenId(token.id)}
               onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
+                'origin-center', // Ensure scaling animations are centered
                 activeTool === 'select' && !isCurrentlyEditingThisToken && !draggingToken && !rightClickPopoverState && 'cursor-pointer',
                 activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditingThisToken && 'cursor-grabbing',
                 isCurrentlyEditingThisToken && 'cursor-text',
                 'drop-shadow-md', 
-                isTokenActiveTurn && "animate-pulse-token origin-center" 
+                isTokenActiveTurn && "animate-pulse-token",
+                isFlourishing && "animate-focus-flourish"
               )}
             >
               <circle

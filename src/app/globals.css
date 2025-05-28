@@ -83,3 +83,22 @@
     @apply h-full;
   }
 }
+
+@layer utilities {
+  .animate-pulse-token {
+    animation: pulse-token-animation 1.5s infinite ease-in-out;
+  }
+  @keyframes pulse-token-animation {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .animate-focus-flourish {
+    animation: focus-flourish-animation 0.5s ease-out forwards;
+  }
+  @keyframes focus-flourish-animation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+}
