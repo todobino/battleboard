@@ -193,9 +193,9 @@ export default function BattleGrid({
 
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
-  // Stores the *snapped grid cell* where the token would drop / is hovering over
+  // Stores the *snapped grid cell* where the token would drop / is hovering over (if valid)
   const [draggingTokenGridPosition, setDraggingTokenGridPosition] = useState<Point | null>(null);
-  // Stores the *actual visual SVG position* of the token being dragged
+  // Stores the *snapped visual SVG position* of the token being dragged
   const [draggedTokenVisualPosition, setDraggedTokenVisualPosition] = useState<Point | null>(null);
   const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null);
 
@@ -676,8 +676,9 @@ export default function BattleGrid({
         setSelectedTextObjectId(null);
         setDraggingToken(clickedToken);
         setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
+        // Initialize visual position to the token's current snapped position
         setDraggedTokenVisualPosition({ x: clickedToken.x * cellSize, y: clickedToken.y * cellSize });
-        setDraggingTokenGridPosition(null); 
+        setDraggingTokenGridPosition({ x: clickedToken.x, y: clickedToken.y }); // Assume initial pos is valid for drop
 
         if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
           setGhostToken({ ...clickedToken }); // Create ghost
@@ -686,7 +687,7 @@ export default function BattleGrid({
           const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
           setMovementMeasureLine({
             startSvgCenter: { x: startSvgCenterX, y: startSvgCenterY },
-            currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY },
+            currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, // Initial line points to self
             distanceText: '0 ft',
           });
         }
@@ -1102,34 +1103,52 @@ export default function BattleGrid({
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       setRightClickPopoverState(null);
       const currentMouseSvgPos = getMousePosition(event);
-      
-      // Update visual position for smooth dragging
-      const newVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
-      const newVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
-      setDraggedTokenVisualPosition({ x: newVisualSvgX, y: newVisualSvgY });
-
-      // Calculate snapped grid position for logic (occupancy, drop)
       const tokenActualSize = draggingToken.size || 1;
-      const gridX = Math.floor(newVisualSvgX / cellSize);
-      const gridY = Math.floor(newVisualSvgY / cellSize);
-      const clampedGridX = Math.max(0, Math.min(gridX, numCols - tokenActualSize));
-      const clampedGridY = Math.max(0, Math.min(gridY, numRows - tokenActualSize));
-
-      const isTargetOccupiedByOther = isSquareOccupied(clampedGridX, clampedGridY, tokenActualSize, tokens, numCols, numRows, draggingToken.id);
       
-      if (!isTargetOccupiedByOther) {
-          if (!draggingTokenGridPosition || draggingTokenGridPosition.x !== clampedGridX || draggingTokenGridPosition.y !== clampedGridY) {
-              setDraggingTokenGridPosition({ x: clampedGridX, y: clampedGridY });
-          }
-      } 
+      // Calculate the visual top-left if the token were to follow the cursor perfectly
+      const smoothVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
+      const smoothVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
+
+      // Determine the grid cell the token's top-left would snap to
+      let potentialSnapGridX = Math.floor(smoothVisualSvgX / cellSize);
+      let potentialSnapGridY = Math.floor(smoothVisualSvgY / cellSize);
+
+      // Clamp this snapped position so the token's origin doesn't make it go out of bounds
+      const clampedSnapGridX = Math.max(0, Math.min(potentialSnapGridX, numCols - tokenActualSize));
+      const clampedSnapGridY = Math.max(0, Math.min(potentialSnapGridY, numRows - tokenActualSize));
+      
+      // Update the visual position of the token to this snapped grid location
+      setDraggedTokenVisualPosition({ x: clampedSnapGridX * cellSize, y: clampedSnapGridY * cellSize });
+      
+      // Check if this snapped location is a valid drop target (within bounds and not occupied by others)
+      const isTargetSquareValidForDrop = !isSquareOccupied(
+        clampedSnapGridX,
+        clampedSnapGridY,
+        tokenActualSize,
+        tokens,
+        numCols,
+        numRows,
+        draggingToken.id
+      );
+
+      if (isTargetSquareValidForDrop) {
+          // If valid, this is where the token would be dropped if mouse is released now
+          setDraggingTokenGridPosition({ x: clampedSnapGridX, y: clampedSnapGridY });
+      } else {
+          // If the current snapped location is invalid, clear the logical drop position.
+          // This means if the user releases the mouse now, the token won't move (snaps back to original).
+          setDraggingTokenGridPosition(null);
+      }
       setHoveredCellWhilePaintingOrErasing(null);
 
+
       if (ghostToken && movementMeasureLine && ['player', 'enemy', 'ally'].includes(draggingToken.type)) {
-        const hoveredGridCellX = Math.floor(currentMouseSvgPos.x / cellSize);
-        const hoveredGridCellY = Math.floor(currentMouseSvgPos.y / cellSize);
+        // Measurement line points to the center of the cell the MOUSE CURSOR is over
+        const hoveredGridCellXForMeasure = Math.floor(currentMouseSvgPos.x / cellSize);
+        const hoveredGridCellYForMeasure = Math.floor(currentMouseSvgPos.y / cellSize);
         
-        const currentTargetSvgCenterX = hoveredGridCellX * cellSize + cellSize / 2;
-        const currentTargetSvgCenterY = hoveredGridCellY * cellSize + cellSize / 2;
+        const currentTargetSvgCenterX = hoveredGridCellXForMeasure * cellSize + cellSize / 2;
+        const currentTargetSvgCenterY = hoveredGridCellYForMeasure * cellSize + cellSize / 2;
 
         const dxSvg = currentTargetSvgCenterX - movementMeasureLine.startSvgCenter.x;
         const dySvg = currentTargetSvgCenterY - movementMeasureLine.startSvgCenter.y;
@@ -1309,11 +1328,12 @@ export default function BattleGrid({
 
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
-      if (draggingTokenGridPosition) { // Use the snapped grid position for the move action
+      if (draggingTokenGridPosition) { // Use the snapped grid position for the move action (if valid)
         if (onTokenMove) {
             onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
         }
       }
+      // If draggingTokenGridPosition is null, token effectively snaps back to original spot as onTokenMove is not called
       setDraggingToken(null);
       setDragOffset(null);
       setDraggingTokenGridPosition(null);
@@ -1894,8 +1914,10 @@ export default function BattleGrid({
 
           let currentTransform: string;
           if (draggingToken && token.id === draggingToken.id && draggedTokenVisualPosition) {
+            // If this token is being dragged, use its snapped visual position
             currentTransform = `translate(${draggedTokenVisualPosition.x}, ${draggedTokenVisualPosition.y})`;
           } else {
+            // Otherwise, use its committed grid position
             currentTransform = `translate(${token.x * cellSize}, ${token.y * cellSize})`;
           }
 
