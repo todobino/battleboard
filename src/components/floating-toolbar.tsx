@@ -161,10 +161,8 @@ export default function FloatingToolbar({
           onClick={toggleToolbarPosition}
           className={cn(
             "mr-1",
-            // Default state: blue icon, blue border, transparent bg
-            "border-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-bg))] bg-background",
-            // Hover state: blue background, white icon
-            "hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]"
+            "bg-[hsl(var(--app-blue-bg))] border-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))]",
+            "hover:bg-[hsl(var(--app-blue-hover-bg))]"
           )}
         >
           {isToolbarAtTop
@@ -370,17 +368,18 @@ export default function FloatingToolbar({
           onClick={onRedo}
           disabled={!canRedo}
         />
+        <Separator orientation="vertical" className="h-8 bg-border mx-1" />
 
         <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
           <Tooltip>
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="default" // Changed from outline to default for background color control
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",
-                    "bg-card border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   )}
                   aria-label="Reset Board"
                 >
