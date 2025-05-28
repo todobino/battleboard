@@ -193,7 +193,10 @@ export default function BattleGrid({
 
   const [draggingToken, setDraggingToken] = useState<TokenType | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
-  const [draggingTokenPosition, setDraggingTokenPosition] = useState<Point | null>(null);
+  // Stores the *snapped grid cell* where the token would drop / is hovering over
+  const [draggingTokenGridPosition, setDraggingTokenGridPosition] = useState<Point | null>(null);
+  // Stores the *actual visual SVG position* of the token being dragged
+  const [draggedTokenVisualPosition, setDraggedTokenVisualPosition] = useState<Point | null>(null);
   const [mouseDownPos, setMouseDownPos] = useState<Point | null>(null);
 
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -673,10 +676,11 @@ export default function BattleGrid({
         setSelectedTextObjectId(null);
         setDraggingToken(clickedToken);
         setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
-        setDraggingTokenPosition(null); 
+        setDraggedTokenVisualPosition({ x: clickedToken.x * cellSize, y: clickedToken.y * cellSize });
+        setDraggingTokenGridPosition(null); 
 
         if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
-          setGhostToken({ ...clickedToken });
+          setGhostToken({ ...clickedToken }); // Create ghost
           const tokenActualSize = clickedToken.size || 1;
           const startSvgCenterX = clickedToken.x * cellSize + (tokenActualSize * cellSize) / 2;
           const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
@@ -1098,19 +1102,24 @@ export default function BattleGrid({
     } else if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       setRightClickPopoverState(null);
       const currentMouseSvgPos = getMousePosition(event);
+      
+      // Update visual position for smooth dragging
+      const newVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
+      const newVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
+      setDraggedTokenVisualPosition({ x: newVisualSvgX, y: newVisualSvgY });
+
+      // Calculate snapped grid position for logic (occupancy, drop)
       const tokenActualSize = draggingToken.size || 1;
-      const newTargetTokenOriginX = currentMouseSvgPos.x - dragOffset.x;
-      const newTargetTokenOriginY = currentMouseSvgPos.y - dragOffset.y;
-      const gridX = Math.floor(newTargetTokenOriginX / cellSize);
-      const gridY = Math.floor(newTargetTokenOriginY / cellSize);
+      const gridX = Math.floor(newVisualSvgX / cellSize);
+      const gridY = Math.floor(newVisualSvgY / cellSize);
       const clampedGridX = Math.max(0, Math.min(gridX, numCols - tokenActualSize));
       const clampedGridY = Math.max(0, Math.min(gridY, numRows - tokenActualSize));
 
       const isTargetOccupiedByOther = isSquareOccupied(clampedGridX, clampedGridY, tokenActualSize, tokens, numCols, numRows, draggingToken.id);
       
       if (!isTargetOccupiedByOther) {
-          if (!draggingTokenPosition || draggingTokenPosition.x !== clampedGridX || draggingTokenPosition.y !== clampedGridY) {
-              setDraggingTokenPosition({ x: clampedGridX, y: clampedGridY });
+          if (!draggingTokenGridPosition || draggingTokenGridPosition.x !== clampedGridX || draggingTokenGridPosition.y !== clampedGridY) {
+              setDraggingTokenGridPosition({ x: clampedGridX, y: clampedGridY });
           }
       } 
       setHoveredCellWhilePaintingOrErasing(null);
@@ -1300,14 +1309,15 @@ export default function BattleGrid({
 
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
-      if (draggingTokenPosition) { 
+      if (draggingTokenGridPosition) { // Use the snapped grid position for the move action
         if (onTokenMove) {
-            onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+            onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
         }
       }
       setDraggingToken(null);
       setDragOffset(null);
-      setDraggingTokenPosition(null);
+      setDraggingTokenGridPosition(null);
+      setDraggedTokenVisualPosition(null);
       setGhostToken(null);
       setMovementMeasureLine(null);
     }
@@ -1401,12 +1411,13 @@ export default function BattleGrid({
     }
 
     if (draggingToken) {
-        if (draggingTokenPosition && onTokenMove) {
-             onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
+        if (draggingTokenGridPosition && onTokenMove) {
+             onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
         }
         setDraggingToken(null);
         setDragOffset(null);
-        setDraggingTokenPosition(null);
+        setDraggingTokenGridPosition(null);
+        setDraggedTokenVisualPosition(null);
         setMouseDownPos(null);
         setGhostToken(null);
         setMovementMeasureLine(null);
@@ -1853,14 +1864,6 @@ export default function BattleGrid({
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
           const tokenActualSize = token.size || 1; 
 
-          let currentX = token.x; 
-          let currentY = token.y; 
-
-          if (draggingToken && token.id === draggingToken.id && draggingTokenPosition && !editingTokenId) {
-            currentX = draggingTokenPosition.x;
-            currentY = draggingTokenPosition.y;
-          }
-
           const iconDisplaySize = tokenActualSize * cellSize * 0.8; 
           const iconOffset = (tokenActualSize * cellSize - iconDisplaySize) / 2;
 
@@ -1889,14 +1892,18 @@ export default function BattleGrid({
           const fixedInputWidth = cellSize * 4; 
           const fixedInputHeight = 20;
 
+          let currentTransform: string;
+          if (draggingToken && token.id === draggingToken.id && draggedTokenVisualPosition) {
+            currentTransform = `translate(${draggedTokenVisualPosition.x}, ${draggedTokenVisualPosition.y})`;
+          } else {
+            currentTransform = `translate(${token.x * cellSize}, ${token.y * cellSize})`;
+          }
+
+
           return (
             <g
               key={token.id}
-              transform={draggingToken && token.id === draggingToken.id && !editingTokenId && dragOffset
-                ? `translate(${getMousePosition({clientX: 0, clientY: 0} as MouseEvent).x + (event?.clientX || 0) - svgRef.current!.getScreenCTM()!.e / svgRef.current!.getScreenCTM()!.a - dragOffset.x}, 
-                               ${getMousePosition({clientX: 0, clientY: 0} as MouseEvent).y + (event?.clientY || 0) - svgRef.current!.getScreenCTM()!.f / svgRef.current!.getScreenCTM()!.d - dragOffset.y})`
-                : `translate(${currentX * cellSize}, ${currentY * cellSize})`
-              }
+              transform={currentTransform}
               onMouseEnter={() => setHoveredTokenId(token.id)}
               onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
