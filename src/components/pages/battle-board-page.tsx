@@ -652,20 +652,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     } else if (!isCombatActive) {
         setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
     }
-
-    toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
-  }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
+    // Toast removed from here
+  }, [participants, currentParticipantIndex, isCombatActive, roundCounter]);
 
   const handleTokenErasedOnGrid = useCallback((tokenId: string) => {
     const participantLinked = participants.find(p => p.tokenId === tokenId);
     if (participantLinked) {
-      // The handleRemoveParticipantFromList function already handles toasts and combat state adjustments.
-      // It will also attempt to "reset" the token, but since the token is being removed from the `tokens`
-      // array by BattleGrid's setTokens, this part of handleRemoveParticipantFromList will effectively be a no-op for the token itself.
       handleRemoveParticipantFromList(participantLinked.id);
     }
-    // The token itself is removed from the `tokens` state via the `setTokens` prop
-    // called by `BattleGrid` after `onTokenErasedOnGrid`.
   }, [participants, handleRemoveParticipantFromList]);
 
   const handleTokenDelete = useCallback((tokenId: string) => {
@@ -675,14 +669,13 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setTokens(prev => prev.filter(t => t.id !== tokenId));
 
     if (participantLinked) {
-      // Use handleRemoveParticipantFromList which correctly updates combat state
       handleRemoveParticipantFromList(participantLinked.id);
     }
 
     if (selectedTokenId === tokenId) setSelectedTokenId(null);
 
     if (participantLinked) {
-        // Toast is handled by handleRemoveParticipantFromList if participantLinked
+        // Participant removal handles its own (lack of) toast now
     } else {
         toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` });
     }
