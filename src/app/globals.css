@@ -94,11 +94,15 @@
   }
 
   .animate-focus-flourish {
-    animation: focus-flourish-animation 0.5s ease-out forwards;
+    animation: focus-flourish-animation 0.5s ease-out;
   }
   @keyframes focus-flourish-animation {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    /* The base filter is applied by the 'drop-shadow-md' class on the token's <g> element.
+       This animation temporarily overrides that filter for the flash effect.
+       At 0% and 100% (implicitly, as the animation isn't 'forwards'), the
+       'drop-shadow-md' filter will be in effect. */
+    50% { /* Peak of the flash */
+      filter: drop-shadow(0 0 8px hsl(var(--accent))) drop-shadow(0 0 12px hsl(var(--accent) / 0.7));
+    }
   }
 }
