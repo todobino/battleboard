@@ -8,7 +8,7 @@ import BattleGrid from '@/components/battle-grid/battle-grid';
 import FloatingToolbar from '@/components/floating-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import WelcomeDialog from '@/components/welcome-dialog';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter as FormDialogFooter,
-  DialogHeader,
+  DialogHeader as FormDialogHeader, // Aliased to avoid conflict with SidebarHeader
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -599,7 +599,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     });
   }, [tokens, toast]);
 
-  const handleRemoveParticipantFromList = useCallback((participantId: string) => {
+ const handleRemoveParticipantFromList = useCallback((participantId: string) => {
     const participantToRemove = participants.find(p => p.id === participantId);
     if (!participantToRemove) return;
 
@@ -607,6 +607,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < participants.length ? participants[currentParticipantIndex].id : null;
 
     setParticipants(updatedParticipants);
+
+    // Unlink token but do not delete or change its appearance
+    // The token's `instanceName` and other visual properties remain as they were.
+    // Only the `tokenId` on the participant is effectively "removed" by the participant being deleted.
 
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
@@ -637,6 +641,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         }
     }
   }, [participants, currentParticipantIndex, isCombatActive]);
+
 
   const handleTokenErasedOnGrid = useCallback((tokenId: string) => {
     setTokens(prev => prev.filter(t => t.id !== tokenId));
@@ -1357,20 +1362,28 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarContent className="p-3 flex flex-col flex-grow">
-            <InitiativeTrackerPanel
-              participantsProp={participants}
-              tokens={tokens}
-              currentParticipantIndex={currentParticipantIndex}
-              roundCounter={roundCounter}
-              onRemoveParticipant={handleRemoveParticipantFromList}
-              onRenameParticipant={handleRenameParticipant}
-              onChangeParticipantTokenImage={handleChangeParticipantTokenImage}
-              onFocusToken={handleFocusToken}
-              onMoveParticipantUp={handleMoveParticipantUp}
-              onMoveParticipantDown={handleMoveParticipantDown}
-              onUpdateParticipantStats={handleUpdateParticipantStats}
-            />
+          <SidebarContent className="flex flex-col flex-grow p-0">
+            <SidebarHeader className="p-3 border-b border-sidebar-border">
+                <div className="text-lg flex justify-between items-center text-sidebar-foreground">
+                <span className="font-semibold">Turn Order</span>
+                <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
+                </div>
+            </SidebarHeader>
+            <div className="flex-grow overflow-auto p-3">
+                <InitiativeTrackerPanel
+                participantsProp={participants}
+                tokens={tokens}
+                currentParticipantIndex={currentParticipantIndex}
+                roundCounter={roundCounter}
+                onRemoveParticipant={handleRemoveParticipantFromList}
+                onRenameParticipant={handleRenameParticipant}
+                onChangeParticipantTokenImage={handleChangeParticipantTokenImage}
+                onFocusToken={handleFocusToken}
+                onMoveParticipantUp={handleMoveParticipantUp}
+                onMoveParticipantDown={handleMoveParticipantDown}
+                onUpdateParticipantStats={handleUpdateParticipantStats}
+                />
+            </div>
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
@@ -1382,7 +1395,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                         <Button className="flex-1"> Add Combatant </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-2xl">
-                        <DialogHeader>
+                        <FormDialogHeader>
                           <div className="flex items-center gap-3">
                             <div className="flex-shrink-0">
                               <Button
@@ -1411,7 +1424,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                               <DialogDescription>Enter the details for the new combatant.</DialogDescription>
                             </div>
                           </div>
-                        </DialogHeader>
+                        </FormDialogHeader>
                         <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
 
                           <div className="space-y-1">
@@ -1496,7 +1509,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     onClick={handleStartCombat}
                     className="w-full"
                     disabled={participants.length === 0}
-                    variant="default" // Using default variant for primary action
+                    variant="default"
                   >
                     <Play className="mr-2 h-4 w-4" /> Start Combat
                   </Button>
@@ -1515,3 +1528,4 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
+

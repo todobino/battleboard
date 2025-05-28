@@ -34,7 +34,7 @@ export default function InitiativeTrackerPanel({
   participantsProp = [],
   tokens,
   currentParticipantIndex,
-  roundCounter,
+  roundCounter, // Prop kept, but display moved to parent
   onRemoveParticipant,
   onRenameParticipant,
   onChangeParticipantTokenImage,
@@ -218,13 +218,7 @@ export default function InitiativeTrackerPanel({
 
   return (
     <div className="flex flex-col h-full min-w-0">
-      <div className="pb-3 mb-3 border-b border-sidebar-border">
-        <div className="text-lg flex justify-between items-center text-sidebar-foreground">
-          <span className="font-semibold">Turn Order</span>
-          <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
-        </div>
-      </div>
-
+      {/* Header with Title and Round Counter has been moved to BattleBoardPage */}
       <div className="flex flex-col flex-grow overflow-hidden min-w-0">
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
