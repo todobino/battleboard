@@ -26,6 +26,7 @@ const MIN_NEW_TEXT_INPUT_WIDTH = 150;
 const DOUBLE_CLICK_THRESHOLD_MS = 300;
 const PAN_TO_TOKEN_DURATION = 300; // ms for smooth pan
 const FLOURISH_ANIMATION_DURATION = 500; // ms for token flourish
+const GHOST_TOKEN_OPACITY = 0.4;
 
 
 const snapToCellCenter = (pos: Point, cellSize: number): Point => ({
@@ -239,6 +240,13 @@ export default function BattleGrid({
 
   const animationFrameId = useRef<number | null>(null);
   const [flourishingTokenId, setFlourishingTokenId] = useState<string | null>(null);
+
+  const [ghostToken, setGhostToken] = useState<TokenType | null>(null);
+  const [movementMeasureLine, setMovementMeasureLine] = useState<{
+    startSvgCenter: Point;
+    currentSvgCenter: Point;
+    distanceText: string;
+  } | null>(null);
 
 
   const getMousePosition = useCallback((event: React.MouseEvent<SVGSVGElement> | React.WheelEvent<SVGSVGElement> | MouseEvent): Point => {
@@ -666,6 +674,18 @@ export default function BattleGrid({
         setDraggingToken(clickedToken);
         setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
         setDraggingTokenPosition(null); 
+
+        if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
+          setGhostToken({ ...clickedToken });
+          const tokenActualSize = clickedToken.size || 1;
+          const startSvgCenterX = clickedToken.x * cellSize + (tokenActualSize * cellSize) / 2;
+          const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
+          setMovementMeasureLine({
+            startSvgCenter: { x: startSvgCenterX, y: startSvgCenterY },
+            currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY },
+            distanceText: '0 ft',
+          });
+        }
         return;
       }
 
@@ -1094,6 +1114,28 @@ export default function BattleGrid({
           }
       } 
       setHoveredCellWhilePaintingOrErasing(null);
+
+      if (ghostToken && movementMeasureLine && ['player', 'enemy', 'ally'].includes(draggingToken.type)) {
+        const hoveredGridCellX = Math.floor(currentMouseSvgPos.x / cellSize);
+        const hoveredGridCellY = Math.floor(currentMouseSvgPos.y / cellSize);
+        
+        const currentTargetSvgCenterX = hoveredGridCellX * cellSize + cellSize / 2;
+        const currentTargetSvgCenterY = hoveredGridCellY * cellSize + cellSize / 2;
+
+        const dxSvg = currentTargetSvgCenterX - movementMeasureLine.startSvgCenter.x;
+        const dySvg = currentTargetSvgCenterY - movementMeasureLine.startSvgCenter.y;
+        const distInPixels = Math.sqrt(dxSvg * dxSvg + dySvg * dySvg);
+        const distInSquares = distInPixels / cellSize;
+        const distInFeet = distInSquares * FEET_PER_SQUARE;
+        const roundedDistInFeet = Math.round(distInFeet * 10) / 10;
+
+        setMovementMeasureLine(prev => ({
+          ...prev!,
+          currentSvgCenter: { x: currentTargetSvgCenterX, y: currentTargetSvgCenterY },
+          distanceText: `${roundedDistInFeet} ft`,
+        }));
+      }
+
     } else if (draggingTextObjectId && textObjectDragOffset && activeTool === 'select' && !editingTextObjectId) {
         setRightClickPopoverState(null);
         const newX = pos.x - textObjectDragOffset.x;
@@ -1266,6 +1308,8 @@ export default function BattleGrid({
       setDraggingToken(null);
       setDragOffset(null);
       setDraggingTokenPosition(null);
+      setGhostToken(null);
+      setMovementMeasureLine(null);
     }
 
     if (draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) {
@@ -1364,6 +1408,8 @@ export default function BattleGrid({
         setDragOffset(null);
         setDraggingTokenPosition(null);
         setMouseDownPos(null);
+        setGhostToken(null);
+        setMovementMeasureLine(null);
     }
     if (draggingTextObjectId) {
         setDraggingTextObjectId(null);
@@ -1504,6 +1550,15 @@ export default function BattleGrid({
               </clipPath>
             ) : null
           })}
+          {ghostToken && ghostToken.customImageUrl && (
+            <clipPath key={`clip-ghost-${ghostToken.id}`} id={`clip-ghost-${ghostToken.id}`}>
+               <circle 
+                  cx={(ghostToken.size || 1) * cellSize / 2} 
+                  cy={(ghostToken.size || 1) * cellSize / 2} 
+                  r={(ghostToken.size || 1) * cellSize / 2 * 0.95} 
+              />
+            </clipPath>
+          )}
           <marker id="arrowhead" markerWidth="12" markerHeight="8.4" refX="11.5" refY="4.2" orient="auto">
             <polygon points="0 0, 12 4.2, 0 8.4" fill="hsl(var(--accent))" />
           </marker>
@@ -1724,6 +1779,76 @@ export default function BattleGrid({
           </g>
         )}
 
+        {ghostToken && (
+          <g
+            transform={`translate(${ghostToken.x * cellSize}, ${ghostToken.y * cellSize})`}
+            opacity={GHOST_TOKEN_OPACITY}
+            className="pointer-events-none" 
+          >
+            {((): JSX.Element | null => {
+              const IconComponent = ghostToken.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
+              const tokenActualSize = ghostToken.size || 1;
+              const iconDisplaySize = tokenActualSize * cellSize * 0.8;
+              const iconOffset = (tokenActualSize * cellSize - iconDisplaySize) / 2;
+              const imageDisplaySize = tokenActualSize * cellSize * 0.95;
+              const imageOffset = (tokenActualSize * cellSize - imageDisplaySize) / 2;
+              let backgroundFill = ghostToken.color;
+                if (!ghostToken.customImageUrl) { 
+                    switch (ghostToken.type) {
+                        case 'player': backgroundFill = 'hsl(var(--player-green-bg))'; break;
+                        case 'enemy': backgroundFill = 'hsl(var(--destructive))'; break;
+                        case 'ally': backgroundFill = 'hsl(var(--app-blue-bg))'; break;
+                        case 'item': backgroundFill = ghostToken.color || 'hsl(270, 40%, 30%)'; break; 
+                        case 'terrain': backgroundFill = ghostToken.color || 'hsl(var(--muted))'; break; 
+                        case 'generic': backgroundFill = ghostToken.color || 'hsl(var(--accent))'; break; 
+                        default: backgroundFill = ghostToken.color || 'black'; 
+                    }
+                }
+              return (
+                <>
+                  <circle
+                    cx={tokenActualSize * cellSize / 2}
+                    cy={tokenActualSize * cellSize / 2}
+                    r={tokenActualSize * cellSize / 2}
+                    fill={backgroundFill}
+                    stroke={'hsl(var(--primary-foreground))'}
+                    strokeWidth={1}
+                  />
+                  {ghostToken.customImageUrl ? (
+                     <>
+                      <image
+                        href={ghostToken.customImageUrl}
+                        x={imageOffset}
+                        y={imageOffset}
+                        width={imageDisplaySize}
+                        height={imageDisplaySize}
+                        clipPath={`url(#clip-ghost-${ghostToken.id})`}
+                      />
+                       <circle 
+                        cx={tokenActualSize * cellSize / 2} 
+                        cy={tokenActualSize * cellSize / 2} 
+                        r={tokenActualSize * cellSize / 2 * 0.95} 
+                        fill="none" 
+                        strokeWidth="1.5" 
+                        stroke={'hsl(var(--primary-foreground))'} 
+                      />
+                    </>
+                  ) : IconComponent ? (
+                    <IconComponent
+                      x={iconOffset}
+                      y={iconOffset}
+                      width={iconDisplaySize}
+                      height={iconDisplaySize}
+                      color={'hsl(var(--primary-foreground))'}
+                      strokeWidth={1.5}
+                    />
+                  ) : null}
+                </>
+              );
+            })()}
+          </g>
+        )}
+
         {tokens.map(token => {
           const IconComponent = token.icon as React.FC<LucideProps & {x?: number; y?:number; width?: string | number; height?: string | number; color?: string}>;
           const tokenActualSize = token.size || 1; 
@@ -1767,11 +1892,15 @@ export default function BattleGrid({
           return (
             <g
               key={token.id}
-              transform={`translate(${currentX * cellSize}, ${currentY * cellSize})`}
+              transform={draggingToken && token.id === draggingToken.id && !editingTokenId && dragOffset
+                ? `translate(${getMousePosition({clientX: 0, clientY: 0} as MouseEvent).x + (event?.clientX || 0) - svgRef.current!.getScreenCTM()!.e / svgRef.current!.getScreenCTM()!.a - dragOffset.x}, 
+                               ${getMousePosition({clientX: 0, clientY: 0} as MouseEvent).y + (event?.clientY || 0) - svgRef.current!.getScreenCTM()!.f / svgRef.current!.getScreenCTM()!.d - dragOffset.y})`
+                : `translate(${currentX * cellSize}, ${currentY * cellSize})`
+              }
               onMouseEnter={() => setHoveredTokenId(token.id)}
               onMouseLeave={() => setHoveredTokenId(null)}
               className={cn(
-                'origin-center', // Ensure scaling animations are centered
+                'origin-center', 
                 activeTool === 'select' && !isCurrentlyEditingThisToken && !draggingToken && !rightClickPopoverState && 'cursor-pointer',
                 activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditingThisToken && 'cursor-grabbing',
                 isCurrentlyEditingThisToken && 'cursor-text',
@@ -2060,6 +2189,31 @@ export default function BattleGrid({
              fill="hsl(var(--accent))"
            />
          )}
+
+        {movementMeasureLine && draggingToken && ghostToken && ['player', 'enemy', 'ally'].includes(ghostToken.type) && (
+          <g stroke="hsl(var(--accent))" strokeWidth="2" fill="none" className="pointer-events-none">
+            <line
+              x1={movementMeasureLine.startSvgCenter.x}
+              y1={movementMeasureLine.startSvgCenter.y}
+              x2={movementMeasureLine.currentSvgCenter.x}
+              y2={movementMeasureLine.currentSvgCenter.y}
+              markerEnd="url(#arrowhead)"
+              strokeDasharray="3 3"
+            />
+            <text
+              x={movementMeasureLine.currentSvgCenter.x + 8} 
+              y={movementMeasureLine.currentSvgCenter.y + 8} 
+              fill="hsl(var(--accent))"
+              fontSize="14" 
+              paintOrder="stroke"
+              stroke="hsl(var(--background))" 
+              strokeWidth="2.5px" 
+              className="select-none font-semibold"
+            >
+              {movementMeasureLine.distanceText}
+            </text>
+          </g>
+        )}
       </svg>
 
       <Popover
@@ -2409,3 +2563,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
