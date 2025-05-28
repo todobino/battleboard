@@ -189,7 +189,7 @@ export default function FloatingToolbar({
 
         <Popover open={isMeasurementPopoverOpen} onOpenChange={setIsMeasurementPopoverOpen}>
            <ToolButton
-            label="Measurement Tools"
+            label="Measurement Tool"
             icon={DraftingCompass}
             onClick={() => {
                 setIsMeasurementPopoverOpen(prev => !prev);
@@ -202,7 +202,7 @@ export default function FloatingToolbar({
                   variant={(isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2'
-                  aria-label="Measurement Tools"
+                  aria-label="Measurement Tool"
                 >
                   <DraftingCompass className="h-5 w-5 text-accent-foreground" />
                 </Button>
