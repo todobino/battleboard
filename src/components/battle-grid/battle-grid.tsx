@@ -25,7 +25,7 @@ const SHAPE_CLICK_THRESHOLD = 8; // pixels for clicking near a shape
 const MIN_NEW_TEXT_INPUT_WIDTH = 150;
 const DOUBLE_CLICK_THRESHOLD_MS = 300;
 const PAN_TO_TOKEN_DURATION = 300; // ms for smooth pan
-const FLOURISH_ANIMATION_DURATION = 500; // ms for token flourish
+// const FLOURISH_ANIMATION_DURATION = 500; // ms for token flourish - REMOVED
 const GHOST_TOKEN_OPACITY = 0.4;
 
 
@@ -242,7 +242,7 @@ export default function BattleGrid({
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
 
   const animationFrameId = useRef<number | null>(null);
-  const [flourishingTokenId, setFlourishingTokenId] = useState<string | null>(null);
+  // const [flourishingTokenId, setFlourishingTokenId] = useState<string | null>(null); // REMOVED
 
   const [ghostToken, setGhostToken] = useState<TokenType | null>(null);
   const [movementMeasureLine, setMovementMeasureLine] = useState<{
@@ -513,8 +513,9 @@ export default function BattleGrid({
         if (animationFrameId.current) {
           cancelAnimationFrame(animationFrameId.current);
         }
-        setFlourishingTokenId(token.id);
-        setTimeout(() => setFlourishingTokenId(null), FLOURISH_ANIMATION_DURATION);
+        // Flourish animation logic removed
+        // setFlourishingTokenId(token.id);
+        // setTimeout(() => setFlourishingTokenId(null), FLOURISH_ANIMATION_DURATION);
 
         const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
         const tokenActualSize = token.size || 1;
@@ -1931,7 +1932,7 @@ export default function BattleGrid({
           const isTokenActiveTurn = token.id === activeTurnTokenId;
           const isTokenSelectedByClick = token.id === selectedTokenId;
           const isTokenLabelVisible = showAllLabels || isTokenSelectedByClick;
-          const isFlourishing = token.id === flourishingTokenId;
+          // const isFlourishing = token.id === flourishingTokenId; // REMOVED
 
           const fixedInputWidth = cellSize * 4; 
           const fixedInputHeight = 20;
@@ -1955,9 +1956,10 @@ export default function BattleGrid({
                 activeTool === 'select' && !isCurrentlyEditingThisToken && !draggingToken && !rightClickPopoverState && 'cursor-pointer',
                 activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditingThisToken && 'cursor-grabbing',
                 isCurrentlyEditingThisToken && 'cursor-text',
-                'drop-shadow-md', 
-                isTokenActiveTurn && "animate-pulse-token",
-                isFlourishing && "animate-focus-flourish"
+                'drop-shadow-md'
+                // Removed animation classes:
+                // isTokenActiveTurn && "animate-pulse-token",
+                // isFlourishing && "animate-focus-flourish"
               )}
             >
               <circle
@@ -1966,12 +1968,12 @@ export default function BattleGrid({
                 r={tokenActualSize * cellSize / 2}
                 fill={backgroundFill}
                 stroke={
-                  isTokenSelectedByClick ? 'hsl(200, 100%, 50%)' : 
+                  isTokenSelectedByClick || isTokenActiveTurn ? 'hsl(var(--ring))' : // Highlight for selected OR active turn
                   hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditingThisToken && !rightClickPopoverState 
                       ? 'hsl(var(--accent))' 
                       : 'hsl(var(--primary-foreground))' 
                 }
-                strokeWidth={isTokenSelectedByClick ? 2 : 1} 
+                strokeWidth={isTokenSelectedByClick || isTokenActiveTurn ? 2 : 1} // Thicker border for selected OR active turn
               />
               {token.customImageUrl ? (
                 <>
