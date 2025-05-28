@@ -33,7 +33,7 @@ interface FloatingToolbarProps extends FloatingToolbarPropsType {}
 
 interface ToolButtonProps {
   label: string;
-  icon: React.ElementType;
+  icon?: React.ElementType; // Made icon optional as children can be used
   tool?: ActiveTool | ActiveTool[];
   currentActiveTool?: ActiveTool;
   onClick?: () => void;
@@ -42,7 +42,7 @@ interface ToolButtonProps {
   variantOverride?: "default" | "outline";
   isActive?: boolean;
   disabled?: boolean;
-  className?: string; // Added className for custom styling
+  className?: string;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled, className }) => {
@@ -59,15 +59,15 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
           size="icon"
           onClick={onClick}
           className={cn(
-            'rounded-md shadow-lg h-10 w-10 p-2', 
+            'rounded-md shadow-lg h-10 w-10 p-2',
             (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted',
-            className 
+            className
           )}
           aria-label={label}
           asChild={asChild}
           disabled={disabled}
         >
-          {children || <IconComponent className="h-5 w-5 text-accent-foreground" />}
+          {children || (IconComponent && <IconComponent className="h-5 w-5 text-accent-foreground" />)}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" align="center">
@@ -89,7 +89,7 @@ export default function FloatingToolbar({
   onUndo, onRedo, canUndo, canRedo,
   onResetBoard,
   defaultBattlemaps,
-  escapePressCount, 
+  escapePressCount,
   toolbarPosition,
   setToolbarPosition,
 }: FloatingToolbarProps) {
@@ -109,7 +109,7 @@ export default function FloatingToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false); // Close reset alert as well
+      setIsResetAlertOpen(false); 
     }
   }, [escapePressCount]);
 
@@ -118,7 +118,6 @@ export default function FloatingToolbar({
     if (setActiveTool) {
       setActiveTool(tool);
     }
-    // Close other popovers if they are not the one being interacted with
     if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_rectangle'].includes(tool) && tool !== 'type_tool') {
         setIsMapSettingsPopoverOpen(false);
         setIsMeasurementPopoverOpen(false);
@@ -149,6 +148,7 @@ export default function FloatingToolbar({
   };
 
   const isToolbarAtTop = toolbarPosition === 'top';
+  const popoverSide = isToolbarAtTop ? "bottom" : "top";
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -158,12 +158,22 @@ export default function FloatingToolbar({
       )}>
         <ToolButton
           label={isToolbarAtTop ? "Move Toolbar to Bottom" : "Move Toolbar to Top"}
-          icon={isToolbarAtTop ? ArrowDownToLine : ArrowUpToLine}
           onClick={toggleToolbarPosition}
-          className="mr-1" 
-        />
+          className={cn(
+            "mr-1",
+            // Default state: blue icon, blue border, transparent bg
+            "border-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-bg))] bg-background",
+            // Hover state: blue background, white icon
+            "hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]"
+          )}
+        >
+          {isToolbarAtTop
+            ? <ArrowDownToLine className="h-5 w-5" />
+            : <ArrowUpToLine className="h-5 w-5" />
+          }
+        </ToolButton>
         <Separator orientation="vertical" className="h-8 bg-border mx-1" />
-        
+
         <ToolButton
           label="Select/Pan"
           icon={MousePointerSquareDashed}
@@ -179,27 +189,27 @@ export default function FloatingToolbar({
             onClick={() => {
                 setIsMapSettingsPopoverOpen(prev => !prev);
             }}
-            isActive={isMapSettingsPopoverOpen} 
+            isActive={isMapSettingsPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
                 <Button
                   variant={(isMapSettingsPopoverOpen) ? 'default' : 'outline'}
                   size="icon"
-                  className='rounded-md shadow-lg h-10 w-10 p-2' 
+                  className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Map Tool"
                 >
                   <Map className="h-5 w-5 text-accent-foreground" />
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-[640px]" side={isToolbarAtTop ? "bottom" : "top"} align="center">
+          <PopoverContent className="w-[640px]" side={popoverSide} align="center">
             <GridSettingsPanel
               showGridLines={showGridLines}
               setShowGridLines={setShowGridLines}
               backgroundImageUrl={backgroundImageUrl}
               setBackgroundImageUrl={setBackgroundImageUrl}
-              setActiveTool={setActiveTool} 
+              setActiveTool={setActiveTool}
               backgroundZoomLevel={backgroundZoomLevel}
               setBackgroundZoomLevel={setBackgroundZoomLevel}
               defaultBattlemaps={defaultBattlemaps}
@@ -228,7 +238,7 @@ export default function FloatingToolbar({
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
+          <PopoverContent className="w-80" side={popoverSide} align="center">
             <MeasurementToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -260,7 +270,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
+          <PopoverContent className="w-80" side={popoverSide} align="center">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}
@@ -290,7 +300,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
+          <PopoverContent className="w-80" side={popoverSide} align="center">
             <ColorToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -322,7 +332,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
+          <PopoverContent className="w-80" side={popoverSide} align="center">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
               onToolSelect={handleShapeToolSelected}
@@ -337,7 +347,7 @@ export default function FloatingToolbar({
           currentActiveTool={activeTool}
           onClick={() => handleToolClick('type_tool')}
         />
-        
+
         <ToolButton
           label="Eraser Tool"
           icon={Eraser}
@@ -378,7 +388,7 @@ export default function FloatingToolbar({
                 </Button>
               </AlertDialogTrigger>
             </TooltipTrigger>
-            <TooltipContent side={isToolbarAtTop ? "bottom" : "top"} align="center">
+            <TooltipContent side={popoverSide} align="center">
               <p>Reset Board</p>
             </TooltipContent>
           </Tooltip>
@@ -394,7 +404,7 @@ export default function FloatingToolbar({
               <AlertDialogAction
                 onClick={() => {
                   onResetBoard();
-                  setIsResetAlertOpen(false); 
+                  setIsResetAlertOpen(false);
                 }}
                 className={buttonVariants({ variant: "destructive" })}
               >
@@ -403,8 +413,9 @@ export default function FloatingToolbar({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
+
       </div>
     </TooltipProvider>
   );
 }
+
