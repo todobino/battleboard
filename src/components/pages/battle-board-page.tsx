@@ -595,22 +595,52 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [tokens, toast]);
 
   const handleTokenDelete = useCallback((tokenId: string) => {
+    const tokenBeingDeleted = tokens.find(t => t.id === tokenId);
+    const participantLinked = participants.find(p => p.tokenId === tokenId);
+
     setTokens(prev => prev.filter(t => t.id !== tokenId));
-    setParticipants(prev => {
-      const newParticipants = prev.map(p => p.tokenId === tokenId ? { ...p, tokenId: undefined } : p);
-      const activeParticipant = prev[currentParticipantIndex];
-      if (activeParticipant && activeParticipant.tokenId === tokenId) {
-        const updatedCurrentParticipant = { ...activeParticipant, tokenId: undefined };
-        const idx = newParticipants.findIndex(p => p.id === activeParticipant.id);
-        if (idx !== -1) {
-          newParticipants[idx] = updatedCurrentParticipant;
+
+    if (participantLinked) {
+      setParticipants(prevParticipants => {
+        const updatedParticipants = prevParticipants.filter(p => p.id !== participantLinked.id);
+        const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < prevParticipants.length ? prevParticipants[currentParticipantIndex].id : null;
+
+        if (updatedParticipants.length === 0) {
+          setCurrentParticipantIndex(-1);
+          if (isCombatActive) setRoundCounter(1);
+          setIsCombatActive(false);
+        } else if (isCombatActive && activeParticipantIdBeforeRemove) {
+            const newActiveIndex = updatedParticipants.findIndex(p => p.id === activeParticipantIdBeforeRemove);
+            if (newActiveIndex !== -1) {
+                setCurrentParticipantIndex(newActiveIndex);
+            } else {
+                // If the deleted participant was the active one, or before it
+                const removedIndexOriginal = prevParticipants.findIndex(p => p.id === participantLinked.id);
+                if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
+                    setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
+                } else if (currentParticipantIndex >= updatedParticipants.length) {
+                     setCurrentParticipantIndex(0);
+                }
+                if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
+                    setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
+                }
+            }
+        } else if (!isCombatActive) {
+             setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
         }
-      }
-      return newParticipants;
-    });
+        return updatedParticipants;
+      });
+    }
+
     if (selectedTokenId === tokenId) setSelectedTokenId(null);
-    toast({ title: "Token Deleted" });
-  }, [currentParticipantIndex, toast, selectedTokenId]);
+
+    if (participantLinked) {
+        toast({ title: "Token & Combatant Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" and linked combatant "${participantLinked.name}" removed.` });
+    } else {
+        toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` });
+    }
+  }, [tokens, participants, currentParticipantIndex, toast, selectedTokenId, isCombatActive]);
+
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
     setTokenToChangeImage(tokenId);
