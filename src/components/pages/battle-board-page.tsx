@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-react'; // Added Play icon
+import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon, GenericTokenIcon } from '@/components/icons';
@@ -191,6 +191,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const [selectedTextObjectId, setSelectedTextObjectId] = useState<string | null>(null);
   const [tokenIdToFocus, setTokenIdToFocus] = useState<string | null>(null);
+  const [toolbarPosition, setToolbarPosition] = useState<'top' | 'bottom'>('top');
 
 
   const rehydrateToken = useCallback((tokenFromFile: Omit<Token, 'icon'>): Token => {
@@ -229,6 +230,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
               currentParticipantIndex: number;
               roundCounter: number;
               isCombatActive: boolean;
+              toolbarPosition?: 'top' | 'bottom';
           };
 
           const rehydratedTokens = (loadedState.tokens || []).map(rehydrateToken);
@@ -245,6 +247,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           setCurrentParticipantIndex(loadedState.currentParticipantIndex !== undefined ? loadedState.currentParticipantIndex : -1);
           setRoundCounter(loadedState.roundCounter || 1);
           setIsCombatActive(loadedState.isCombatActive || false);
+          setToolbarPosition(loadedState.toolbarPosition || 'top');
 
           initialSnapshotForSession = createInitialSnapshot({
             gridCells: loadedState.gridCells || initialGridCells(),
@@ -290,6 +293,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       currentParticipantIndex,
       roundCounter,
       isCombatActive,
+      toolbarPosition,
     };
 
     try {
@@ -301,7 +305,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
-    currentParticipantIndex, roundCounter, isCombatActive,
+    currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
     isInitialLoadComplete
   ]);
 
@@ -407,6 +411,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setSelectedShapeId(null);
     setSelectedTextObjectId(null);
     setTokenIdToFocus(null);
+    setToolbarPosition('top');
 
     const freshSnapshot = createInitialSnapshot({
         gridCells: defaultGridCells,
@@ -432,6 +437,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             currentParticipantIndex: -1,
             roundCounter: 1,
             isCombatActive: false,
+            toolbarPosition: 'top',
         };
         try {
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
@@ -602,10 +608,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     setParticipants(updatedParticipants);
 
-    // Token remains on the grid, only its link to the turn order is severed.
-    // If a token was explicitly linked, its appearance is not changed here, only its participation.
-    // The token is not deleted from the `tokens` state here.
-
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
       if (isCombatActive) setRoundCounter(1);
@@ -649,7 +651,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const tokenBeingDeleted = tokens.find(t => t.id === tokenId);
     const participantLinked = participants.find(p => p.tokenId === tokenId);
 
-    setTokens(prev => prev.filter(t => t.id === tokenId));
+    setTokens(prev => prev.filter(t => t.id !== tokenId));
 
     if (participantLinked) {
       handleRemoveParticipantFromList(participantLinked.id);
@@ -1315,6 +1317,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             onResetBoard={handleResetBoard}
             defaultBattlemaps={defaultBattlemaps}
             escapePressCount={escapePressCount}
+            toolbarPosition={toolbarPosition}
+            setToolbarPosition={setToolbarPosition}
           />
       </div>
 

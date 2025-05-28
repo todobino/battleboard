@@ -180,6 +180,8 @@ export interface FloatingToolbarProps {
   onResetBoard: () => void;
   defaultBattlemaps: DefaultBattleMap[];
   escapePressCount?: number;
+  toolbarPosition: 'top' | 'bottom';
+  setToolbarPosition: React.Dispatch<React.SetStateAction<'top' | 'bottom'>>;
 }
 
 export interface GridSettingsPanelProps {

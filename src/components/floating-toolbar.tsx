@@ -1,11 +1,11 @@
 
 'use client';
 
-import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types'; // Added DefaultBattleMap and imported existing props type
+import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
 import React, { useState, useEffect } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power, ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -83,12 +83,15 @@ export default function FloatingToolbar({
   selectedTokenTemplate, setSelectedTokenTemplate,
   backgroundImageUrl, setBackgroundImageUrl,
   showGridLines, setShowGridLines,
+  showAllLabels, setShowAllLabels,
   measurement, setMeasurement,
   backgroundZoomLevel, setBackgroundZoomLevel,
   onUndo, onRedo, canUndo, canRedo,
   onResetBoard,
   defaultBattlemaps,
   escapePressCount, 
+  toolbarPosition,
+  setToolbarPosition,
 }: FloatingToolbarProps) {
 
   const [isMapSettingsPopoverOpen, setIsMapSettingsPopoverOpen] = useState(false);
@@ -141,9 +144,26 @@ export default function FloatingToolbar({
     setIsMeasurementPopoverOpen(false);
   };
 
+  const toggleToolbarPosition = () => {
+    setToolbarPosition(current => (current === 'top' ? 'bottom' : 'top'));
+  };
+
+  const isToolbarAtTop = toolbarPosition === 'top';
+
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50">
+      <div className={cn(
+        "absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-2 p-2 bg-background/80 backdrop-blur-sm rounded-lg shadow-lg border border-border z-50",
+        isToolbarAtTop ? "top-4" : "bottom-4"
+      )}>
+        <ToolButton
+          label={isToolbarAtTop ? "Move Toolbar to Bottom" : "Move Toolbar to Top"}
+          icon={isToolbarAtTop ? ArrowDownToLine : ArrowUpToLine}
+          onClick={toggleToolbarPosition}
+          className="mr-1" 
+        />
+        <Separator orientation="vertical" className="h-8 bg-border mx-1" />
+        
         <ToolButton
           label="Select/Pan"
           icon={MousePointerSquareDashed}
@@ -173,7 +193,7 @@ export default function FloatingToolbar({
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-[640px]" side="bottom" align="center">
+          <PopoverContent className="w-[640px]" side={isToolbarAtTop ? "bottom" : "top"} align="center">
             <GridSettingsPanel
               showGridLines={showGridLines}
               setShowGridLines={setShowGridLines}
@@ -208,7 +228,7 @@ export default function FloatingToolbar({
                 </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="center">
+          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
             <MeasurementToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -240,7 +260,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="center">
+          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}
@@ -270,7 +290,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="center">
+          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
             <ColorToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -302,7 +322,7 @@ export default function FloatingToolbar({
               </Button>
             </PopoverTrigger>
           </ToolButton>
-          <PopoverContent className="w-80" side="bottom" align="center">
+          <PopoverContent className="w-80" side={isToolbarAtTop ? "bottom" : "top"} align="center">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
               onToolSelect={handleShapeToolSelected}
@@ -358,7 +378,7 @@ export default function FloatingToolbar({
                 </Button>
               </AlertDialogTrigger>
             </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">
+            <TooltipContent side={isToolbarAtTop ? "bottom" : "top"} align="center">
               <p>Reset Board</p>
             </TooltipContent>
           </Tooltip>
@@ -388,4 +408,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
