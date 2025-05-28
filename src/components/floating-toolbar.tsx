@@ -283,7 +283,7 @@ export default function FloatingToolbar({
 
         <Popover open={isShapeToolPopoverOpen} onOpenChange={setIsShapeToolPopoverOpen}>
           <ToolButton
-            label="Shapes Tool"
+            label="Shape Tool"
             icon={Shapes}
             onClick={() => {
               setIsShapeToolPopoverOpen(prev => !prev);
@@ -296,7 +296,7 @@ export default function FloatingToolbar({
                 variant={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle' ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Shapes Tool"
+                aria-label="Shape Tool"
               >
                 <Shapes className="h-5 w-5 text-accent-foreground" />
               </Button>
