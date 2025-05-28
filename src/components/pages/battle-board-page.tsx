@@ -594,6 +594,80 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     });
   }, [tokens, toast]);
 
+  const handleRemoveParticipantFromList = useCallback((participantId: string) => {
+    const participantToRemove = participants.find(p => p.id === participantId);
+    if (!participantToRemove) return;
+
+    setTokens(prevTokens => {
+      if (participantToRemove.tokenId) {
+        return prevTokens.map(token => {
+          if (token.id === participantToRemove.tokenId) {
+            const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
+                                 tokenTemplates.find(t => t.type === 'generic');
+            const wasParticipantSpecificAvatar = token.customImageUrl &&
+                                                token.instanceName === participantToRemove.name &&
+                                                participantToRemove.customImageUrl === token.customImageUrl;
+
+            return {
+              ...token,
+              instanceName: undefined,
+              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl,
+              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
+              color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
+              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label,
+            };
+          }
+          return token;
+        });
+      }
+      return prevTokens;
+    });
+
+    const updatedParticipants = participants.filter(p => p.id !== participantId);
+
+    const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < participants.length ? participants[currentParticipantIndex].id : null;
+
+    setParticipants(updatedParticipants);
+
+    if (updatedParticipants.length === 0) {
+      setCurrentParticipantIndex(-1);
+      if (isCombatActive) setRoundCounter(1);
+      setIsCombatActive(false);
+    } else if (isCombatActive && activeParticipantIdBeforeRemove) {
+        const newActiveIndex = updatedParticipants.findIndex(p => p.id === activeParticipantIdBeforeRemove);
+        if (newActiveIndex !== -1) {
+            setCurrentParticipantIndex(newActiveIndex);
+        } else {
+            const removedIndexOriginal = participants.findIndex(p => p.id === participantId);
+            if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
+                setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
+            } else if (currentParticipantIndex >= updatedParticipants.length) {
+                 setCurrentParticipantIndex(0);
+            }
+
+            if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
+                setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
+            }
+        }
+    } else if (!isCombatActive) {
+        setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
+    }
+
+    toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
+  }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
+
+  const handleTokenErasedOnGrid = useCallback((tokenId: string) => {
+    const participantLinked = participants.find(p => p.tokenId === tokenId);
+    if (participantLinked) {
+      // The handleRemoveParticipantFromList function already handles toasts and combat state adjustments.
+      // It will also attempt to "reset" the token, but since the token is being removed from the `tokens`
+      // array by BattleGrid's setTokens, this part of handleRemoveParticipantFromList will effectively be a no-op for the token itself.
+      handleRemoveParticipantFromList(participantLinked.id);
+    }
+    // The token itself is removed from the `tokens` state via the `setTokens` prop
+    // called by `BattleGrid` after `onTokenErasedOnGrid`.
+  }, [participants, handleRemoveParticipantFromList]);
+
   const handleTokenDelete = useCallback((tokenId: string) => {
     const tokenBeingDeleted = tokens.find(t => t.id === tokenId);
     const participantLinked = participants.find(p => p.tokenId === tokenId);
@@ -601,45 +675,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setTokens(prev => prev.filter(t => t.id !== tokenId));
 
     if (participantLinked) {
-      setParticipants(prevParticipants => {
-        const updatedParticipants = prevParticipants.filter(p => p.id !== participantLinked.id);
-        const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < prevParticipants.length ? prevParticipants[currentParticipantIndex].id : null;
-
-        if (updatedParticipants.length === 0) {
-          setCurrentParticipantIndex(-1);
-          if (isCombatActive) setRoundCounter(1);
-          setIsCombatActive(false);
-        } else if (isCombatActive && activeParticipantIdBeforeRemove) {
-            const newActiveIndex = updatedParticipants.findIndex(p => p.id === activeParticipantIdBeforeRemove);
-            if (newActiveIndex !== -1) {
-                setCurrentParticipantIndex(newActiveIndex);
-            } else {
-                // If the deleted participant was the active one, or before it
-                const removedIndexOriginal = prevParticipants.findIndex(p => p.id === participantLinked.id);
-                if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
-                    setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
-                } else if (currentParticipantIndex >= updatedParticipants.length) {
-                     setCurrentParticipantIndex(0);
-                }
-                if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
-                    setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
-                }
-            }
-        } else if (!isCombatActive) {
-             setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
-        }
-        return updatedParticipants;
-      });
+      // Use handleRemoveParticipantFromList which correctly updates combat state
+      handleRemoveParticipantFromList(participantLinked.id);
     }
 
     if (selectedTokenId === tokenId) setSelectedTokenId(null);
 
     if (participantLinked) {
-        toast({ title: "Token & Combatant Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" and linked combatant "${participantLinked.name}" removed.` });
+        // Toast is handled by handleRemoveParticipantFromList if participantLinked
     } else {
         toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` });
     }
-  }, [tokens, participants, currentParticipantIndex, toast, selectedTokenId, isCombatActive]);
+  }, [tokens, participants, toast, selectedTokenId, handleRemoveParticipantFromList]);
 
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
@@ -705,7 +752,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       const updatedTokens = [...prevTokens];
       updatedTokens[tokenIndex] = { ...tokenToResize, size: newSize };
-      
+
       return updatedTokens;
     });
   }, [toast]);
@@ -761,7 +808,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (finalTokenId) {
         const existingToken = tokens.find(t => t.id === finalTokenId);
         if (existingToken) tokenSize = existingToken.size || 1;
-    } else if (selectedTokenTemplate) { 
+    } else if (selectedTokenTemplate) {
         tokenSize = selectedTokenTemplate.size || 1;
     }
 
@@ -921,68 +968,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     croppedAvatarDataUrl, handleAddParticipantToList, toast
   ]);
 
- const handleRemoveParticipantFromList = useCallback((participantId: string) => {
-    const participantToRemove = participants.find(p => p.id === participantId);
-    if (!participantToRemove) return;
-
-    setTokens(prevTokens => {
-      if (participantToRemove.tokenId) {
-        return prevTokens.map(token => {
-          if (token.id === participantToRemove.tokenId) {
-            const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
-                                 tokenTemplates.find(t => t.type === 'generic'); 
-            const wasParticipantSpecificAvatar = token.customImageUrl &&
-                                                token.instanceName === participantToRemove.name &&
-                                                participantToRemove.customImageUrl === token.customImageUrl;
-
-            return {
-              ...token,
-              instanceName: undefined, 
-              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl, 
-              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
-              color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
-              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label, 
-            };
-          }
-          return token;
-        });
-      }
-      return prevTokens;
-    });
-
-    const updatedParticipants = participants.filter(p => p.id !== participantId);
-
-    const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < participants.length ? participants[currentParticipantIndex].id : null;
-
-    setParticipants(updatedParticipants);
-
-    if (updatedParticipants.length === 0) {
-      setCurrentParticipantIndex(-1);
-      if (isCombatActive) setRoundCounter(1);
-      setIsCombatActive(false);
-    } else if (isCombatActive && activeParticipantIdBeforeRemove) {
-        const newActiveIndex = updatedParticipants.findIndex(p => p.id === activeParticipantIdBeforeRemove);
-        if (newActiveIndex !== -1) {
-            setCurrentParticipantIndex(newActiveIndex);
-        } else {
-            const removedIndexOriginal = participants.findIndex(p => p.id === participantId);
-            if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
-                setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
-            } else if (currentParticipantIndex >= updatedParticipants.length) {
-                 setCurrentParticipantIndex(0); 
-            }
-            
-            if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
-                setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
-            }
-        }
-    } else if (!isCombatActive) {
-        setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
-    }
-
-    toast({ title: "Participant Removed", description: `${participantToRemove.name} removed from turn order.` });
-  }, [participants, currentParticipantIndex, toast, isCombatActive, roundCounter]);
-
   const handleFocusToken = useCallback((tokenId: string) => {
     setSelectedTokenId(tokenId);
     setTokenIdToFocus(tokenId);
@@ -993,10 +978,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (['player', 'enemy', 'ally'].includes(token.type)) {
       setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
     } else {
-      setNewParticipantType('player'); 
+      setNewParticipantType('player');
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(null); 
+    setCroppedAvatarDataUrl(null);
 
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
@@ -1264,6 +1249,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             activeTurnTokenId={activeTurnTokenId}
             currentTextFontSize={currentTextFontSize}
             onTokenDelete={handleTokenDelete}
+            onTokenErasedOnGrid={handleTokenErasedOnGrid}
             onTokenImageChangeRequest={handleRequestTokenImageChange}
             escapePressCount={escapePressCount}
             selectedTokenId={selectedTokenId} setSelectedTokenId={setSelectedTokenId}
@@ -1381,7 +1367,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-                 
+
                   <div className="space-y-1">
                     {/* Removed Type label */}
                     <div className="flex space-x-2">
@@ -1476,4 +1462,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-

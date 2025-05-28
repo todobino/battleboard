@@ -122,6 +122,7 @@ export interface BattleGridProps {
   activeTurnTokenId?: string | null;
   currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
+  onTokenErasedOnGrid?: (tokenId: string) => void; // Added new prop
   onTokenImageChangeRequest: (tokenId: string) => void;
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
   escapePressCount?: number;

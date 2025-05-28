@@ -161,6 +161,7 @@ export default function BattleGrid({
   activeTurnTokenId,
   currentTextFontSize,
   onTokenDelete,
+  onTokenErasedOnGrid, // Added new prop
   onTokenImageChangeRequest,
   escapePressCount,
   selectedTokenId, setSelectedTokenId,
@@ -532,7 +533,7 @@ export default function BattleGrid({
   }, [tokenIdToFocus, tokens, viewBox, cellSize, numCols, numRows, showGridLines, setViewBox, onFocusHandled]);
 
 
-  const eraseContentAtCell = (gridX: number, gridY: number) => {
+  const eraseContentAtCell = useCallback((gridX: number, gridY: number) => {
     setGridCells(prev => {
       const newCells = prev.map(row => row.map(cell => ({ ...cell })));
       if (newCells[gridY] && newCells[gridY][gridX]) {
@@ -540,11 +541,27 @@ export default function BattleGrid({
       }
       return newCells;
     });
-    setTokens(prev => prev.filter(token => {
-      const tokenSize = token.size || 1;
-      return !(gridX >= token.x && gridX < token.x + tokenSize &&
-               gridY >= token.y && gridY < token.y + tokenSize);
+
+    const tokensToBeErasedByThisCellAction: string[] = [];
+    tokens.forEach(token => { // Use the `tokens` prop (current state from BattleBoardPage)
+        const tokenSize = token.size || 1;
+        const tokenIsInThisEraseCell = gridX >= token.x && gridX < token.x + tokenSize &&
+                                 gridY >= token.y && gridY < token.y + tokenSize;
+        if (tokenIsInThisEraseCell) {
+            tokensToBeErasedByThisCellAction.push(token.id);
+        }
+    });
+
+    if (onTokenErasedOnGrid && tokensToBeErasedByThisCellAction.length > 0) {
+        tokensToBeErasedByThisCellAction.forEach(id => onTokenErasedOnGrid(id));
+    }
+    
+    setTokens(prevTokens => prevTokens.filter(token => {
+        const tokenSize = token.size || 1;
+        return !(gridX >= token.x && gridX < token.x + tokenSize &&
+                 gridY >= token.y && gridY < token.y + tokenSize);
     }));
+
 
     const cellCenterX = gridX * cellSize + cellSize / 2;
     const cellCenterY = gridY * cellSize + cellSize / 2;
@@ -575,7 +592,7 @@ export default function BattleGrid({
         return !(cellCenterX >= obj.x && cellCenterX <= obj.x + obj.width &&
                  cellCenterY >= obj.y && cellCenterY <= obj.y + obj.height);
     }));
-  };
+  }, [setGridCells, tokens, setTokens, setDrawnShapes, setTextObjects, cellSize, onTokenErasedOnGrid]); // Added dependencies
 
   const handleGridMouseDown = (event: React.MouseEvent<SVGSVGElement>) => {
     if (event.button === 2) return; 
