@@ -33,6 +33,7 @@ export interface Participant {
   hp?: number;
   ac?: number;
   tokenId?: string; // Optional: links to a token on the grid
+  customImageUrl?: string; // Added to participant for initiative tracker display consistency
 }
 
 export type ActiveTool =
@@ -76,6 +77,7 @@ export interface DrawnShape {
   strokeWidth: number;
   label?: string;
   opacity?: number; // For fill opacity of circles/rectangles, stroke opacity for lines
+  isLocked?: boolean; // Added to allow shapes to be locked
 }
 
 export interface TextObjectType {
@@ -122,7 +124,7 @@ export interface BattleGridProps {
   activeTurnTokenId?: string | null;
   currentTextFontSize: number;
   onTokenDelete: (tokenId: string) => void;
-  onTokenErasedOnGrid?: (tokenId: string) => void; // Added new prop
+  onTokenErasedOnGrid?: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
   escapePressCount?: number;

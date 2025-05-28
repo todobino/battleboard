@@ -5,7 +5,7 @@ import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObject
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users, CircleDotDashed, VenetianMask, SlidersVertical, ImagePlus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, Edit3, Trash2, Image as ImageIcon, ListCheck, ListX, Users, CircleDotDashed, VenetianMask, SlidersVertical, ImagePlus, ArrowUpCircle, ArrowDownCircle, Lock, Unlock } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -726,7 +726,7 @@ export default function BattleGrid({
           setSelectedShapeId(shape.id);
           setSelectedTokenId(null);
           setSelectedTextObjectId(null);
-          if (shape.type === 'circle' || shape.type === 'rectangle') {
+          if ((shape.type === 'circle' || shape.type === 'rectangle') && !shape.isLocked) {
             setPotentialDraggingShapeInfo({ 
               id: shape.id, type: shape.type, 
               startScreenPos: { x: event.clientX, y: event.clientY },
@@ -1105,20 +1105,26 @@ export default function BattleGrid({
       const currentMouseSvgPos = getMousePosition(event);
       const tokenActualSize = draggingToken.size || 1;
       
-      const smoothVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
-      const smoothVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
+      // Raw visual position based on mouse, before snapping
+      const rawVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
+      const rawVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
 
-      let potentialSnapGridX = Math.floor(smoothVisualSvgX / cellSize);
-      let potentialSnapGridY = Math.floor(smoothVisualSvgY / cellSize);
-
-      const clampedSnapGridX = Math.max(0, Math.min(potentialSnapGridX, numCols - tokenActualSize));
-      const clampedSnapGridY = Math.max(0, Math.min(potentialSnapGridY, numRows - tokenActualSize));
+      // Snapped visual position (top-left of the cell the token's top-left would be in)
+      const snappedVisualSvgX = Math.round(rawVisualSvgX / cellSize) * cellSize;
+      const snappedVisualSvgY = Math.round(rawVisualSvgY / cellSize) * cellSize;
       
-      setDraggedTokenVisualPosition({ x: clampedSnapGridX * cellSize, y: clampedSnapGridY * cellSize });
+      setDraggedTokenVisualPosition({ x: snappedVisualSvgX, y: snappedVisualSvgY });
+
+      // Grid coordinates for the snapped position
+      const potentialDropGridX = Math.floor((snappedVisualSvgX + cellSize / 2) / cellSize);
+      const potentialDropGridY = Math.floor((snappedVisualSvgY + cellSize / 2) / cellSize);
+
+      const clampedDropGridX = Math.max(0, Math.min(potentialDropGridX, numCols - tokenActualSize));
+      const clampedDropGridY = Math.max(0, Math.min(potentialDropGridY, numRows - tokenActualSize));
       
       const isTargetSquareValidForDrop = !isSquareOccupied(
-        clampedSnapGridX,
-        clampedSnapGridY,
+        clampedDropGridX,
+        clampedDropGridY,
         tokenActualSize,
         tokens,
         numCols,
@@ -1127,17 +1133,17 @@ export default function BattleGrid({
       );
 
       if (isTargetSquareValidForDrop) {
-          setDraggingTokenGridPosition({ x: clampedSnapGridX, y: clampedSnapGridY });
+          setDraggingTokenGridPosition({ x: clampedDropGridX, y: clampedDropGridY });
       } else {
-          setDraggingTokenGridPosition(null);
+          setDraggingTokenGridPosition(null); // Mark as invalid drop position
       }
       setHoveredCellWhilePaintingOrErasing(null);
 
 
       if (ghostToken && movementMeasureLine && draggedTokenVisualPosition && ['player', 'enemy', 'ally'].includes(draggingToken.type)) {
         // Measurement line points to the center of the HELD TOKEN's current snapped position
-        const currentTargetSvgCenterX = draggedTokenVisualPosition.x + (tokenActualSize * cellSize) / 2;
-        const currentTargetSvgCenterY = draggedTokenVisualPosition.y + (tokenActualSize * cellSize) / 2;
+        const currentTargetSvgCenterX = snappedVisualSvgX + (tokenActualSize * cellSize) / 2;
+        const currentTargetSvgCenterY = snappedVisualSvgY + (tokenActualSize * cellSize) / 2;
 
         const dxSvg = currentTargetSvgCenterX - movementMeasureLine.startSvgCenter.x;
         const dySvg = currentTargetSvgCenterY - movementMeasureLine.startSvgCenter.y;
@@ -1164,24 +1170,32 @@ export default function BattleGrid({
         const dxScreen = event.clientX - potentialDraggingShapeInfo.startScreenPos.x;
         const dyScreen = event.clientY - potentialDraggingShapeInfo.startScreenPos.y;
         if (dxScreen * dxScreen + dyScreen * dyScreen > CLICK_THRESHOLD_SQUARED) { 
-            setRightClickPopoverState(null);
-            setIsActuallyDraggingShape(true);
-            setCurrentDraggingShapeId(potentialDraggingShapeInfo.id);
-            let initialShapeRefX, initialShapeRefY;
-            if (potentialDraggingShapeInfo.type === 'circle') { 
-                initialShapeRefX = potentialDraggingShapeInfo.originalStartPoint.x;
-                initialShapeRefY = potentialDraggingShapeInfo.originalStartPoint.y;
-            } else if (potentialDraggingShapeInfo.type === 'rectangle') { 
-                initialShapeRefX = Math.min(potentialDraggingShapeInfo.originalStartPoint.x, potentialDraggingShapeInfo.originalEndPoint.x);
-                initialShapeRefY = Math.min(potentialDraggingShapeInfo.originalStartPoint.y, potentialDraggingShapeInfo.originalEndPoint.y);
-            } else { return; } 
-            setShapeDragOffset({ x: mouseDownPos.x - initialShapeRefX, y: mouseDownPos.y - initialShapeRefY });
+            const shapeToDrag = drawnShapes.find(s => s.id === potentialDraggingShapeInfo.id);
+            if (shapeToDrag && !shapeToDrag.isLocked) {
+                setRightClickPopoverState(null);
+                setIsActuallyDraggingShape(true);
+                setCurrentDraggingShapeId(potentialDraggingShapeInfo.id);
+                let initialShapeRefX, initialShapeRefY;
+                if (potentialDraggingShapeInfo.type === 'circle') { 
+                    initialShapeRefX = potentialDraggingShapeInfo.originalStartPoint.x;
+                    initialShapeRefY = potentialDraggingShapeInfo.originalStartPoint.y;
+                } else if (potentialDraggingShapeInfo.type === 'rectangle') { 
+                    initialShapeRefX = Math.min(potentialDraggingShapeInfo.originalStartPoint.x, potentialDraggingShapeInfo.originalEndPoint.x);
+                    initialShapeRefY = Math.min(potentialDraggingShapeInfo.originalStartPoint.y, potentialDraggingShapeInfo.originalEndPoint.y);
+                } else { return; } 
+                setShapeDragOffset({ x: mouseDownPos.x - initialShapeRefX, y: mouseDownPos.y - initialShapeRefY });
+            }
             setPotentialDraggingShapeInfo(null); 
         }
     } else if (isActuallyDraggingShape && currentDraggingShapeId && shapeDragOffset && activeTool === 'select' && !editingShapeId) {
         setRightClickPopoverState(null);
         const draggedShape = drawnShapes.find(s => s.id === currentDraggingShapeId);
-        if (!draggedShape) return;
+        if (!draggedShape || draggedShape.isLocked) { // Double check lock here too
+            setIsActuallyDraggingShape(false);
+            setCurrentDraggingShapeId(null);
+            setShapeDragOffset(null);
+            return;
+        }
 
         let rawNewRefPoint = { x: pos.x - shapeDragOffset.x, y: pos.y - shapeDragOffset.y };
         let snappedNewRefPoint;
@@ -1492,7 +1506,16 @@ export default function BattleGrid({
     if (editingTokenId || isCreatingText || editingTextObjectId || editingShapeId) return 'cursor-text';
     if (isPanning) return 'cursor-grabbing';
     if (draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
-    if (activeTool === 'select' && !draggingToken && !isPanning && !rightClickPopoverState && !isActuallyDraggingShape) return 'cursor-default';
+    
+    if (activeTool === 'select' && !draggingToken && !isPanning && !rightClickPopoverState && !isActuallyDraggingShape) {
+        // Check for hovered shape's lock status
+        const hoveredShape = selectedShapeId ? drawnShapes.find(s => s.id === selectedShapeId) : null;
+        if (hoveredShape && hoveredShape.isLocked && (hoveredShape.type === 'circle' || hoveredShape.type === 'rectangle')) {
+            return 'cursor-default';
+        }
+        return 'cursor-pointer'; // Default to pointer for selectable items
+    }
+
     if (draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) return 'cursor-grabbing';
     if (isActuallyDraggingShape && activeTool === 'select' && !editingShapeId) return 'cursor-grabbing';
     if (activeTool === 'type_tool') return 'cursor-text';
@@ -1538,6 +1561,17 @@ export default function BattleGrid({
         const currentItem = rightClickPopoverState.item as DrawnShape;
         const updatedItem = {...currentItem, endPoint: {x: currentItem.startPoint.x + newRadiusInPixels, y: currentItem.startPoint.y}};
         setRightClickPopoverState(prev => prev ? ({...prev, item: updatedItem }) : null);
+    }
+  };
+
+  const toggleShapeLock = (shapeId: string) => {
+    setDrawnShapes(prev => prev.map(s =>
+      s.id === shapeId ? { ...s, isLocked: !s.isLocked } : s
+    ));
+    if(rightClickPopoverState?.type === 'shape' && rightClickPopoverState.item.id === shapeId) {
+        const currentItem = rightClickPopoverState.item as DrawnShape;
+        const updatedItem = { ...currentItem, isLocked: !currentItem.isLocked };
+        setRightClickPopoverState(prev => prev ? ({...prev, item: updatedItem }) : null );
     }
   };
 
@@ -1663,7 +1697,8 @@ export default function BattleGrid({
 
             return (
               <g key={shape.id} className={cn(
-                                            activeTool === 'select' && (shape.type === 'circle' || shape.type === 'rectangle') && !rightClickPopoverState && !isActuallyDraggingShape && 'cursor-pointer',
+                                            activeTool === 'select' && (shape.type === 'circle' || shape.type === 'rectangle') && !shape.isLocked && !rightClickPopoverState && !isActuallyDraggingShape && 'cursor-pointer',
+                                            activeTool === 'select' && (shape.type === 'circle' || shape.type === 'rectangle') && shape.isLocked && 'cursor-default',
                                             activeTool === 'select' && isActuallyDraggingShape && currentDraggingShapeId === shape.id && 'cursor-grabbing',
                                             activeTool === 'select' && shape.type === 'line' && !rightClickPopoverState && 'cursor-pointer' 
                                           )}>
@@ -1903,10 +1938,8 @@ export default function BattleGrid({
 
           let currentTransform: string;
           if (draggingToken && token.id === draggingToken.id && draggedTokenVisualPosition) {
-            // If this token is being dragged, use its snapped visual position
             currentTransform = `translate(${draggedTokenVisualPosition.x}, ${draggedTokenVisualPosition.y})`;
           } else {
-            // Otherwise, use its committed grid position
             currentTransform = `translate(${token.x * cellSize}, ${token.y * cellSize})`;
           }
 
@@ -2258,7 +2291,7 @@ export default function BattleGrid({
                 side="bottom"
                 align="center"
                 className="w-auto p-1" 
-                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (tokens.find(t => t.id === (rightClickPopoverState.item as TokenType).id)?.size)) || (rightClickPopoverState.type === 'shape' && (rightClickPopoverState.item as DrawnShape).opacity)}`}
+                key={`popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.type === 'token' && (tokens.find(t => t.id === (rightClickPopoverState.item as TokenType).id)?.size)) || (rightClickPopoverState.type === 'shape' && `${(rightClickPopoverState.item as DrawnShape).opacity}-${(rightClickPopoverState.item as DrawnShape).isLocked}`)}`}
                 onOpenAutoFocus={(e) => e.preventDefault()} 
             >
               {rightClickPopoverState.type === 'token' && (() => {
@@ -2384,125 +2417,135 @@ export default function BattleGrid({
                 </div>
               )}
 
-              {rightClickPopoverState.type === 'shape' && (
-                <div className="w-60 p-2 space-y-2" key={`shape-popover-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity}`}>
-                  {(rightClickPopoverState.item as DrawnShape).type === 'line' ? (
-                    <Button
-                      variant="ghost"
-                      className={cn(
-                          "w-full justify-start h-8 px-2 text-sm flex items-center",
-                          "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      )}
-                      onClick={() => {
-                          setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
-                          setRightClickPopoverState(null);
-                          setSelectedShapeId(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
-                    </Button>
-                  ) : (
-                    <>
-                      <div className="space-y-1 pt-1">
-                          <Label className="text-xs">Shape Opacity</Label>
-                          <div
-                              className="flex space-x-1"
-                              key={`opacity-controls-${rightClickPopoverState.item.id}-${(rightClickPopoverState.item as DrawnShape).opacity ?? 0.5}`}
-                          >
-                              {[1.0, 0.5, 0.1].map(opacityValue => (
-                                  <Button
-                                      key={`opacity-${opacityValue}`}
-                                      variant={(((rightClickPopoverState.item as DrawnShape).opacity ?? 0.5) === opacityValue) ? 'default' : 'outline'}
-                                      className="flex-1 h-8 text-xs"
-                                      onClick={() => handleSetShapeOpacity(rightClickPopoverState.item.id, opacityValue)}
-                                  >
-                                      {`${(opacityValue * 100).toFixed(0)}%`}
-                                  </Button>
-                              ))}
-                          </div>
-                      </div>
-
-                      {(rightClickPopoverState.item as DrawnShape).type === 'circle' && (
-                          <div className="space-y-1 pt-1">
-                              <Label htmlFor={`shape-radius-input-${rightClickPopoverState.item.id}`} className="text-xs flex items-center">
-                                 Radius (ft)
-                              </Label>
-                              <div className="flex items-center space-x-1">
-                                  <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                          const currentFeet = parseFloat(shapeRadiusInput) || 0;
-                                          const newFeet = Math.max(FEET_PER_SQUARE / 2, currentFeet - FEET_PER_SQUARE);
-                                          setShapeRadiusInput(String(newFeet)); 
-                                          handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
-                                      }}
-                                  >
-                                      <Minus className="h-4 w-4"/>
-                                  </Button>
-                                  <Input
-                                      id={`shape-radius-input-${rightClickPopoverState.item.id}`}
-                                      type="number"
-                                      value={shapeRadiusInput}
-                                      onChange={(e) => setShapeRadiusInput(e.target.value)}
-                                      onBlur={() => handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput)}
-                                      onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                              handleShapeRadiusChange(rightClickPopoverState.item.id, shapeRadiusInput);
-                                              (e.target as HTMLInputElement).blur(); 
-                                          }
-                                      }}
-                                      className="h-8 text-sm text-center w-16"
-                                      min={FEET_PER_SQUARE / 2} 
-                                      step={FEET_PER_SQUARE} 
-                                  />
-                                  <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                          const currentFeet = parseFloat(shapeRadiusInput) || 0;
-                                          const newFeet = currentFeet + FEET_PER_SQUARE;
-                                          setShapeRadiusInput(String(newFeet)); 
-                                          handleShapeRadiusChange(rightClickPopoverState.item.id, String(newFeet)); 
-                                      }}
-                                  >
-                                      <Plus className="h-4 w-4"/>
-                                  </Button>
-                              </div>
-                          </div>
-                      )}
-                       <Button
-                          variant="ghost"
-                          className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
-                          onClick={() => {
-                              const shape = rightClickPopoverState.item as DrawnShape;
-                              setEditingShapeId(shape.id);
-                              setEditingShapeLabelText(shape.label || '');
-                              setRightClickPopoverState(null); 
-                          }}
-                      >
-                          <Edit3 className="mr-2 h-3.5 w-3.5" /> {(rightClickPopoverState.item as DrawnShape).label ? 'Edit Label' : 'Add Label'}
-                      </Button>
+              {rightClickPopoverState.type === 'shape' && (() => {
+                const currentShape = rightClickPopoverState.item as DrawnShape;
+                return (
+                  <div className="w-60 p-2 space-y-2" key={`shape-popover-${currentShape.id}-${currentShape.opacity}-${currentShape.isLocked}`}>
+                    {currentShape.type === 'line' ? (
                       <Button
-                          variant="ghost"
-                          className={cn(
-                              "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
-                              "text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          )}
-                          onClick={() => {
-                              setDrawnShapes(prev => prev.filter(s => s.id !== rightClickPopoverState.item.id));
-                              setRightClickPopoverState(null); 
-                              setSelectedShapeId(null); 
-                          }}
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start h-8 px-2 text-sm flex items-center",
+                            "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        )}
+                        onClick={() => {
+                            setDrawnShapes(prev => prev.filter(s => s.id !== currentShape.id));
+                            setRightClickPopoverState(null);
+                            setSelectedShapeId(null);
+                        }}
                       >
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
                       </Button>
-                    </>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                          onClick={() => toggleShapeLock(currentShape.id)}
+                        >
+                          {currentShape.isLocked ? <Unlock className="mr-2 h-3.5 w-3.5" /> : <Lock className="mr-2 h-3.5 w-3.5" />}
+                          {currentShape.isLocked ? 'Unlock Shape' : 'Lock Shape'}
+                        </Button>
+                        <div className="space-y-1 pt-1">
+                            <Label className="text-xs">Shape Opacity</Label>
+                            <div
+                                className="flex space-x-1"
+                                key={`opacity-controls-${currentShape.id}-${currentShape.opacity ?? 0.5}`}
+                            >
+                                {[1.0, 0.5, 0.1].map(opacityValue => (
+                                    <Button
+                                        key={`opacity-${opacityValue}`}
+                                        variant={((currentShape.opacity ?? 0.5) === opacityValue) ? 'default' : 'outline'}
+                                        className="flex-1 h-8 text-xs"
+                                        onClick={() => handleSetShapeOpacity(currentShape.id, opacityValue)}
+                                    >
+                                        {`${(opacityValue * 100).toFixed(0)}%`}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {currentShape.type === 'circle' && (
+                            <div className="space-y-1 pt-1">
+                                <Label htmlFor={`shape-radius-input-${currentShape.id}`} className="text-xs flex items-center">
+                                   Radius (ft)
+                                </Label>
+                                <div className="flex items-center space-x-1">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => {
+                                            const currentFeet = parseFloat(shapeRadiusInput) || 0;
+                                            const newFeet = Math.max(FEET_PER_SQUARE / 2, currentFeet - FEET_PER_SQUARE);
+                                            setShapeRadiusInput(String(newFeet)); 
+                                            handleShapeRadiusChange(currentShape.id, String(newFeet)); 
+                                        }}
+                                    >
+                                        <Minus className="h-4 w-4"/>
+                                    </Button>
+                                    <Input
+                                        id={`shape-radius-input-${currentShape.id}`}
+                                        type="number"
+                                        value={shapeRadiusInput}
+                                        onChange={(e) => setShapeRadiusInput(e.target.value)}
+                                        onBlur={() => handleShapeRadiusChange(currentShape.id, shapeRadiusInput)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleShapeRadiusChange(currentShape.id, shapeRadiusInput);
+                                                (e.target as HTMLInputElement).blur(); 
+                                            }
+                                        }}
+                                        className="h-8 text-sm text-center w-16"
+                                        min={FEET_PER_SQUARE / 2} 
+                                        step={FEET_PER_SQUARE} 
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => {
+                                            const currentFeet = parseFloat(shapeRadiusInput) || 0;
+                                            const newFeet = currentFeet + FEET_PER_SQUARE;
+                                            setShapeRadiusInput(String(newFeet)); 
+                                            handleShapeRadiusChange(currentShape.id, String(newFeet)); 
+                                        }}
+                                    >
+                                        <Plus className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                         <Button
+                            variant="ghost"
+                            className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-3" 
+                            onClick={() => {
+                                setEditingShapeId(currentShape.id);
+                                setEditingShapeLabelText(currentShape.label || '');
+                                setRightClickPopoverState(null); 
+                            }}
+                        >
+                            <Edit3 className="mr-2 h-3.5 w-3.5" /> {currentShape.label ? 'Edit Label' : 'Add Label'}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "w-full justify-start h-8 px-2 text-sm flex items-center mt-1", 
+                                "text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            )}
+                            onClick={() => {
+                                setDrawnShapes(prev => prev.filter(s => s.id !== currentShape.id));
+                                setRightClickPopoverState(null); 
+                                setSelectedShapeId(null); 
+                            }}
+                        >
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
             </PopoverContent>
         )}
       </Popover>
