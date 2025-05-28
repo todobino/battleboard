@@ -297,7 +297,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       localStorage.setItem(LOCAL_STORAGE_KEY, serializedState);
     } catch (error) {
       console.error("Failed to save state to localStorage:", error);
-      // Potentially add more sophisticated error handling or user notification here
     }
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
@@ -598,33 +597,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const participantToRemove = participants.find(p => p.id === participantId);
     if (!participantToRemove) return;
 
-    setTokens(prevTokens => {
-      if (participantToRemove.tokenId) {
-        return prevTokens.map(token => {
-          if (token.id === participantToRemove.tokenId) {
-            const baseTemplate = tokenTemplates.find(t => t.type === token.type) ||
-                                 tokenTemplates.find(t => t.type === 'generic');
-            const wasParticipantSpecificAvatar = token.customImageUrl &&
-                                                token.instanceName === participantToRemove.name &&
-                                                participantToRemove.customImageUrl === token.customImageUrl;
-
-            return {
-              ...token,
-              instanceName: undefined,
-              customImageUrl: wasParticipantSpecificAvatar ? undefined : token.customImageUrl,
-              icon: wasParticipantSpecificAvatar ? baseTemplate?.icon : (token.customImageUrl ? undefined : token.icon),
-              color: wasParticipantSpecificAvatar ? (baseTemplate?.color || 'hsl(var(--accent))') : token.color,
-              label: wasParticipantSpecificAvatar ? (baseTemplate?.name || 'Generic') : token.label,
-            };
-          }
-          return token;
-        });
-      }
-      return prevTokens;
-    });
+    // When a participant is removed from the list, their token on the grid is NOT modified or removed.
+    // The link is broken by removing the participant. The token remains as is.
 
     const updatedParticipants = participants.filter(p => p.id !== participantId);
-
     const activeParticipantIdBeforeRemove = isCombatActive && currentParticipantIndex >= 0 && currentParticipantIndex < participants.length ? participants[currentParticipantIndex].id : null;
 
     setParticipants(updatedParticipants);
@@ -644,23 +620,32 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             } else if (currentParticipantIndex >= updatedParticipants.length) {
                  setCurrentParticipantIndex(0);
             }
-
             if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
                 setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
             }
         }
     } else if (!isCombatActive) {
-        setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
+        const oldActiveParticipantId = participants[currentParticipantIndex]?.id;
+        if (oldActiveParticipantId){
+            const newActiveIndex = updatedParticipants.findIndex(p => p.id === oldActiveParticipantId);
+             setCurrentParticipantIndex(newActiveIndex !== -1 ? newActiveIndex : (updatedParticipants.length > 0 ? 0 : -1));
+        } else {
+            setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
+        }
     }
-    // Toast removed from here
-  }, [participants, currentParticipantIndex, isCombatActive, roundCounter]);
+  }, [participants, currentParticipantIndex, isCombatActive]);
 
   const handleTokenErasedOnGrid = useCallback((tokenId: string) => {
+    // This function is called from BattleGrid when eraser tool removes a token.
+    // We need to remove the token from state and any linked participant.
+    setTokens(prev => prev.filter(t => t.id !== tokenId));
+
     const participantLinked = participants.find(p => p.tokenId === tokenId);
     if (participantLinked) {
       handleRemoveParticipantFromList(participantLinked.id);
     }
-  }, [participants, handleRemoveParticipantFromList]);
+    if (selectedTokenId === tokenId) setSelectedTokenId(null);
+  }, [participants, handleRemoveParticipantFromList, selectedTokenId]);
 
   const handleTokenDelete = useCallback((tokenId: string) => {
     const tokenBeingDeleted = tokens.find(t => t.id === tokenId);
@@ -674,9 +659,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (selectedTokenId === tokenId) setSelectedTokenId(null);
 
-    if (participantLinked) {
-        // Participant removal handles its own (lack of) toast now
-    } else {
+    if (!participantLinked) { // Only toast if it was just a token, not a linked participant
         toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` });
     }
   }, [tokens, participants, toast, selectedTokenId, handleRemoveParticipantFromList]);
@@ -796,7 +779,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const participantNameInput = participantData.name.trim();
     let finalTokenId: string | undefined = explicitTokenId !== "none" ? explicitTokenId : undefined;
     let newTokensCreated: Token[] = [];
-    let tokenSize = 1; // Default size
+    let tokenSize = 1; 
 
     if (finalTokenId) {
         const existingToken = tokens.find(t => t.id === finalTokenId);
@@ -1362,7 +1345,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
 
                   <div className="space-y-1">
-                    {/* Removed Type label */}
                     <div className="flex space-x-2">
                     {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
                         const config = participantTypeButtonConfig[type];
