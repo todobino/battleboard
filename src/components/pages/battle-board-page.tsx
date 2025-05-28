@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Camera, Users, Plus, Minus, Shuffle } from 'lucide-react';
+import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-react'; // Added Play icon
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon, GenericTokenIcon } from '@/components/icons';
@@ -603,6 +603,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setParticipants(updatedParticipants);
 
     // Token remains on the grid, only its link to the turn order is severed.
+    // If a token was explicitly linked, its appearance is not changed here, only its participation.
+    // The token is not deleted from the `tokens` state here.
 
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
@@ -647,7 +649,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     const tokenBeingDeleted = tokens.find(t => t.id === tokenId);
     const participantLinked = participants.find(p => p.tokenId === tokenId);
 
-    setTokens(prev => prev.filter(t => t.id !== tokenId));
+    setTokens(prev => prev.filter(t => t.id === tokenId));
 
     if (participantLinked) {
       handleRemoveParticipantFromList(participantLinked.id);
@@ -655,7 +657,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     if (selectedTokenId === tokenId) setSelectedTokenId(null);
 
-    if (!participantLinked) {
+    if (!participantLinked && tokenBeingDeleted) {
       toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` });
     }
   }, [tokens, participants, toast, selectedTokenId, handleRemoveParticipantFromList]);
@@ -1233,7 +1235,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const combinedParticipants = [...prevParticipants, ...newParticipantsFromTokens];
       const sortedParticipants = combinedParticipants.sort((a, b) => {
         if (b.initiative === a.initiative) {
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name); // Secondary sort by name for ties
         }
         return b.initiative - a.initiative;
       });
@@ -1369,121 +1371,131 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
           <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
             {!isCombatActive ? (
-              <div className="flex gap-2">
-                <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
-                  <DialogTrigger asChild>
-                    <Button className="flex-1"> Add Combatant </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-16 h-16 rounded-full p-0 relative overflow-hidden border-2 border-dashed hover:border-primary flex items-center justify-center"
-                            onClick={() => avatarFileInputRef.current?.click()}
-                            aria-label="Upload combatant avatar"
-                          >
-                            {croppedAvatarDataUrl ? (
-                              <img src={croppedAvatarDataUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
-                            ) : (
-                              <Camera className="w-7 h-7 text-muted-foreground" />
-                            )}
-                          </Button>
-                          <Input
-                            ref={avatarFileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleAvatarImageUploadChange}
-                            className="hidden"
-                          />
-                        </div>
-                        <div className="flex-grow">
-                          <DialogTitle>Add New Combatant</DialogTitle>
-                          <DialogDescription>Enter the details for the new combatant.</DialogDescription>
-                        </div>
-                      </div>
-                    </DialogHeader>
-                    <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-
-                      <div className="space-y-1">
-                        <div className="flex space-x-2">
-                        {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                            const config = participantTypeButtonConfig[type];
-                            const isSelected = newParticipantType === type;
-                            const IconComponent = config.icon;
-                            return (
-                            <Button
-                                key={type}
+              <div className="flex flex-col gap-2">
+                 <div className="flex gap-2">
+                    <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+                      <DialogTrigger asChild>
+                        <Button className="flex-1"> Add Combatant </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              <Button
                                 type="button"
-                                variant={isSelected ? undefined : 'outline'}
-                                onClick={() => setNewParticipantType(type)}
-                                className={cn(
-                                "flex-1 flex items-center justify-center gap-2",
-                                isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                                variant="outline"
+                                className="w-16 h-16 rounded-full p-0 relative overflow-hidden border-2 border-dashed hover:border-primary flex items-center justify-center"
+                                onClick={() => avatarFileInputRef.current?.click()}
+                                aria-label="Upload combatant avatar"
+                              >
+                                {croppedAvatarDataUrl ? (
+                                  <img src={croppedAvatarDataUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Camera className="w-7 h-7 text-muted-foreground" />
                                 )}
-                            >
-                                <IconComponent className="h-4 w-4" />
-                                {config.label}
-                            </Button>
-                            );
-                        })}
-                        </div>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="participant-name-dialog">Name</Label>
-                          <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="assign-token-select">Assign Token</Label>
-                          <Select
-                            value={selectedAssignedTokenId}
-                            onValueChange={(value) => {
-                              setSelectedAssignedTokenId(value);
-                              if (value !== "none") {
-                                setNewParticipantQuantity('1');
-                              }
-                            }}
-                          >
-                            <SelectTrigger id="assign-token-select">
-                              <SelectValue placeholder="Select existing token..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None (Create new token)</SelectItem>
-                              {unassignedTokensForDialog.map(token => (
-                                <SelectItem key={token.id} value={token.id}>
-                                  {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                              </Button>
+                              <Input
+                                ref={avatarFileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarImageUploadChange}
+                                className="hidden"
+                              />
+                            </div>
+                            <div className="flex-grow">
+                              <DialogTitle>Add New Combatant</DialogTitle>
+                              <DialogDescription>Enter the details for the new combatant.</DialogDescription>
+                            </div>
+                          </div>
+                        </DialogHeader>
+                        <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
+
+                          <div className="space-y-1">
+                            <div className="flex space-x-2">
+                            {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                                const config = participantTypeButtonConfig[type];
+                                const isSelected = newParticipantType === type;
+                                const IconComponent = config.icon;
+                                return (
+                                <Button
+                                    key={type}
+                                    type="button"
+                                    variant={isSelected ? undefined : 'outline'}
+                                    onClick={() => setNewParticipantType(type)}
+                                    className={cn(
+                                    "flex-1 flex items-center justify-center gap-2",
+                                    isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                                    )}
+                                >
+                                    <IconComponent className="h-4 w-4" />
+                                    {config.label}
+                                </Button>
+                                );
+                            })}
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1 space-y-1">
+                              <Label htmlFor="participant-name-dialog">Name</Label>
+                              <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <Label htmlFor="assign-token-select">Assign Token</Label>
+                              <Select
+                                value={selectedAssignedTokenId}
+                                onValueChange={(value) => {
+                                  setSelectedAssignedTokenId(value);
+                                  if (value !== "none") {
+                                    setNewParticipantQuantity('1');
+                                  }
+                                }}
+                              >
+                                <SelectTrigger id="assign-token-select">
+                                  <SelectValue placeholder="Select existing token..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">None (Create new token)</SelectItem>
+                                  {unassignedTokensForDialog.map(token => (
+                                    <SelectItem key={token.id} value={token.id}>
+                                      {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
 
 
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
-                        {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
-                        {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
-                        {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
-                      </div>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
+                            {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
+                            {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
+                            {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
+                          </div>
 
-                      <FormDialogFooter>
-                        <Button type="submit" className="w-full"> Add to Turn Order </Button>
-                      </FormDialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-                <Button
-                  onClick={handleAutoRollInitiative}
-                  className="flex-1"
-                  variant="outline"
-                  disabled={unassignedTokensForAutoRoll.length === 0}
-                >
-                  <Shuffle className="mr-2 h-4 w-4" /> Auto Roll
-                </Button>
+                          <FormDialogFooter>
+                            <Button type="submit" className="w-full"> Add to Turn Order </Button>
+                          </FormDialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      onClick={handleAutoRollInitiative}
+                      className="flex-1"
+                      variant="outline"
+                      disabled={unassignedTokensForAutoRoll.length === 0}
+                    >
+                      <Shuffle className="mr-2 h-4 w-4" /> Auto Roll
+                    </Button>
+                 </div>
+                 <Button
+                    onClick={handleStartCombat}
+                    className="w-full"
+                    disabled={participants.length === 0}
+                    variant="default" // Using default variant for primary action
+                  >
+                    <Play className="mr-2 h-4 w-4" /> Start Combat
+                  </Button>
               </div>
             ) : (
               <div className="flex gap-2">
@@ -1499,5 +1511,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-
-    
