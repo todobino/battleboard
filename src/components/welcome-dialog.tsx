@@ -97,7 +97,7 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
             <FeatureSection
               icon={Palette}
               title="Draw & Annotate"
-              description="Use the 'Paint Tool' to color cells, the 'Shapes Tool' to draw lines, circles, and squares, and the 'Type Tool' to add text bubbles. The 'Eraser' cleans up your creations."
+              description="Use the 'Brush Tool' to color cells, the 'Shapes Tool' to draw lines, circles, and squares, and the 'Type Tool' to add text bubbles. The 'Eraser' cleans up your creations."
               imageUrl="https://placehold.co/300x150.png"
               imageHint="drawing tools palette"
               imageAlt="Drawing tools placeholder"
@@ -126,3 +126,4 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
     </Dialog>
   );
 }
+

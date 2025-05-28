@@ -251,7 +251,7 @@ export default function FloatingToolbar({
 
         <Popover open={isColorPainterPopoverOpen} onOpenChange={setIsColorPainterPopoverOpen}>
           <ToolButton
-            label="Paint Tool"
+            label="Brush Tool"
             icon={Paintbrush}
             onClick={() => {
                 setIsColorPainterPopoverOpen(prev => !prev);
@@ -264,7 +264,7 @@ export default function FloatingToolbar({
                 variant={(isColorPainterPopoverOpen || activeTool === 'paint_cell') ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Paint Tool"
+                aria-label="Brush Tool"
               >
                 <Paintbrush className="h-5 w-5 text-accent-foreground" />
               </Button>
@@ -388,3 +388,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
