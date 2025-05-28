@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObjectType, Participant } from '@/types';
+import type { Point, BattleGridProps, Token as TokenType, DrawnShape, TextObjectType, Participant, GridCellData } from '@/types';
 import type { LucideProps } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
@@ -195,6 +195,7 @@ export default function BattleGrid({
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isErasing, setIsErasing] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
+  const [pendingGridCellsDuringPaint, setPendingGridCellsDuringPaint] = useState<GridCellData[][] | null>(null);
   const [hoveredCellWhilePaintingOrErasing, setHoveredCellWhilePaintingOrErasing] = useState<Point | null>(null);
   const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -714,13 +715,12 @@ export default function BattleGrid({
       case 'paint_cell':
         setIsPainting(true);
         setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-        setGridCells(prev => {
-          const newCells = prev.map(row => row.map(cell => ({ ...cell })));
-          if (newCells[gridY] && newCells[gridY][gridX]) {
-            newCells[gridY][gridX].color = selectedColor;
-          }
-          return newCells;
-        });
+        // Initialize pending cells for the stroke
+        const initialPendingCells = gridCells.map(row => row.map(cell => ({ ...cell })));
+        if (initialPendingCells[gridY]?.[gridX]) {
+            initialPendingCells[gridY][gridX].color = selectedColor;
+        }
+        setPendingGridCellsDuringPaint(initialPendingCells);
         break;
       case 'place_token':
         if (selectedTokenTemplate) {
@@ -1118,14 +1118,14 @@ export default function BattleGrid({
         const gridY = Math.floor(pos.y / cellSize);
         if (gridX >= 0 && gridX < numCols && gridY >= 0 && gridY < numRows) {
             setHoveredCellWhilePaintingOrErasing({ x: gridX, y: gridY });
-            setGridCells(prev => {
-                const newCells = [...prev.map(r => [...r.map(c => ({...c}))])]; 
-                if (newCells[gridY] && newCells[gridY][gridX] && newCells[gridY][gridX].color !== selectedColor) {
-                    newCells[gridY][gridX].color = selectedColor;
-                    return newCells;
+            if (pendingGridCellsDuringPaint &&
+                pendingGridCellsDuringPaint[gridY]?.[gridX]?.color !== selectedColor) {
+                const updatedPendingCells = pendingGridCellsDuringPaint.map(row => row.map(cell => ({ ...cell })));
+                if (updatedPendingCells[gridY]?.[gridX]) {
+                   updatedPendingCells[gridY][gridX].color = selectedColor;
                 }
-                return prev; 
-            });
+                setPendingGridCellsDuringPaint(updatedPendingCells);
+            }
         } else {
            setHoveredCellWhilePaintingOrErasing(null);
         }
@@ -1218,7 +1218,6 @@ export default function BattleGrid({
         const dyScreen = event.clientY - potentialDraggingShapeInfo.startScreenPos.y;
         if (dxScreen * dxScreen + dyScreen * dyScreen < CLICK_THRESHOLD_SQUARED) { 
             // This was a click, not a drag for shape movement
-            // Popover opening is handled by right-click (handleContextMenu)
         }
     }
     setPotentialDraggingShapeInfo(null); 
@@ -1239,6 +1238,10 @@ export default function BattleGrid({
         setHoveredCellWhilePaintingOrErasing(null);
     }
     if (isPainting) {
+        if (activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
+            setGridCells(pendingGridCellsDuringPaint);
+            setPendingGridCellsDuringPaint(null);
+        }
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
     }
@@ -1282,11 +1285,17 @@ export default function BattleGrid({
       setIsPanning(false);
       setPanStart(null);
     }
+    
     if (isErasing || isPainting || activeTool === 'place_token') {
+        if (isPainting && activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
+            setGridCells(pendingGridCellsDuringPaint);
+            setPendingGridCellsDuringPaint(null);
+        }
         setIsErasing(false);
         setIsPainting(false);
         setHoveredCellWhilePaintingOrErasing(null);
     }
+
     if (draggingToken) {
         if (draggingTokenPosition && onTokenMove) {
              onTokenMove(draggingToken.id, draggingTokenPosition.x, draggingTokenPosition.y);
@@ -1470,6 +1479,11 @@ export default function BattleGrid({
                                   hoveredCellWhilePaintingOrErasing &&
                                   hoveredCellWhilePaintingOrErasing.x === x &&
                                   hoveredCellWhilePaintingOrErasing.y === y;
+              
+              const cellDataToUse = (isPainting && activeTool === 'paint_cell' && pendingGridCellsDuringPaint && pendingGridCellsDuringPaint[y]?.[x])
+                ? pendingGridCellsDuringPaint[y][x]
+                : cell;
+
               return (
               <rect
                 key={cell.id}
@@ -1477,7 +1491,7 @@ export default function BattleGrid({
                 y={y * cellSize}
                 width={isHighlighted && activeTool === 'place_token' ? cellSize * highlightSize : cellSize}
                 height={isHighlighted && activeTool === 'place_token' ? cellSize * highlightSize : cellSize}
-                fill={cell.color || 'transparent'}
+                fill={cellDataToUse.color || 'transparent'}
                 stroke={
                   isHighlighted 
                     ? 'hsl(var(--ring))' 
@@ -2332,5 +2346,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
-    
