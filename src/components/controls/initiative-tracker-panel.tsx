@@ -243,7 +243,7 @@ export default function InitiativeTrackerPanel({
                       key={p.id}
                       className={cn(
                         "flex flex-col p-2.5 w-full max-w-full min-w-0 rounded-md overflow-hidden",
-                        itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "border border-border hover:bg-muted/50",
+                        itemIsActive ? "border-2 border-accent text-accent-foreground shadow-md" : "border border-sidebar-border hover:bg-muted/50",
                         canFocus && "cursor-pointer"
                       )}
                       onClick={() => {
