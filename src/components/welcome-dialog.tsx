@@ -89,7 +89,7 @@ export default function WelcomeDialog({ isOpen, onClose }: WelcomeDialogProps) {
             <FeatureSection
               icon={Users}
               title="Manage Tokens"
-              description="Add player, enemy, or ally tokens using the 'Tokens Tool'. Click on a token to rename, change its image, or delete it. Drag tokens to move them around the grid."
+              description="Add player, enemy, or ally tokens using the 'Token Tool'. Click on a token to rename, change its image, or delete it. Drag tokens to move them around the grid."
               imageUrl="https://placehold.co/300x150.png"
               imageHint="boardgame miniatures tokens"
               imageAlt="Token management placeholder"

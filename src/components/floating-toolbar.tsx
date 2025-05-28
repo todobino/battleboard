@@ -221,7 +221,7 @@ export default function FloatingToolbar({
 
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={setIsTokenPlacerPopoverOpen}>
           <ToolButton
-            label="Tokens Tool"
+            label="Token Tool"
             icon={Users}
              onClick={() => {
                 setIsTokenPlacerPopoverOpen(prev => !prev);
@@ -234,7 +234,7 @@ export default function FloatingToolbar({
                 variant={(isTokenPlacerPopoverOpen || activeTool === 'place_token') ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Tokens Tool"
+                aria-label="Token Tool"
               >
                 <Users className="h-5 w-5 text-accent-foreground" />
               </Button>
