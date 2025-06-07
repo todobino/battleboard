@@ -1,6 +1,8 @@
 
+
 import type { LucideProps } from 'lucide-react';
 import type React from 'react';
+import type { UseToast } from '@/hooks/use-toast'; // For BattleGridProps
 
 export interface Point {
   x: number;
@@ -96,6 +98,7 @@ export interface DefaultBattleMap {
   hint: string;
 }
 
+// Props for the main BattleGrid component, now acting more as a container
 export interface BattleGridProps {
   gridCells: GridCellData[][];
   setGridCells: React.Dispatch<React.SetStateAction<GridCellData[][]>>;
@@ -103,8 +106,8 @@ export interface BattleGridProps {
   setTokens: React.Dispatch<React.SetStateAction<Token[]>>;
   drawnShapes: DrawnShape[];
   setDrawnShapes: React.Dispatch<React.SetStateAction<DrawnShape[]>>;
-  currentDrawingShape: DrawnShape | null;
-  setCurrentDrawingShape: React.Dispatch<React.SetStateAction<DrawnShape | null>>;
+  currentDrawingShape: DrawnShape | null; // Still needed for interactions hook
+  setCurrentDrawingShape: React.Dispatch<React.SetStateAction<DrawnShape | null>>; // Still needed for interactions hook
   textObjects: TextObjectType[];
   setTextObjects: React.Dispatch<React.SetStateAction<TextObjectType[]>>;
   showGridLines: boolean;
@@ -127,7 +130,7 @@ export interface BattleGridProps {
   onTokenErasedOnGrid?: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
-  escapePressCount?: number;
+  // escapePressCount no longer direct prop, handled by useEscapeKey or passed from BattleBoardPage
 
   selectedTokenId?: string | null;
   setSelectedTokenId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -140,9 +143,11 @@ export interface BattleGridProps {
   onFocusHandled?: () => void;
 
   onOpenAddCombatantDialogForToken?: (token: Token) => void;
-  onOpenEditStatsDialogForToken?: (tokenId: string) => void; // Added this
-  participants: Participant[];
+  onOpenEditStatsDialogForToken?: (tokenId: string) => void;
+  participants: Participant[]; // For right-click menu context
+  toast: UseToast['toast']; // Pass toast function
 }
+
 
 export interface UndoableState {
   gridCells: GridCellData[][];
@@ -180,7 +185,7 @@ export interface FloatingToolbarProps {
   canRedo: boolean;
   onResetBoard: () => void;
   defaultBattlemaps: DefaultBattleMap[];
-  escapePressCount?: number;
+  escapePressCount: number; // Passed from BattleBoardPage
   toolbarPosition: 'top' | 'bottom';
   setToolbarPosition: React.Dispatch<React.SetStateAction<'top' | 'bottom'>>;
 }
@@ -190,7 +195,7 @@ export interface GridSettingsPanelProps {
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
   backgroundImageUrl: string | null;
   setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
-  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>; // May not be needed if popover closes on tool select
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   defaultBattlemaps: DefaultBattleMap[];
@@ -200,13 +205,14 @@ export interface InitiativeTrackerPanelProps {
   participantsProp?: Participant[];
   tokens: Token[];
   currentParticipantIndex: number;
-  roundCounter: number;
+  // roundCounter: number; // Displayed in BattleBoardPage header now
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
   onFocusToken?: (tokenId: string) => void;
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
-  onUpdateParticipantStats?: (participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => void;
-  onOpenEditStatsDialogForParticipant?: (participant: Participant) => void; // Added this
+  // onUpdateParticipantStats?: (participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => void; // Handled by BattleBoardPage
+  onOpenEditStatsDialogForParticipant?: (participant: Participant) => void;
 }
+

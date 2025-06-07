@@ -123,22 +123,22 @@ export function screenToGridCoords(screenPos: Point, cellSize: number): Point {
 
 /**
  * Measures text dimensions using a temporary span.
- * This function should ideally be in a client-side utility file if used in client components.
  * @param text The text to measure.
  * @param fontSize The font size in pixels.
  * @returns The width and height of the text.
  */
 export function measureText(text: string, fontSize: number): { width: number; height: number } {
-    if (typeof document === 'undefined') return { width: 0, height: 0 }; // Guard for SSR
+    if (typeof document === 'undefined') return { width: 0, height: 0}; // Guard for SSR or non-browser environments
     const tempSpan = document.createElement('span');
     document.body.appendChild(tempSpan);
-    tempSpan.style.fontFamily = 'sans-serif'; // Should match SVG text font
+    // Ensure font style matches how it's rendered in SVG for accuracy
+    tempSpan.style.fontFamily = 'sans-serif'; // Or a more specific font if used
     tempSpan.style.fontSize = `${fontSize}px`;
-    tempSpan.style.fontWeight = 'normal'; // Or 'bold' as needed
+    tempSpan.style.fontWeight = 'normal'; // Or 'bold' if text is bolded
     tempSpan.style.whiteSpace = 'nowrap';
     tempSpan.style.visibility = 'hidden';
     tempSpan.style.position = 'absolute';
-    tempSpan.textContent = text || " ";
+    tempSpan.textContent = text || " "; // Ensure textContent is not empty for measurement
     const width = tempSpan.offsetWidth;
     const height = tempSpan.offsetHeight;
     document.body.removeChild(tempSpan);
