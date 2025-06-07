@@ -3,7 +3,7 @@
 
 import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, FloatingToolbarProps as FloatingToolbarPropsType } from '@/types';
 import type { Dispatch, SetStateAction } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power, ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -118,13 +118,12 @@ export default function FloatingToolbar({
     if (setActiveTool) {
       setActiveTool(tool);
     }
-    if (tool !== 'map_tool' && !['measure_distance', 'measure_radius'].includes(tool) && tool !== 'token_placer_tool' && tool !== 'paint_cell' && !['shapes_tool', 'draw_line', 'draw_circle', 'draw_rectangle'].includes(tool) && tool !== 'type_tool') {
-        setIsMapSettingsPopoverOpen(false);
-        setIsMeasurementPopoverOpen(false);
-        setIsTokenPlacerPopoverOpen(false);
-        setIsColorPainterPopoverOpen(false);
-        setIsShapeToolPopoverOpen(false);
-    }
+    // Close other popovers when a direct tool is selected or a new popover tool is implicitly chosen
+    if (tool !== 'map_tool') setIsMapSettingsPopoverOpen(false);
+    if (tool !== 'measure_distance' && tool !== 'measure_radius') setIsMeasurementPopoverOpen(false);
+    if (tool !== 'place_token') setIsTokenPlacerPopoverOpen(false);
+    if (tool !== 'paint_cell') setIsColorPainterPopoverOpen(false);
+    if (tool !== 'draw_line' && tool !== 'draw_circle' && tool !== 'draw_rectangle') setIsShapeToolPopoverOpen(false);
   };
 
   const handleTokenTemplateSelected = () => {
@@ -142,6 +141,14 @@ export default function FloatingToolbar({
   const handleMeasurementToolSelected = () => {
     setIsMeasurementPopoverOpen(false);
   };
+  
+  // Memoized onClick handlers for popover toggles
+  const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
+  const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
+  const toggleTokenPlacerPopover = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), [setIsTokenPlacerPopoverOpen]);
+  const toggleColorPainterPopover = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), [setIsColorPainterPopoverOpen]);
+  const toggleShapeToolPopover = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), [setIsShapeToolPopoverOpen]);
+
 
   const toggleToolbarPosition = () => {
     setToolbarPosition(current => (current === 'top' ? 'bottom' : 'top'));
@@ -184,9 +191,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Map Tool"
             icon={Map}
-            onClick={() => {
-                setIsMapSettingsPopoverOpen(prev => !prev);
-            }}
+            onClick={toggleMapSettingsPopover}
             isActive={isMapSettingsPopoverOpen}
             asChild
           >
@@ -219,9 +224,7 @@ export default function FloatingToolbar({
            <ToolButton
             label="Measurement Tool"
             icon={DraftingCompass}
-            onClick={() => {
-                setIsMeasurementPopoverOpen(prev => !prev);
-            }}
+            onClick={toggleMeasurementPopover}
             isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
             asChild
           >
@@ -251,9 +254,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Token Tool"
             icon={Users}
-             onClick={() => {
-                setIsTokenPlacerPopoverOpen(prev => !prev);
-            }}
+            onClick={toggleTokenPlacerPopover}
             isActive={isTokenPlacerPopoverOpen || activeTool === 'place_token'}
             asChild
           >
@@ -281,9 +282,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Brush Tool"
             icon={Paintbrush}
-            onClick={() => {
-                setIsColorPainterPopoverOpen(prev => !prev);
-            }}
+            onClick={toggleColorPainterPopover}
             isActive={isColorPainterPopoverOpen || activeTool === 'paint_cell'}
             asChild
           >
@@ -313,9 +312,7 @@ export default function FloatingToolbar({
           <ToolButton
             label="Shape Tool"
             icon={Shapes}
-            onClick={() => {
-              setIsShapeToolPopoverOpen(prev => !prev);
-            }}
+            onClick={toggleShapeToolPopover}
             isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle'}
             asChild
           >
@@ -375,7 +372,7 @@ export default function FloatingToolbar({
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="default" // Changed from outline to default for background color control
+                  variant="default" 
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",
@@ -417,4 +414,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
