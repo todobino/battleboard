@@ -455,7 +455,7 @@ export default function BattleGrid({
             y={Math.min(interactions.marqueeStartPoint.y, interactions.marqueeEndPoint.y)}
             width={Math.abs(interactions.marqueeStartPoint.x - interactions.marqueeEndPoint.x)}
             height={Math.abs(interactions.marqueeStartPoint.y - interactions.marqueeEndPoint.y)}
-            fill="hsla(var(--accent), 0.2)"
+            fill="hsla(var(--accent), 0.1)"
             stroke="hsl(var(--accent))"
             strokeWidth="1"
             strokeDasharray="3 3"
@@ -496,3 +496,4 @@ export default function BattleGrid({
     </div>
   );
 }
+
