@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 const GRID_ROWS = 40; // Default grid dimensions
 const GRID_COLS = 40;
 const DEFAULT_TEXT_FONT_SIZE = 16;
-const LOCAL_STORAGE_KEY_BBS = 'battleBoardStateV3'; // Updated key for new structure
+const LOCAL_STORAGE_KEY_BBS = 'battleBoardStateV4'; // Updated key for new structure with multi-select
 
 const initialGridCells = (): GridCellData[][] =>
   Array.from({ length: GRID_ROWS }, (_, y) =>
@@ -36,6 +36,10 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
   const [drawnShapes, setDrawnShapes] = useState<DrawnShape[]>([]);
   const [textObjects, setTextObjects] = useState<TextObjectType[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+
+  const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([]);
+  const [selectedShapeIds, setSelectedShapeIds] = useState<string[]>([]);
+  const [selectedTextObjectIds, setSelectedTextObjectIds] = useState<string[]>([]);
 
   const [showGridLines, setShowGridLines] = useState<boolean>(true);
   const [showAllLabels, setShowAllLabels] = useState<boolean>(true);
@@ -94,6 +98,11 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
           setRoundCounter(loaded.roundCounter || 1);
           setIsCombatActive(loaded.isCombatActive || false);
           setToolbarPosition(loaded.toolbarPosition || 'top');
+          // Multi-select states - default to empty arrays if not found
+          setSelectedTokenIds(loaded.selectedTokenIds || []);
+          setSelectedShapeIds(loaded.selectedShapeIds || []);
+          setSelectedTextObjectIds(loaded.selectedTextObjectIds || []);
+
         } catch (error) {
           console.error("Failed to load state from localStorage:", error);
           localStorage.removeItem(LOCAL_STORAGE_KEY_BBS); // Clear corrupted state
@@ -111,6 +120,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
       gridCells, tokens: stripIconsForStorage(tokens), drawnShapes, textObjects, participants,
       showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
       currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
+      selectedTokenIds, selectedShapeIds, selectedTextObjectIds, // Save multi-select states
     };
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY_BBS, JSON.stringify(stateToSave));
@@ -121,6 +131,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
     currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
+    selectedTokenIds, selectedShapeIds, selectedTextObjectIds, // Include in dependency array
     isInitialLoadComplete
   ]);
   
@@ -131,6 +142,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
       drawnShapes: JSON.parse(JSON.stringify(drawnShapes)),
       textObjects: JSON.parse(JSON.stringify(textObjects)),
       participants: JSON.parse(JSON.stringify(participants)),
+      // Note: selectedIds are not part of undoable state, they are transient UI state.
     };
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
@@ -140,13 +152,12 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     setDrawnShapes(snapshot.drawnShapes);
     setTextObjects(snapshot.textObjects);
     setParticipants(snapshot.participants);
-    // Note: Other UI states like background image, zoom, combat state are NOT part of undo/redo.
-    // They are managed separately and persisted.
+    // Clear selections after undo/redo
+    setSelectedTokenIds([]);
+    setSelectedShapeIds([]);
+    setSelectedTextObjectIds([]);
   }, [rehydrateToken]);
 
-
-  // Derived states and simple setters are returned directly.
-  // More complex logic (event handlers, etc.) will be in BattleBoardPage or other hooks.
 
   return {
     gridCells, setGridCells,
@@ -154,6 +165,11 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     drawnShapes, setDrawnShapes,
     textObjects, setTextObjects,
     participants, setParticipants,
+
+    selectedTokenIds, setSelectedTokenIds,
+    selectedShapeIds, setSelectedShapeIds,
+    selectedTextObjectIds, setSelectedTextObjectIds,
+
     showGridLines, setShowGridLines,
     showAllLabels, setShowAllLabels,
     backgroundImageUrl, setBackgroundImageUrl,
@@ -166,13 +182,13 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     selectedTokenTemplate, setSelectedTokenTemplate,
     measurement, setMeasurement,
     currentTextFontSize, setCurrentTextFontSize,
-    isInitialLoadComplete, setIsInitialLoadComplete, // For UndoRedo hook initialization
+    isInitialLoadComplete, setIsInitialLoadComplete,
     toolbarPosition, setToolbarPosition,
-    getCurrentSnapshot, // For UndoRedo hook
-    restoreSnapshot,   // For UndoRedo hook
-    GRID_ROWS, GRID_COLS, // Constants needed elsewhere
-    rehydrateToken, stripIconsForStorage, // Utilities for token state
-    toast, // Pass toast for use in other handlers
-    findAvailableSquare: findAvailableSquareGridUtils, // Make available for add participant
+    getCurrentSnapshot, 
+    restoreSnapshot,   
+    GRID_ROWS, GRID_COLS, 
+    rehydrateToken, stripIconsForStorage, 
+    toast, 
+    findAvailableSquare: findAvailableSquareGridUtils, 
   };
 }

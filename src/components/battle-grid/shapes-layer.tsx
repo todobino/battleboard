@@ -16,7 +16,7 @@ interface ShapesLayerProps {
   handleSaveShapeLabel: () => void;
   handleShapeLabelInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   showAllLabels: boolean;
-  selectedShapeId: string | null;
+  selectedShapeIds: string[]; // Changed from selectedShapeId
   activeTool: ActiveTool;
   rightClickPopoverStateActive: boolean;
   isActuallyDraggingShape: boolean;
@@ -34,7 +34,7 @@ export default function ShapesLayer({
   handleSaveShapeLabel,
   handleShapeLabelInputKeyDown,
   showAllLabels,
-  selectedShapeId,
+  selectedShapeIds, // Changed
   activeTool,
   rightClickPopoverStateActive,
   isActuallyDraggingShape,
@@ -55,7 +55,7 @@ export default function ShapesLayer({
   
   const renderShape = (shape: DrawnShape, isCurrentDrawing: boolean) => {
     const isCurrentlyEditingThisShapeLabel = editingShapeId === shape.id;
-    const isShapeSelected = shape.id === selectedShapeId;
+    const isShapeSelected = selectedShapeIds.includes(shape.id); // Check if shape is in selected array
     const isLabelVisible = showAllLabels || isShapeSelected;
 
     let labelX = 0, labelY = 0;

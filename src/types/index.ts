@@ -130,14 +130,13 @@ export interface BattleGridProps {
   onTokenErasedOnGrid?: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
-  // escapePressCount no longer direct prop, handled by useEscapeKey or passed from BattleBoardPage
 
-  selectedTokenId?: string | null;
-  setSelectedTokenId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedShapeId?: string | null;
-  setSelectedShapeId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedTextObjectId?: string | null;
-  setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedTokenIds: string[];
+  setSelectedTokenIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedShapeIds: string[];
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedTextObjectIds: string[];
+  setSelectedTextObjectIds: React.Dispatch<React.SetStateAction<string[]>>;
 
   tokenIdToFocus?: string | null;
   onFocusHandled?: () => void;
@@ -205,14 +204,12 @@ export interface InitiativeTrackerPanelProps {
   participantsProp?: Participant[];
   tokens: Token[];
   currentParticipantIndex: number;
-  // roundCounter: number; // Displayed in BattleBoardPage header now
+  roundCounter?: number; // Made optional as it's displayed in BattleBoardPage header
   onRemoveParticipant: (id: string) => void;
   onRenameParticipant: (id: string, newName: string) => void;
   onChangeParticipantTokenImage: (id: string, newImageUrl: string) => void;
   onFocusToken?: (tokenId: string) => void;
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
-  // onUpdateParticipantStats?: (participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => void; // Handled by BattleBoardPage
   onOpenEditStatsDialogForParticipant?: (participant: Participant) => void;
 }
-

@@ -144,3 +144,21 @@ export function measureText(text: string, fontSize: number): { width: number; he
     document.body.removeChild(tempSpan);
     return { width, height };
   }
+
+/**
+ * Checks if two rectangles intersect.
+ * @param r1 The first rectangle {x, y, width, height}.
+ * @param r2 The second rectangle {x, y, width, height}.
+ * @returns True if the rectangles intersect, false otherwise.
+ */
+export function rectsIntersect(
+  r1: { x: number; y: number; width: number; height: number },
+  r2: { x: number; y: number; width: number; height: number }
+): boolean {
+  return !(
+    r2.x > r1.x + r1.width ||
+    r2.x + r2.width < r1.x ||
+    r2.y > r1.y + r1.height ||
+    r2.y + r2.height < r1.y
+  );
+}

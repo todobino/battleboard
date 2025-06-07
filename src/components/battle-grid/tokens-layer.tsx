@@ -21,7 +21,7 @@ interface TokensLayerProps {
   handleSaveTokenName: () => void;
   handleEditInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   activeTurnTokenId: string | null;
-  selectedTokenId: string | null;
+  selectedTokenIds: string[]; // Changed from selectedTokenId
   hoveredTokenId: string | null;
   setHoveredTokenId: (id: string | null) => void;
   showAllLabels: boolean;
@@ -43,7 +43,7 @@ export default function TokensLayer({
   handleSaveTokenName,
   handleEditInputKeyDown,
   activeTurnTokenId,
-  selectedTokenId,
+  selectedTokenIds, // Changed
   hoveredTokenId,
   setHoveredTokenId,
   showAllLabels,
@@ -72,6 +72,7 @@ export default function TokensLayer({
     const imageDisplaySize = tokenActualSize * cellSize * 0.95;
     const imageOffset = (tokenActualSize * cellSize - imageDisplaySize) / 2;
     let backgroundFill = token.color;
+    const isSelected = selectedTokenIds.includes(token.id); // Check if token is in selected array
 
     if (!token.customImageUrl) {
       switch (token.type) {
@@ -94,9 +95,9 @@ export default function TokensLayer({
           cy={tokenActualSize * cellSize / 2}
           r={tokenActualSize * cellSize / 2}
           fill={backgroundFill}
-          stroke={isGhost ? 'hsl(var(--primary-foreground))' : (selectedTokenId === token.id || activeTurnTokenId === token.id ? 'hsl(var(--ring))' : 
+          stroke={isGhost ? 'hsl(var(--primary-foreground))' : (isSelected || activeTurnTokenId === token.id ? 'hsl(var(--ring))' : 
                     hoveredTokenId === token.id && activeTool === 'select' && !editingTokenId && !rightClickPopoverStateActive ? 'hsl(var(--accent))' : 'hsl(var(--primary-foreground))')}
-          strokeWidth={isGhost ? 1 : (selectedTokenId === token.id || activeTurnTokenId === token.id ? 2 : 1)}
+          strokeWidth={isGhost ? 1 : (isSelected || activeTurnTokenId === token.id ? 2 : 1)}
         />
         {token.customImageUrl ? (
           <>
@@ -151,7 +152,8 @@ export default function TokensLayer({
       {tokens.map(token => {
         const tokenActualSize = token.size || 1;
         const isCurrentlyEditingThisToken = editingTokenId === token.id;
-        const isTokenLabelVisible = showAllLabels || selectedTokenId === token.id;
+        const isTokenSelected = selectedTokenIds.includes(token.id);
+        const isTokenLabelVisible = showAllLabels || isTokenSelected;
         const fixedInputWidth = cellSize * 4;
         const fixedInputHeight = 20;
 

@@ -37,9 +37,9 @@ export default function BattleGrid({
   measurement, setMeasurement,
   activeTurnTokenId, currentTextFontSize,
   onTokenDelete, onTokenErasedOnGrid, onTokenImageChangeRequest,
-  selectedTokenId, setSelectedTokenId,
-  selectedShapeId, setSelectedShapeId,
-  selectedTextObjectId, setSelectedTextObjectId,
+  selectedTokenIds, setSelectedTokenIds,
+  selectedShapeIds, setSelectedShapeIds,
+  selectedTextObjectIds, setSelectedTextObjectIds,
   tokenIdToFocus, onFocusHandled,
   onOpenAddCombatantDialogForToken,
   onOpenEditStatsDialogForToken,
@@ -81,7 +81,7 @@ export default function BattleGrid({
     measurement, setMeasurement, currentDrawingShape, setCurrentDrawingShape,
     onTokenMove, onTokenErasedOnGrid,
     editingTokenId, setEditingTokenId, editingTextObjectId, setEditingTextObjectId, editingShapeId, setEditingShapeId,
-    selectedTokenId, setSelectedTokenId, selectedShapeId, setSelectedShapeId, selectedTextObjectId, setSelectedTextObjectId,
+    selectedTokenIds, setSelectedTokenIds, selectedShapeIds, setSelectedShapeIds, selectedTextObjectIds, setSelectedTextObjectIds,
     isPanning, 
     panZoomHandlePanStart: handlePanStart, 
     panZoomHandlePanMove: handlePanMove,
@@ -108,7 +108,9 @@ export default function BattleGrid({
   const handleTokenLabelClick = (event: React.MouseEvent, token: TokenType) => {
     event.stopPropagation();
     if (activeTool === 'select' && !interactions.draggingToken && !rightClickPopoverState) {
-      setSelectedTokenId(token.id);
+      setSelectedTokenIds([token.id]);
+      setSelectedShapeIds([]);
+      setSelectedTextObjectIds([]);
       setEditingTokenId(token.id);
       setEditingText(token.instanceName || '');
     }
@@ -131,7 +133,9 @@ export default function BattleGrid({
   const handleShapeLabelClick = (event: React.MouseEvent, shape: DrawnShape) => {
     event.stopPropagation();
     if (activeTool === 'select' && !rightClickPopoverState && !interactions.isActuallyDraggingShape) {
-      setSelectedShapeId(shape.id);
+      setSelectedShapeIds([shape.id]);
+      setSelectedTokenIds([]);
+      setSelectedTextObjectIds([]);
       setEditingShapeId(shape.id);
       setEditingShapeLabelText(shape.label || '');
     }
@@ -149,8 +153,13 @@ export default function BattleGrid({
 
 
   const handleContextMenu = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (activeTool === 'select' && isPanning) { // If panning was initiated by right-click, don't show menu
+      event.preventDefault();
+      return;
+    }
     event.preventDefault();
-    if (activeTool !== 'select' || editingTokenId || editingShapeId || editingTextObjectId) return;
+    if (editingTokenId || editingShapeId || editingTextObjectId) return;
+
     const pos = getMousePosition(event);
 
     const rClickedToken = tokens.find(token => {
@@ -159,7 +168,7 @@ export default function BattleGrid({
                pos.y >= token.y * cellSize && pos.y <= (token.y + tokenActualSize) * cellSize;
     });
     if (rClickedToken) {
-        setSelectedTokenId(rClickedToken.id); setSelectedShapeId(null); setSelectedTextObjectId(null);
+        setSelectedTokenIds([rClickedToken.id]); setSelectedShapeIds([]); setSelectedTextObjectIds([]);
         setRightClickPopoverState({ type: 'token', item: rClickedToken, x: event.clientX, y: event.clientY });
         if (rightClickPopoverTriggerRef.current) {
             rightClickPopoverTriggerRef.current.style.position = 'fixed';
@@ -178,7 +187,7 @@ export default function BattleGrid({
         else if (shape.type === 'rectangle') hit = isPointInRectangle(pos, Math.min(shape.startPoint.x, shape.endPoint.x), Math.min(shape.startPoint.y, shape.endPoint.y), Math.abs(shape.endPoint.x - shape.startPoint.x), Math.abs(shape.endPoint.y - shape.startPoint.y));
         
         if (hit) {
-            setSelectedShapeId(shape.id); setSelectedTokenId(null); setSelectedTextObjectId(null);
+            setSelectedShapeIds([shape.id]); setSelectedTokenIds([]); setSelectedTextObjectIds([]);
             setRightClickPopoverState({ type: 'shape', item: shape, x: event.clientX, y: event.clientY });
              if (shape.type === 'circle') { 
                 const pixelRadius = Math.sqrt(dist2(shape.startPoint, shape.endPoint));
@@ -199,7 +208,7 @@ export default function BattleGrid({
     
     const rClickedTextObject = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
     if (rClickedTextObject) {
-        setSelectedTextObjectId(rClickedTextObject.id); setSelectedTokenId(null); setSelectedShapeId(null);
+        setSelectedTextObjectIds([rClickedTextObject.id]); setSelectedTokenIds([]); setSelectedShapeIds([]);
         setRightClickPopoverState({ type: 'text', item: rClickedTextObject, x: event.clientX, y: event.clientY });
         if (rightClickPopoverTriggerRef.current) {
              rightClickPopoverTriggerRef.current.style.position = 'fixed';
@@ -220,6 +229,12 @@ export default function BattleGrid({
       setEditingTextObjectId(null);
       if(interactions.isCreatingText) interactions.finalizeTextCreation(); 
       setHoveredTextObjectId(null); 
+      // Clear marquee selection on escape
+      if (interactions.isMarqueeSelecting) {
+        interactions.setIsMarqueeSelecting(false);
+        interactions.setMarqueeStartPoint(null);
+        interactions.setMarqueeEndPoint(null);
+      }
     }
   }, [escapePressCount, interactions]);
 
@@ -270,11 +285,12 @@ export default function BattleGrid({
 
   const getCursorStyle = () => {
     if (editingTokenId || interactions.isCreatingText || editingTextObjectId || editingShapeId) return 'cursor-text';
-    if (isPanning) return 'cursor-grabbing';
+    if (isPanning) return 'cursor-grabbing'; // This isPanning is from usePanZoom
     if (interactions.draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
     
     if (activeTool === 'select' && !interactions.draggingToken && !isPanning && !rightClickPopoverState && !interactions.isActuallyDraggingShape) {
-        const hoveredShape = selectedShapeId ? drawnShapes.find(s => s.id === selectedShapeId) : null;
+        const primarySelectedShapeId = selectedShapeIds.length > 0 ? selectedShapeIds[0] : null; // simplified for now
+        const hoveredShape = primarySelectedShapeId ? drawnShapes.find(s => s.id === primarySelectedShapeId) : null;
         if (hoveredShape && hoveredShape.isLocked && (hoveredShape.type === 'circle' || hoveredShape.type === 'rectangle')) {
             return 'cursor-default';
         }
@@ -284,6 +300,7 @@ export default function BattleGrid({
     if (interactions.isActuallyDraggingShape && activeTool === 'select' && !editingShapeId) return 'cursor-grabbing';
     if (activeTool === 'type_tool') return 'cursor-text';
     if (['paint_cell', 'place_token', 'measure_distance', 'measure_radius', 'eraser_tool', 'draw_line', 'draw_circle', 'draw_rectangle'].includes(activeTool)) return 'cursor-crosshair';
+    if (interactions.isMarqueeSelecting) return 'cursor-crosshair';
     return 'cursor-default';
   };
 
@@ -296,18 +313,22 @@ export default function BattleGrid({
 
 
   const handleEditTokenNameFromMenu = (tokenId: string, currentName: string) => {
-    setSelectedTokenId(tokenId);
+    setSelectedTokenIds([tokenId]);
+    setSelectedShapeIds([]);
+    setSelectedTextObjectIds([]);
     setEditingTokenId(tokenId);
     setEditingText(currentName);
   };
   const handleEditTextObjectFromMenu = (textObj: TextObjectType) => {
-    setSelectedTextObjectId(textObj.id);
+    setSelectedTextObjectIds([textObj.id]);
+    setSelectedTokenIds([]);
+    setSelectedShapeIds([]);
     setEditingTextObjectId(textObj.id);
     setEditingTextObjectContent(textObj.content);
   };
   const handleDeleteTextObject = (textObjId: string) => {
     setTextObjects(prev => prev.filter(to => to.id !== textObjId));
-    if (selectedTextObjectId === textObjId) setSelectedTextObjectId(null);
+    setSelectedTextObjectIds(prev => prev.filter(id => id !== textObjId));
   };
   const handleToggleShapeLock = (shapeId: string) => {
     setDrawnShapes(prev => prev.map(s => s.id === shapeId ? { ...s, isLocked: !s.isLocked } : s));
@@ -330,13 +351,15 @@ export default function BattleGrid({
     setDrawnShapes(prev => prev.map(s => (s.id === shapeId && s.type === 'circle') ? { ...s, endPoint: { x: s.startPoint.x + newRadiusInPixels, y: s.startPoint.y } } : s));
   };
   const handleEditShapeLabelFromMenu = (shape: DrawnShape) => {
-    setSelectedShapeId(shape.id);
+    setSelectedShapeIds([shape.id]);
+    setSelectedTokenIds([]);
+    setSelectedTextObjectIds([]);
     setEditingShapeId(shape.id);
     setEditingShapeLabelText(shape.label || '');
   };
   const handleDeleteShape = (shapeId: string) => {
     setDrawnShapes(prev => prev.filter(s => s.id !== shapeId));
-    if (selectedShapeId === shapeId) setSelectedShapeId(null);
+    setSelectedShapeIds(prev => prev.filter(id => id !== shapeId));
   };
 
   return (
@@ -380,7 +403,7 @@ export default function BattleGrid({
           handleSaveShapeLabel={handleSaveShapeLabel}
           handleShapeLabelInputKeyDown={handleShapeLabelInputKeyDown}
           showAllLabels={showAllLabels}
-          selectedShapeId={selectedShapeId}
+          selectedShapeIds={selectedShapeIds}
           activeTool={activeTool}
           rightClickPopoverStateActive={!!rightClickPopoverState}
           isActuallyDraggingShape={interactions.isActuallyDraggingShape}
@@ -400,7 +423,7 @@ export default function BattleGrid({
           handleSaveTokenName={handleSaveTokenName}
           handleEditInputKeyDown={handleEditInputKeyDown}
           activeTurnTokenId={activeTurnTokenId}
-          selectedTokenId={selectedTokenId}
+          selectedTokenIds={selectedTokenIds}
           hoveredTokenId={hoveredTokenId}
           setHoveredTokenId={setHoveredTokenId}
           showAllLabels={showAllLabels}
@@ -420,12 +443,25 @@ export default function BattleGrid({
           finalizeTextCreation={interactions.finalizeTextCreation}
           handleTextInputKeyDown={handleTextInputKeyDown}
           activeTool={activeTool}
-          selectedTextObjectId={selectedTextObjectId}
+          selectedTextObjectIds={selectedTextObjectIds}
           hoveredTextObjectId={hoveredTextObjectId}
           setHoveredTextObjectId={setHoveredTextObjectId}
           draggingTextObjectId={interactions.draggingTextObjectId}
           rightClickPopoverStateActive={!!rightClickPopoverState}
         />
+        {interactions.isMarqueeSelecting && interactions.marqueeStartPoint && interactions.marqueeEndPoint && (
+          <rect
+            x={Math.min(interactions.marqueeStartPoint.x, interactions.marqueeEndPoint.x)}
+            y={Math.min(interactions.marqueeStartPoint.y, interactions.marqueeEndPoint.y)}
+            width={Math.abs(interactions.marqueeStartPoint.x - interactions.marqueeEndPoint.x)}
+            height={Math.abs(interactions.marqueeStartPoint.y - interactions.marqueeEndPoint.y)}
+            fill="hsla(var(--accent), 0.2)"
+            stroke="hsl(var(--accent))"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            className="pointer-events-none"
+          />
+        )}
         <MeasurementOverlay measurement={measurement} cellSize={cellSize} />
       </svg>
 

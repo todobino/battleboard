@@ -54,9 +54,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     getCurrentSnapshot: bbs.getCurrentSnapshot,
     restoreSnapshot: bbs.restoreSnapshot,
     onStateRestored: () => {
-      setSelectedTokenId(null);
-      setSelectedShapeId(null);
-      setSelectedTextObjectId(null);
+      bbs.setSelectedTokenIds([]);
+      bbs.setSelectedShapeIds([]);
+      bbs.setSelectedTextObjectIds([]);
     }
   });
 
@@ -83,9 +83,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
   };
 
-  const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
-  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
-  const [selectedTextObjectId, setSelectedTextObjectId] = useState<string | null>(null);
+  // Single tokenIdToFocus remains for camera movement
   const [tokenIdToFocus, setTokenIdToFocus] = useState<string | null>(null);
 
   // State for "Add Participant" Dialog
@@ -147,7 +145,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     bbs.setCurrentParticipantIndex(-1);
     bbs.setRoundCounter(1);
     bbs.setIsCombatActive(false);
-    setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
+    bbs.setSelectedTokenIds([]); 
+    bbs.setSelectedShapeIds([]); 
+    bbs.setSelectedTextObjectIds([]);
     setTokenIdToFocus(null);
     bbs.setToolbarPosition('top');
 
@@ -221,8 +221,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (participantLinked) {
       bbs.setParticipants(prevP => prevP.filter(p => p.id !== participantLinked.id));
     }
-    if (selectedTokenId === tokenId) setSelectedTokenId(null);
-  }, [bbs, selectedTokenId]);
+    bbs.setSelectedTokenIds(prev => prev.filter(id => id !== tokenId));
+  }, [bbs]);
 
   const handleTokenDelete = useCallback((tokenId: string) => {
     const tokenBeingDeleted = bbs.tokens.find(t => t.id === tokenId);
@@ -231,11 +231,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (participantLinked) {
       bbs.setParticipants(prevP => prevP.filter(p => p.id !== participantLinked.id));
     }
-    if (selectedTokenId === tokenId) setSelectedTokenId(null);
+    bbs.setSelectedTokenIds(prev => prev.filter(id => id !== tokenId));
     if (!participantLinked && tokenBeingDeleted) {
       setTimeout(() => toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` }),0);
     }
-  }, [bbs, toast, selectedTokenId]);
+  }, [bbs, toast]);
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
     setTokenToChangeImage(tokenId);
@@ -304,7 +304,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     });
   }, [bbs, toast]);
 
-  const handleFocusToken = useCallback((tokenId: string) => { setSelectedTokenId(tokenId); setTokenIdToFocus(tokenId); }, []);
+  const handleFocusToken = useCallback((tokenId: string) => { 
+    bbs.setSelectedTokenIds([tokenId]); 
+    bbs.setSelectedShapeIds([]);
+    bbs.setSelectedTextObjectIds([]);
+    setTokenIdToFocus(tokenId); 
+  }, [bbs]);
 
   const handleMoveParticipant = useCallback((participantId: string, direction: 'up' | 'down') => {
     bbs.setParticipants(prevParticipants => {
@@ -552,20 +557,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     }
   }, [bbs, toast, handleAddParticipantToList, unassignedTokensForAutoRoll]); 
 
-  // const participantTypeButtonConfig = {
-  //   player: {label:'Player', icon:PlayerIcon, selectedClass:'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]'},
-  //   enemy: {label:'Enemy', icon:EnemyIcon, selectedClass:'bg-destructive text-destructive-foreground hover:bg-destructive/90', unselectedHoverClass:'hover:bg-destructive hover:text-destructive-foreground'},
-  //   ally: {label:'Ally', icon:AllyIcon, selectedClass:'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]'}
-  // };
-  const participantTypeButtonConfig: any = {}; // TEMPORARY PLACEHOLDER
-
-
+  const participantTypeButtonConfig: Record<'player' | 'enemy' | 'ally', {label: string; icon: React.ElementType; selectedClass: string; unselectedHoverClass: string;}> = {
+    player: {label:'Player', icon:PlayerIcon, selectedClass:'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]'},
+    enemy: {label:'Enemy', icon:EnemyIcon, selectedClass:'bg-destructive text-destructive-foreground hover:bg-destructive/90', unselectedHoverClass:'hover:bg-destructive hover:text-destructive-foreground'},
+    ally: {label:'Ally', icon:AllyIcon, selectedClass:'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]'}
+  };
+  
   return (
     <div className="flex h-screen">
       {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
       
       <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
-        {/* DialogTrigger is now handled by the button's onClick */}
         <DialogContent className="sm:max-w-2xl">
             <FormDialogHeader>
               <div className="flex items-center gap-3">
@@ -582,11 +584,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
              <div className="space-y-1">
                 <Label>Type</Label>
-                {/* Temporarily commented out due to parsing error investigation 
                 <div className="flex space-x-2">
-                    {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map(type => (<Button key={type} type="button" variant={newParticipantType === type ? undefined : 'outline'} onClick={() => setNewParticipantType(type)} className={cn("flex-1", newParticipantType === type ? participantTypeButtonConfig[type].selectedClass : participantTypeButtonConfig[type].unselectedHoverClass)}><participantTypeButtonConfig[type].icon className="h-4 w-4 mr-2"/>{participantTypeButtonConfig[type].label}</Button>))}
+                    {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map(type => {
+                      const config = participantTypeButtonConfig[type];
+                      const IconComponent = config.icon;
+                      return (
+                        <Button key={type} type="button" variant={newParticipantType === type ? undefined : 'outline'} onClick={() => setNewParticipantType(type)} className={cn("flex-1", newParticipantType === type ? config.selectedClass : config.unselectedHoverClass)}>
+                          <IconComponent className="h-4 w-4 mr-2"/>
+                          {config.label}
+                        </Button>
+                      );
+                    })}
                 </div>
-                */}
              </div>
              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 space-y-1"><Label htmlFor="p-name">Name</Label><Input id="p-name" value={newParticipantName} onChange={e=>setNewParticipantName(e.target.value)} required/></div>
@@ -638,7 +647,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             gridCells={bbs.gridCells} setGridCells={bbs.setGridCells}
             tokens={bbs.tokens} setTokens={bbs.setTokens}
             drawnShapes={bbs.drawnShapes} setDrawnShapes={bbs.setDrawnShapes}
-            currentDrawingShape={null} setCurrentDrawingShape={() => {}}
+            currentDrawingShape={null} setCurrentDrawingShape={() => {}} // Placeholder, drawing state is in useGridInteractions
             textObjects={bbs.textObjects} setTextObjects={bbs.setTextObjects}
             showGridLines={bbs.showGridLines} setShowGridLines={bbs.setShowGridLines}
             showAllLabels={bbs.showAllLabels} setShowAllLabels={bbs.setShowAllLabels}
@@ -652,9 +661,9 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             currentTextFontSize={bbs.currentTextFontSize}
             onTokenDelete={handleTokenDelete} onTokenErasedOnGrid={handleTokenErasedOnGrid}
             onTokenImageChangeRequest={handleRequestTokenImageChange}
-            selectedTokenId={selectedTokenId} setSelectedTokenId={setSelectedTokenId}
-            selectedShapeId={selectedShapeId} setSelectedShapeId={setSelectedShapeId}
-            selectedTextObjectId={selectedTextObjectId} setSelectedTextObjectId={setSelectedTextObjectId}
+            selectedTokenIds={bbs.selectedTokenIds} setSelectedTokenIds={bbs.setSelectedTokenIds}
+            selectedShapeIds={bbs.selectedShapeIds} setSelectedShapeIds={bbs.setSelectedShapeIds}
+            selectedTextObjectIds={bbs.selectedTextObjectIds} setSelectedTextObjectIds={bbs.setSelectedTextObjectIds}
             tokenIdToFocus={tokenIdToFocus} onFocusHandled={() => setTokenIdToFocus(null)}
             onOpenAddCombatantDialogForToken={handleOpenAddCombatantDialogForToken}
             onOpenEditStatsDialogForToken={handleOpenEditStatsDialogFromToken}
@@ -721,6 +730,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-
-
-    

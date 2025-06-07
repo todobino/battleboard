@@ -22,7 +22,7 @@ interface TextObjectsLayerProps {
   finalizeTextCreation: () => void;
   handleTextInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   activeTool: ActiveTool;
-  selectedTextObjectId: string | null;
+  selectedTextObjectIds: string[]; // Changed from selectedTextObjectId
   hoveredTextObjectId: string | null;
   setHoveredTextObjectId: (id: string | null) => void;
   draggingTextObjectId: string | null;
@@ -41,7 +41,7 @@ export default function TextObjectsLayer({
   finalizeTextCreation,
   handleTextInputKeyDown,
   activeTool,
-  selectedTextObjectId,
+  selectedTextObjectIds, // Changed
   hoveredTextObjectId,
   setHoveredTextObjectId,
   draggingTextObjectId,
@@ -83,6 +83,7 @@ export default function TextObjectsLayer({
     <g>
       {textObjects.map(obj => {
         const isCurrentlyEditingThisText = editingTextObjectId === obj.id;
+        const isSelected = selectedTextObjectIds.includes(obj.id); // Check if text object is in selected array
         return isCurrentlyEditingThisText ? (
           <foreignObject
             key={`edit-${obj.id}`}
@@ -154,7 +155,7 @@ export default function TextObjectsLayer({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
-                border: (selectedTextObjectId === obj.id && activeTool !== 'type_tool') ? '1px solid hsl(var(--ring))' :
+                border: (isSelected && activeTool !== 'type_tool') ? '1px solid hsl(var(--ring))' :
                         (activeTool === 'type_tool' && hoveredTextObjectId === obj.id ? '1px solid hsl(var(--accent))' : 'none'),
               }}
             >

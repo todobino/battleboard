@@ -5,7 +5,7 @@ import type { Point, Token, DrawnShape, GridCellData, TextObjectType, ActiveTool
 import type { UseToast } from '@/hooks/use-toast';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { snapToVertex, snapToCellCenter, findAvailableSquare, isSquareOccupied } from '@/lib/grid-utils';
-import { distanceToLineSegment, isPointInCircle, isPointInRectangle, dist2, measureText } from '@/lib/geometry-utils';
+import { distanceToLineSegment, isPointInCircle, isPointInRectangle, dist2, measureText, rectsIntersect } from '@/lib/geometry-utils';
 
 const CLICK_THRESHOLD_SQUARED = 25;
 const SHAPE_CLICK_THRESHOLD = 8;
@@ -48,12 +48,12 @@ interface UseGridInteractionsProps {
   editingShapeId: string | null;
   setEditingShapeId: React.Dispatch<React.SetStateAction<string | null>>;
 
-  selectedTokenId: string | null;
-  setSelectedTokenId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedShapeId: string | null;
-  setSelectedShapeId: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedTextObjectId: string | null;
-  setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedTokenIds: string[];
+  setSelectedTokenIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedShapeIds: string[];
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedTextObjectIds: string[];
+  setSelectedTextObjectIds: React.Dispatch<React.SetStateAction<string[]>>;
   
   isPanning: boolean; 
   panZoomHandlePanStart: (event: React.MouseEvent<SVGSVGElement>) => void;
@@ -73,7 +73,7 @@ export function useGridInteractions({
   measurement, setMeasurement, currentDrawingShape, setCurrentDrawingShape,
   onTokenMove, onTokenErasedOnGrid,
   editingTokenId, setEditingTokenId, editingTextObjectId, setEditingTextObjectId, editingShapeId, setEditingShapeId,
-  selectedTokenId, setSelectedTokenId, selectedShapeId, setSelectedShapeId, selectedTextObjectId, setSelectedTextObjectId,
+  selectedTokenIds, setSelectedTokenIds, selectedShapeIds, setSelectedShapeIds, selectedTextObjectIds, setSelectedTextObjectIds,
   isPanning, panZoomHandlePanStart, panZoomHandlePanMove, panZoomHandlePanEnd, 
   toast,
   rightClickPopoverState, setRightClickPopoverState, shapeRadiusInput, setShapeRadiusInput
@@ -94,7 +94,7 @@ export function useGridInteractions({
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingStartPoint, setDrawingStartPoint] = useState<Point | null>(null);
 
-  const [isCreatingText, setIsCreatingText] = useState<{ id: string; x: number; y: number; currentText: string; fontSize: number; inputWidth: number; } | null>(null);
+  const [isCreatingText, setIsCreatingTextInternal] = useState<{ id: string; x: number; y: number; currentText: string; fontSize: number; inputWidth: number; } | null>(null);
   const [draggingTextObjectId, setDraggingTextObjectId] = useState<string | null>(null);
   const [textObjectDragOffset, setTextObjectDragOffset] = useState<Point | null>(null);
   const [lastTextClickInfo, setLastTextClickInfo] = useState<{ id: string | null; time: number }>({ id: null, time: 0 });
@@ -106,6 +106,16 @@ export function useGridInteractions({
   
   const [ghostToken, setGhostToken] = useState<Token | null>(null);
   const [movementMeasureLine, setMovementMeasureLine] = useState<{ startSvgCenter: Point; currentSvgCenter: Point; distanceText: string; } | null>(null);
+
+  const [isMarqueeSelecting, setIsMarqueeSelectingInternal] = useState(false);
+  const [marqueeStartPoint, setMarqueeStartPointInternal] = useState<Point | null>(null);
+  const [marqueeEndPoint, setMarqueeEndPointInternal] = useState<Point | null>(null);
+
+  // Public setters for marquee state if needed by BattleGrid for escape key, etc.
+  const setIsMarqueeSelecting = useCallback((val: boolean) => setIsMarqueeSelectingInternal(val), []);
+  const setMarqueeStartPoint = useCallback((val: Point | null) => setMarqueeStartPointInternal(val), []);
+  const setMarqueeEndPoint = useCallback((val: Point | null) => setMarqueeEndPointInternal(val), []);
+  const setIsCreatingText = useCallback((val: any) => setIsCreatingTextInternal(val), []);
 
 
   const finalizeTextCreation = useCallback(() => {
@@ -125,8 +135,8 @@ export function useGridInteractions({
       };
       setTextObjects(prev => [...prev, newTextObject]);
     }
-    setIsCreatingText(null);
-  }, [isCreatingText, setTextObjects]);
+    setIsCreatingTextInternal(null);
+  }, [isCreatingText, setTextObjects, setIsCreatingTextInternal]);
 
   const handleFinalizeTextEdit = useCallback(() => {
     if (editingTextObjectId) {
@@ -193,8 +203,6 @@ export function useGridInteractions({
   }, [setGridCells, tokens, setTokens, setDrawnShapes, setTextObjects, cellSize, onTokenErasedOnGrid]);
 
   const handleGridMouseDown = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    if (event.button === 2) return; 
-
     if (editingTokenId || editingTextObjectId || editingShapeId) return;
     const pos = getMousePosition(event);
     const gridX = Math.floor(pos.x / cellSize);
@@ -204,63 +212,80 @@ export function useGridInteractions({
     if (rightClickPopoverState) setRightClickPopoverState(null);
 
     if (activeTool === 'select') {
-      const clickedToken = tokens.find(token => {
-        const tokenActualSize = (token.size || 1);
-        return pos.x >= token.x * cellSize && pos.x <= (token.x + tokenActualSize) * cellSize &&
-               pos.y >= token.y * cellSize && pos.y <= (token.y + tokenActualSize) * cellSize;
-      });
-      if (clickedToken) {
-        event.stopPropagation();
-        setSelectedTokenId(clickedToken.id);
-        setSelectedShapeId(null);
-        setSelectedTextObjectId(null);
-        setDraggingToken(clickedToken);
-        setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
-        setDraggedTokenVisualPosition({ x: clickedToken.x * cellSize, y: clickedToken.y * cellSize });
-        setDraggingTokenGridPosition({ x: clickedToken.x, y: clickedToken.y });
-        if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
-          setGhostToken({ ...clickedToken });
-          const tokenActualSize = clickedToken.size || 1;
-          const startSvgCenterX = clickedToken.x * cellSize + (tokenActualSize * cellSize) / 2;
-          const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
-          setMovementMeasureLine({ startSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, distanceText: '0 ft' });
-        }
-        return;
-      }
-
-      const clickedTextObject = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
-      if (clickedTextObject) {
-        event.stopPropagation();
-        setSelectedTextObjectId(clickedTextObject.id);
-        setSelectedTokenId(null);
-        setSelectedShapeId(null);
-        setDraggingTextObjectId(clickedTextObject.id);
-        setTextObjectDragOffset({ x: pos.x - clickedTextObject.x, y: pos.y - clickedTextObject.y });
-        return;
-      }
-
-      for (let i = drawnShapes.length - 1; i >= 0; i--) {
-        const shape = drawnShapes[i];
-        let hit = false;
-        if (shape.type === 'line') hit = distanceToLineSegment(pos.x, pos.y, shape.startPoint.x, shape.startPoint.y, shape.endPoint.x, shape.endPoint.y) <= SHAPE_CLICK_THRESHOLD;
-        else if (shape.type === 'circle') hit = isPointInCircle(pos, shape.startPoint, Math.sqrt(dist2(shape.startPoint, shape.endPoint)));
-        else if (shape.type === 'rectangle') hit = isPointInRectangle(pos, Math.min(shape.startPoint.x, shape.endPoint.x), Math.min(shape.startPoint.y, shape.endPoint.y), Math.abs(shape.endPoint.x - shape.startPoint.x), Math.abs(shape.endPoint.y - shape.startPoint.y));
-        
-        if (hit) {
+      if (event.button === 0) { // LEFT CLICK for select tool
+        let itemClicked = false;
+        const clickedToken = tokens.find(token => {
+          const tokenActualSize = (token.size || 1);
+          return pos.x >= token.x * cellSize && pos.x <= (token.x + tokenActualSize) * cellSize &&
+                 pos.y >= token.y * cellSize && pos.y <= (token.y + tokenActualSize) * cellSize;
+        });
+        if (clickedToken) {
           event.stopPropagation();
-          setSelectedShapeId(shape.id);
-          setSelectedTokenId(null);
-          setSelectedTextObjectId(null);
-          if ((shape.type === 'circle' || shape.type === 'rectangle') && !shape.isLocked) {
-            setPotentialDraggingShapeInfo({ id: shape.id, type: shape.type, startScreenPos: { x: event.clientX, y: event.clientY }, originalStartPoint: shape.startPoint, originalEndPoint: shape.endPoint });
+          setSelectedTokenIds([clickedToken.id]);
+          setSelectedShapeIds([]);
+          setSelectedTextObjectIds([]);
+          setDraggingToken(clickedToken);
+          setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
+          setDraggedTokenVisualPosition({ x: clickedToken.x * cellSize, y: clickedToken.y * cellSize });
+          setDraggingTokenGridPosition({ x: clickedToken.x, y: clickedToken.y });
+          if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
+            setGhostToken({ ...clickedToken });
+            const tokenActualSize = clickedToken.size || 1;
+            const startSvgCenterX = clickedToken.x * cellSize + (tokenActualSize * cellSize) / 2;
+            const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
+            setMovementMeasureLine({ startSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, distanceText: '0 ft' });
           }
-          return;
+          itemClicked = true;
+        } else {
+          const clickedTextObject = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
+          if (clickedTextObject) {
+            event.stopPropagation();
+            setSelectedTextObjectIds([clickedTextObject.id]);
+            setSelectedTokenIds([]);
+            setSelectedShapeIds([]);
+            setDraggingTextObjectId(clickedTextObject.id);
+            setTextObjectDragOffset({ x: pos.x - clickedTextObject.x, y: pos.y - clickedTextObject.y });
+            itemClicked = true;
+          } else {
+            for (let i = drawnShapes.length - 1; i >= 0; i--) {
+              const shape = drawnShapes[i];
+              let hit = false;
+              if (shape.type === 'line') hit = distanceToLineSegment(pos.x, pos.y, shape.startPoint.x, shape.startPoint.y, shape.endPoint.x, shape.endPoint.y) <= SHAPE_CLICK_THRESHOLD;
+              else if (shape.type === 'circle') hit = isPointInCircle(pos, shape.startPoint, Math.sqrt(dist2(shape.startPoint, shape.endPoint)));
+              else if (shape.type === 'rectangle') hit = isPointInRectangle(pos, Math.min(shape.startPoint.x, shape.endPoint.x), Math.min(shape.startPoint.y, shape.endPoint.y), Math.abs(shape.endPoint.x - shape.startPoint.x), Math.abs(shape.endPoint.y - shape.startPoint.y));
+              
+              if (hit) {
+                event.stopPropagation();
+                setSelectedShapeIds([shape.id]);
+                setSelectedTokenIds([]);
+                setSelectedTextObjectIds([]);
+                if ((shape.type === 'circle' || shape.type === 'rectangle') && !shape.isLocked) {
+                  setPotentialDraggingShapeInfo({ id: shape.id, type: shape.type, startScreenPos: { x: event.clientX, y: event.clientY }, originalStartPoint: shape.startPoint, originalEndPoint: shape.endPoint });
+                }
+                itemClicked = true;
+                break;
+              }
+            }
+          }
         }
+        
+        if (!itemClicked) { // Clicked on empty space, start marquee selection
+          setIsMarqueeSelectingInternal(true);
+          setMarqueeStartPointInternal(pos);
+          setMarqueeEndPointInternal(pos); // Initialize end point same as start
+          setSelectedTokenIds([]); 
+          setSelectedShapeIds([]);
+          setSelectedTextObjectIds([]);
+        }
+        return;
+
+      } else if (event.button === 2) { // RIGHT CLICK for select tool (PAN)
+        event.preventDefault();
+        panZoomHandlePanStart(event);
+        return;
       }
-      setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
-      panZoomHandlePanStart(event);
-      return;
     }
+
 
     if (activeTool === 'type_tool') {
         event.stopPropagation(); 
@@ -270,8 +295,8 @@ export function useGridInteractions({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); 
-            setSelectedTokenId(null); setSelectedShapeId(null);
+            setSelectedTextObjectIds([clickedTextObjectForInteraction.id]); 
+            setSelectedTokenIds([]); setSelectedShapeIds([]);
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 setEditingTextObjectId(clickedTextObjectForInteraction.id);
@@ -282,11 +307,11 @@ export function useGridInteractions({
             return; 
         } else {
             setLastTextClickInfo({ id: null, time: 0 }); 
-            setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
+            setSelectedTokenIds([]); setSelectedShapeIds([]); setSelectedTextObjectIds([]);
             setTimeout(() => { 
                 if (activeTool === 'type_tool' && !editingTextObjectId && !isCreatingText) {
                     const newPos = getMousePosition(event); 
-                    setIsCreatingText({
+                    setIsCreatingTextInternal({
                         id: `text-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                         x: newPos.x, y: newPos.y, currentText: '', fontSize: currentTextFontSize, inputWidth: MIN_NEW_TEXT_INPUT_WIDTH,
                     });
@@ -296,12 +321,12 @@ export function useGridInteractions({
         return;
     }
 
-    if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) {
-      if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
+    if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) {  // Middle click or Ctrl/Cmd + Left for pan (fallback)
          panZoomHandlePanStart(event);
-      }
-      return;
+         return;
     }
+    
+    if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) return;
     
     switch (activeTool) {
       case 'paint_cell':
@@ -359,18 +384,23 @@ export function useGridInteractions({
     activeTool, cellSize, tokens, textObjects, drawnShapes, gridCells, numCols, numRows,
     getMousePosition, editingTokenId, editingTextObjectId, editingShapeId,
     setTokens, setTextObjects, setDrawnShapes, setGridCells, setMeasurement, setCurrentDrawingShape,
-    setSelectedTokenId, setSelectedShapeId, setSelectedTextObjectId,
+    setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
     isCreatingText, finalizeTextCreation, handleFinalizeTextEdit, lastTextClickInfo, currentTextFontSize,
     selectedColor, selectedTokenTemplate, toast, panZoomHandlePanStart, eraseContentAtCell,
-    rightClickPopoverState, setRightClickPopoverState 
+    rightClickPopoverState, setRightClickPopoverState, setIsCreatingTextInternal
   ]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    if (isPanning) {
+    const pos = getMousePosition(event);
+
+    if (isPanning) { // This isPanning is from usePanZoom, passed as prop
       panZoomHandlePanMove(event);
       return;
     }
-    const pos = getMousePosition(event);
+    if (isMarqueeSelectingInternal) {
+      setMarqueeEndPointInternal(pos);
+      return;
+    }
 
     if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
       const tokenActualSize = draggingToken.size || 1;
@@ -493,10 +523,86 @@ export function useGridInteractions({
     isMeasuring, measurement, setMeasurement,
     isErasing, eraseContentAtCell, isPainting, pendingGridCellsDuringPaint, setPendingGridCellsDuringPaint, selectedColor,
     selectedTokenTemplate, isDrawing, currentDrawingShape, drawingStartPoint, setCurrentDrawingShape,
+    isMarqueeSelectingInternal, setMarqueeEndPointInternal
   ]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    const wasPanning = isPanning; 
+    const wasPanning = isPanning; // from usePanZoom via props
+
+    if (event.button === 0) { // LEFT MOUSE UP
+      if (isMarqueeSelectingInternal && marqueeStartPointInternal && marqueeEndPointInternal) {
+        const newSelectedTokenIds: string[] = [];
+        const newSelectedShapeIds: string[] = [];
+        const newSelectedTextObjectIds: string[] = [];
+
+        const marqueeRect = {
+            x: Math.min(marqueeStartPointInternal.x, marqueeEndPointInternal.x),
+            y: Math.min(marqueeStartPointInternal.y, marqueeEndPointInternal.y),
+            width: Math.abs(marqueeStartPointInternal.x - marqueeEndPointInternal.x),
+            height: Math.abs(marqueeStartPointInternal.y - marqueeEndPointInternal.y),
+        };
+
+        tokens.forEach(token => {
+            const tokenActualSize = token.size || 1;
+            const tokenRect = {
+                x: token.x * cellSize,
+                y: token.y * cellSize,
+                width: tokenActualSize * cellSize,
+                height: tokenActualSize * cellSize,
+            };
+            if (rectsIntersect(marqueeRect, tokenRect)) {
+                newSelectedTokenIds.push(token.id);
+            }
+        });
+        drawnShapes.forEach(shape => {
+            // Simplified check: if any defining point of the shape is in the marquee.
+            // A more robust solution would check actual intersection of geometries.
+            let shapeIntersects = false;
+            if (shape.type === 'line') {
+                // Check if line segment intersects marquee rect (complex)
+                // Or, simpler: if either endpoint is in marquee, or if marquee points are close to line
+                if (isPointInRectangle(shape.startPoint, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height) ||
+                    isPointInRectangle(shape.endPoint, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height)) {
+                    shapeIntersects = true;
+                }
+                // Could add line-rect intersection test here for more accuracy
+            } else if (shape.type === 'circle') {
+                // Check if circle intersects marquee rect
+                const circle = { x: shape.startPoint.x, y: shape.startPoint.y, r: Math.sqrt(dist2(shape.startPoint, shape.endPoint)) };
+                // Check if circle center is in rect, or if any rect corner is in circle, or if circle edges cross rect edges
+                // Simplified: check if center is in rect OR if rect center is in circle (approximate)
+                if (isPointInCircle({ x: marqueeRect.x + marqueeRect.width / 2, y: marqueeRect.y + marqueeRect.height / 2 }, circle, circle.r) ||
+                    isPointInRectangle(circle, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height)) {
+                     shapeIntersects = true;   
+                }
+            } else if (shape.type === 'rectangle') {
+                const drawnShapeRect = {
+                    x: Math.min(shape.startPoint.x, shape.endPoint.x),
+                    y: Math.min(shape.startPoint.y, shape.endPoint.y),
+                    width: Math.abs(shape.startPoint.x - shape.endPoint.x),
+                    height: Math.abs(shape.startPoint.y - shape.endPoint.y),
+                };
+                if (rectsIntersect(marqueeRect, drawnShapeRect)) {
+                    shapeIntersects = true;
+                }
+            }
+            if (shapeIntersects) newSelectedShapeIds.push(shape.id);
+        });
+        textObjects.forEach(obj => {
+            const textRect = { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
+            if (rectsIntersect(marqueeRect, textRect)) {
+                newSelectedTextObjectIds.push(obj.id);
+            }
+        });
+        setSelectedTokenIds(newSelectedTokenIds);
+        setSelectedShapeIds(newSelectedShapeIds);
+        setSelectedTextObjectIds(newSelectedTextObjectIds);
+
+        setIsMarqueeSelectingInternal(false);
+        setMarqueeStartPointInternal(null);
+        setMarqueeEndPointInternal(null);
+      }
+    }
 
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
       if (draggingTokenGridPosition && onTokenMove) {
@@ -532,7 +638,7 @@ export function useGridInteractions({
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
 
-    if (wasPanning) {
+    if (wasPanning) { // This isPanning is from usePanZoom via props
       panZoomHandlePanEnd();
     }
     setMouseDownPos(null);
@@ -540,7 +646,11 @@ export function useGridInteractions({
     isPanning, panZoomHandlePanEnd, 
     draggingToken, activeTool, editingTokenId, editingTextObjectId, draggingTokenGridPosition, onTokenMove,
     draggingTextObjectId, isMeasuring, isErasing, isPainting, pendingGridCellsDuringPaint, setGridCells,
-    isDrawing, currentDrawingShape, setDrawnShapes, drawnShapes, cellSize, setCurrentDrawingShape
+    isDrawing, currentDrawingShape, setDrawnShapes, drawnShapes, cellSize, setCurrentDrawingShape,
+    isMarqueeSelectingInternal, marqueeStartPointInternal, marqueeEndPointInternal,
+    tokens, textObjects,
+    setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
+    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
   ]);
 
   const handleMouseLeave = useCallback(() => {
@@ -574,10 +684,16 @@ export function useGridInteractions({
       setDrawnShapes(prev => [...prev, shapeToAdd]);
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
+    if (isMarqueeSelectingInternal) {
+        setIsMarqueeSelectingInternal(false);
+        setMarqueeStartPointInternal(null);
+        setMarqueeEndPointInternal(null);
+    }
   }, [
     isPanning, panZoomHandlePanEnd, 
     draggingToken, draggingTokenGridPosition, onTokenMove, activeTool, pendingGridCellsDuringPaint, 
-    setGridCells, isDrawing, currentDrawingShape, setCurrentDrawingShape, setDrawnShapes, drawnShapes, cellSize
+    setGridCells, isDrawing, currentDrawingShape, setCurrentDrawingShape, setDrawnShapes, drawnShapes, cellSize,
+    isMarqueeSelectingInternal, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
   ]);
 
   useEffect(() => {
@@ -585,8 +701,13 @@ export function useGridInteractions({
         if (editingTokenId) setEditingTokenId(null); 
         if (editingTextObjectId) handleFinalizeTextEdit();
         if (editingShapeId) setEditingShapeId(null); 
-        setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
+        setSelectedTokenIds([]); setSelectedShapeIds([]); setSelectedTextObjectIds([]);
         if (rightClickPopoverState) setRightClickPopoverState(null);
+        if (isMarqueeSelectingInternal) {
+            setIsMarqueeSelectingInternal(false);
+            setMarqueeStartPointInternal(null);
+            setMarqueeEndPointInternal(null);
+        }
     }
     if (activeTool !== 'type_tool') {
         if (isCreatingText) finalizeTextCreation();
@@ -600,8 +721,9 @@ export function useGridInteractions({
     setPotentialDraggingShapeInfo(null); setIsActuallyDraggingShape(false); setCurrentDraggingShapeId(null); setShapeDragOffset(null);
 
   }, [activeTool, finalizeTextCreation, handleFinalizeTextEdit, isCreatingText, editingTokenId, editingTextObjectId, editingShapeId, 
-      setEditingTokenId, setEditingShapeId, setSelectedTokenId, setSelectedShapeId, setSelectedTextObjectId, 
-      setCurrentDrawingShape, rightClickPopoverState, setRightClickPopoverState]);
+      setEditingTokenId, setEditingShapeId, setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds, 
+      setCurrentDrawingShape, rightClickPopoverState, setRightClickPopoverState,
+      isMarqueeSelectingInternal, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal]);
 
   return {
     handleGridMouseDown,
@@ -612,10 +734,15 @@ export function useGridInteractions({
     ghostToken, movementMeasureLine, 
     isPainting, pendingGridCellsDuringPaint, hoveredCellWhilePaintingOrErasing, 
     isDrawing, 
-    isCreatingText, setIsCreatingText, 
+    isCreatingText, setIsCreatingText, // Expose public setter for BattleGrid (escape key)
     finalizeTextCreation, 
     handleFinalizeTextEdit, 
-    selectedTokenId, selectedShapeId, selectedTextObjectId,
     isActuallyDraggingShape, draggingTextObjectId,
+    isMarqueeSelecting: isMarqueeSelectingInternal, // Expose read-only marquee state
+    setIsMarqueeSelecting, // Expose public setter for BattleGrid (escape key)
+    marqueeStartPoint: marqueeStartPointInternal,   // Expose read-only marquee state
+    setMarqueeStartPoint, // Expose public setter for BattleGrid (escape key)
+    marqueeEndPoint: marqueeEndPointInternal,     // Expose read-only marquee state
+    setMarqueeEndPoint,   // Expose public setter for BattleGrid (escape key)
   };
 }
