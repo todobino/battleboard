@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react'; // Added useCallback
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Minus, Grid2x2Check, Grid2x2X, Maximize, ListCheck, ListX } from 'lucide-react';
@@ -26,15 +26,24 @@ export default function GridToolbar({
   onZoomOut,
   onResetView,
 }: GridToolbarProps) {
+
+  const handleToggleGridLines = useCallback(() => {
+    setShowGridLines(!showGridLines);
+  }, [showGridLines, setShowGridLines]);
+
+  const handleToggleAllLabels = useCallback(() => {
+    setShowAllLabels(!showAllLabels);
+  }, [showAllLabels, setShowAllLabels]);
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger> {/* Removed asChild */}
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setShowGridLines(!showGridLines)}
+              onClick={handleToggleGridLines} // Use memoized callback
               className={cn(
                 "rounded-md shadow-lg h-10 w-10 p-2",
                 showGridLines
@@ -51,11 +60,11 @@ export default function GridToolbar({
           </TooltipContent>
         </Tooltip>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger> {/* Removed asChild */}
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setShowAllLabels(!showAllLabels)}
+              onClick={handleToggleAllLabels} // Use memoized callback
               className={cn(
                 "rounded-md shadow-lg h-10 w-10 p-2",
                 showAllLabels
@@ -72,7 +81,7 @@ export default function GridToolbar({
           </TooltipContent>
         </Tooltip>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger> {/* Removed asChild */}
             <Button variant="outline" size="icon" onClick={onZoomIn} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Zoom In" >
               <Plus className="h-5 w-5" />
             </Button>
@@ -80,7 +89,7 @@ export default function GridToolbar({
           <TooltipContent side="left" align="center"><p>Zoom In</p></TooltipContent>
         </Tooltip>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger> {/* Removed asChild */}
             <Button variant="outline" size="icon" onClick={onResetView} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Reset View">
               <Maximize className="h-5 w-5" />
             </Button>
@@ -88,7 +97,7 @@ export default function GridToolbar({
           <TooltipContent side="left" align="center"><p>Reset View</p></TooltipContent>
         </Tooltip>
         <Tooltip>
-          <TooltipTrigger asChild>
+          <TooltipTrigger> {/* Removed asChild */}
             <Button variant="outline" size="icon" onClick={onZoomOut} className="rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted" aria-label="Zoom Out" >
               <Minus className="h-5 w-5" />
             </Button>
