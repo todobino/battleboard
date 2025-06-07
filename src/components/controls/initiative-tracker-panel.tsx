@@ -34,14 +34,15 @@ export default function InitiativeTrackerPanel({
   participantsProp = [],
   tokens,
   currentParticipantIndex,
-  roundCounter, // Prop kept, but display moved to parent
+  roundCounter, 
   onRemoveParticipant,
   onRenameParticipant,
   onChangeParticipantTokenImage,
   onFocusToken,
   onMoveParticipantUp,
   onMoveParticipantDown,
-  onUpdateParticipantStats,
+  onUpdateParticipantStats, // Kept for future, but actual update call happens in BattleBoardPage
+  onOpenEditStatsDialogForParticipant, // New prop
 }: InitiativeTrackerPanelProps) {
   const participants = participantsProp;
   const { toast } = useToast();
@@ -55,25 +56,6 @@ export default function InitiativeTrackerPanel({
   const [uncroppedTokenImageSrc, setUncroppedTokenImageSrc] = useState<string | null>(null);
   const [isTokenCropDialogOpen, setIsTokenCropDialogOpen] = useState(false);
   const tokenFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [isEditStatsDialogOpen, setIsEditStatsDialogOpen] = useState(false);
-  const [participantToEditStats, setParticipantToEditStats] = useState<Participant | null>(null);
-  const [dialogInitiative, setDialogInitiative] = useState('');
-  const [dialogHp, setDialogHp] = useState('');
-  const [dialogAc, setDialogAc] = useState('');
-  const [isEditingDialogIni, setIsEditingDialogIni] = useState(false);
-  const [isEditingDialogHpVal, setIsEditingDialogHpVal] = useState(false);
-  const [isEditingDialogAcVal, setIsEditingDialogAcVal] = useState(false);
-
-
-  useEffect(() => {
-    if (participantToEditStats) {
-      setDialogInitiative(String(participantToEditStats.initiative));
-      setDialogHp(participantToEditStats.hp !== undefined ? String(participantToEditStats.hp) : '');
-      setDialogAc(participantToEditStats.ac !== undefined ? String(participantToEditStats.ac) : '');
-    }
-  }, [participantToEditStats]);
-
 
   const handleRenameClick = (participant: Participant) => {
     setParticipantToRename(participant);
@@ -132,93 +114,13 @@ export default function InitiativeTrackerPanel({
   };
 
   const handleEditStatsClick = (participant: Participant) => {
-    setParticipantToEditStats(participant);
-    setIsEditStatsDialogOpen(true);
+    if (onOpenEditStatsDialogForParticipant) {
+        onOpenEditStatsDialogForParticipant(participant);
+    }
   };
-
-  const handleSaveStats = () => {
-    if (!participantToEditStats || !onUpdateParticipantStats) return;
-
-    const initiative = parseInt(dialogInitiative, 10);
-    const hp = dialogHp.trim() === '' ? undefined : parseInt(dialogHp, 10);
-    const ac = dialogAc.trim() === '' ? undefined : parseInt(dialogAc, 10);
-
-    if (isNaN(initiative)) {
-        toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive"});
-        return;
-    }
-    if (dialogHp.trim() !== '' && (hp === undefined || isNaN(hp) || hp < 0)) {
-        toast({ title: "Invalid Health", description: "Health must be a non-negative number or empty.", variant: "destructive"});
-        return;
-    }
-    if (dialogAc.trim() !== '' && (ac === undefined || isNaN(ac) || ac < 0)) {
-        toast({ title: "Invalid Armor", description: "Armor must be a non-negative number or empty.", variant: "destructive"});
-        return;
-    }
-
-    onUpdateParticipantStats(participantToEditStats.id, { initiative, hp, ac });
-    setIsEditStatsDialogOpen(false);
-    setParticipantToEditStats(null);
-  };
-
-  // Helper for numeric inputs in the Edit Stats dialog
-  const renderDialogNumericInput = (
-    value: string,
-    setValue: Dispatch<SetStateAction<string>>,
-    isEditing: boolean,
-    setIsEditing: Dispatch<SetStateAction<boolean>>,
-    label: string,
-    idPrefix: string,
-    optional: boolean = false
-  ) => (
-    <div className="flex-1 min-w-0 space-y-1 border border-border rounded-md p-3">
-      <Label htmlFor={`${idPrefix}-dialog-input`}>{label}</Label>
-      {isEditing ? (
-        <Input
-          id={`${idPrefix}-dialog-input`} type="number" value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => {
-            if (optional && value.trim() === '') { /* Keep empty if optional */ }
-            else {
-              const num = parseInt(value, 10);
-              if (isNaN(num) || num < 0) {
-                setValue(optional ? '' : '0'); // Default to 0 or empty if invalid
-              }
-            }
-            setIsEditing(false);
-          }}
-          autoFocus className="w-full text-center"
-        />
-      ) : (
-        <div className="flex items-center gap-1 mt-1">
-          <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => {
-                const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0);
-                setValue(String(Math.max((optional ? -Infinity : 0), currentValue - 1)));
-            }}>
-            <Minus className="h-4 w-4" />
-          </Button>
-          <Button type="button" variant="ghost" id={`${idPrefix}-dialog-display`}
-            onClick={() => setIsEditing(true)}
-            className="h-8 px-2 text-base w-full justify-center">
-            {value || (optional ? 'N/A' : '0')}
-          </Button>
-          <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
-            onClick={() => {
-                const currentValue = parseInt(value,10) || (optional && value === '' ? -1 : -1);
-                setValue(String(currentValue + 1));
-            }}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-
 
   return (
     <div className="flex flex-col h-full min-w-0">
-      {/* Header with Title and Round Counter has been moved to BattleBoardPage */}
       <div className="flex flex-col flex-grow overflow-hidden min-w-0">
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground px-1 py-2">No participants in turn order.</p>
@@ -358,7 +260,7 @@ export default function InitiativeTrackerPanel({
                             <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleChangeTokenClick(p)}>
                               <ImagePlus className="mr-2 h-3.5 w-3.5" /> Update Image
                             </Button>
-                            {onUpdateParticipantStats && (
+                            {onOpenEditStatsDialogForParticipant && (
                               <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => handleEditStatsClick(p)}>
                                 <SlidersVertical className="mr-2 h-3.5 w-3.5" /> Edit Stats
                               </Button>
@@ -457,31 +359,6 @@ export default function InitiativeTrackerPanel({
           onCropCancel={handleTokenCropCancel}
         />
       )}
-
-      {participantToEditStats && (
-        <Dialog open={isEditStatsDialogOpen} onOpenChange={(isOpen) => {
-            setIsEditStatsDialogOpen(isOpen);
-            if (!isOpen) setParticipantToEditStats(null);
-        }}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Stats for {participantToEditStats.name}</DialogTitle>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              {renderDialogNumericInput(dialogInitiative, setDialogInitiative, isEditingDialogIni, setIsEditingDialogIni, "Initiative", "edit-stats-ini", false)}
-              {renderDialogNumericInput(dialogHp, setDialogHp, isEditingDialogHpVal, setIsEditingDialogHpVal, "Health", "edit-stats-hp", true)}
-              {renderDialogNumericInput(dialogAc, setDialogAc, isEditingDialogAcVal, setIsEditingDialogAcVal, "Armor", "edit-stats-ac", true)}
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleSaveStats}>Save Stats</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
-

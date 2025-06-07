@@ -140,6 +140,7 @@ export interface BattleGridProps {
   onFocusHandled?: () => void;
 
   onOpenAddCombatantDialogForToken?: (token: Token) => void;
+  onOpenEditStatsDialogForToken?: (tokenId: string) => void; // Added this
   participants: Participant[];
 }
 
@@ -207,4 +208,5 @@ export interface InitiativeTrackerPanelProps {
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
   onUpdateParticipantStats?: (participantId: string, newStats: { initiative?: number; hp?: number; ac?: number }) => void;
+  onOpenEditStatsDialogForParticipant?: (participant: Participant) => void; // Added this
 }

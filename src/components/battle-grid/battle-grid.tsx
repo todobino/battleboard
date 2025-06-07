@@ -25,7 +25,6 @@ const SHAPE_CLICK_THRESHOLD = 8; // pixels for clicking near a shape
 const MIN_NEW_TEXT_INPUT_WIDTH = 150;
 const DOUBLE_CLICK_THRESHOLD_MS = 300;
 const PAN_TO_TOKEN_DURATION = 300; // ms for smooth pan
-// const FLOURISH_ANIMATION_DURATION = 500; // ms for token flourish - REMOVED
 const GHOST_TOKEN_OPACITY = 0.4;
 
 
@@ -173,6 +172,7 @@ export default function BattleGrid({
   tokenIdToFocus,
   onFocusHandled,
   onOpenAddCombatantDialogForToken,
+  onOpenEditStatsDialogForToken, // Added prop
   participants,
 }: BattleGridProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -242,7 +242,6 @@ export default function BattleGrid({
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
 
   const animationFrameId = useRef<number | null>(null);
-  // const [flourishingTokenId, setFlourishingTokenId] = useState<string | null>(null); // REMOVED
 
   const [ghostToken, setGhostToken] = useState<TokenType | null>(null);
   const [movementMeasureLine, setMovementMeasureLine] = useState<{
@@ -513,10 +512,6 @@ export default function BattleGrid({
         if (animationFrameId.current) {
           cancelAnimationFrame(animationFrameId.current);
         }
-        // Flourish animation logic removed
-        // setFlourishingTokenId(token.id);
-        // setTimeout(() => setFlourishingTokenId(null), FLOURISH_ANIMATION_DURATION);
-
         const [currentVx, currentVy, currentVw, currentVh] = viewBox.split(' ').map(Number);
         const tokenActualSize = token.size || 1;
         const tokenSvgX = token.x * cellSize + tokenActualSize * cellSize / 2;
@@ -563,7 +558,7 @@ export default function BattleGrid({
           if (progress < 1) {
             animationFrameId.current = requestAnimationFrame(animatePan);
           } else {
-            setViewBox(`${targetViewBoxState.vx} ${targetViewBoxState.vy} ${targetViewBoxState.vw} ${targetViewBoxState.vh}`);
+            setViewBox(`${targetViewBoxState.vx} ${targetViewBoxState.vy} ${startViewBoxState.vw} ${startViewBoxState.vh}`);
             if (onFocusHandled) onFocusHandled();
           }
         };
@@ -572,7 +567,7 @@ export default function BattleGrid({
       } else if (onFocusHandled) {
         onFocusHandled();
       }
-    } else { // tokenIdToFocus is null or svgRef.current is null
+    } else { 
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
@@ -677,18 +672,18 @@ export default function BattleGrid({
         setSelectedTextObjectId(null);
         setDraggingToken(clickedToken);
         setDragOffset({ x: pos.x - clickedToken.x * cellSize, y: pos.y - clickedToken.y * cellSize });
-        // Initialize visual position to the token's current snapped position
+        
         setDraggedTokenVisualPosition({ x: clickedToken.x * cellSize, y: clickedToken.y * cellSize });
-        setDraggingTokenGridPosition({ x: clickedToken.x, y: clickedToken.y }); // Assume initial pos is valid for drop
+        setDraggingTokenGridPosition({ x: clickedToken.x, y: clickedToken.y }); 
 
         if (['player', 'enemy', 'ally'].includes(clickedToken.type)) {
-          setGhostToken({ ...clickedToken }); // Create ghost
+          setGhostToken({ ...clickedToken }); 
           const tokenActualSize = clickedToken.size || 1;
           const startSvgCenterX = clickedToken.x * cellSize + (tokenActualSize * cellSize) / 2;
           const startSvgCenterY = clickedToken.y * cellSize + (tokenActualSize * cellSize) / 2;
           setMovementMeasureLine({
             startSvgCenter: { x: startSvgCenterX, y: startSvgCenterY },
-            currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, // Initial line points to self
+            currentSvgCenter: { x: startSvgCenterX, y: startSvgCenterY }, 
             distanceText: '0 ft',
           });
         }
@@ -754,7 +749,7 @@ export default function BattleGrid({
         const clickedTextObjectForInteraction = textObjects.find(obj => isPointInRectangle(pos, obj.x, obj.y, obj.width, obj.height));
         
         if (clickedTextObjectForInteraction) {
-            setSelectedTextObjectId(clickedTextObjectForInteraction.id); // Select on single click
+            setSelectedTextObjectId(clickedTextObjectForInteraction.id); 
             setSelectedTokenId(null);
             setSelectedShapeId(null);
 
@@ -1106,17 +1101,14 @@ export default function BattleGrid({
       const currentMouseSvgPos = getMousePosition(event);
       const tokenActualSize = draggingToken.size || 1;
       
-      // Raw visual position based on mouse, before snapping
       const rawVisualSvgX = currentMouseSvgPos.x - dragOffset.x;
       const rawVisualSvgY = currentMouseSvgPos.y - dragOffset.y;
 
-      // Snapped visual position (top-left of the cell the token's top-left would be in)
       const snappedVisualSvgX = Math.round(rawVisualSvgX / cellSize) * cellSize;
       const snappedVisualSvgY = Math.round(rawVisualSvgY / cellSize) * cellSize;
       
       setDraggedTokenVisualPosition({ x: snappedVisualSvgX, y: snappedVisualSvgY });
 
-      // Grid coordinates for the snapped position
       const potentialDropGridX = Math.floor((snappedVisualSvgX + cellSize / 2) / cellSize);
       const potentialDropGridY = Math.floor((snappedVisualSvgY + cellSize / 2) / cellSize);
 
@@ -1136,13 +1128,12 @@ export default function BattleGrid({
       if (isTargetSquareValidForDrop) {
           setDraggingTokenGridPosition({ x: clampedDropGridX, y: clampedDropGridY });
       } else {
-          setDraggingTokenGridPosition(null); // Mark as invalid drop position
+          setDraggingTokenGridPosition(null); 
       }
       setHoveredCellWhilePaintingOrErasing(null);
 
 
       if (ghostToken && movementMeasureLine && draggedTokenVisualPosition && ['player', 'enemy', 'ally'].includes(draggingToken.type)) {
-        // Measurement line points to the center of the HELD TOKEN's current snapped position
         const currentTargetSvgCenterX = snappedVisualSvgX + (tokenActualSize * cellSize) / 2;
         const currentTargetSvgCenterY = snappedVisualSvgY + (tokenActualSize * cellSize) / 2;
 
@@ -1191,7 +1182,7 @@ export default function BattleGrid({
     } else if (isActuallyDraggingShape && currentDraggingShapeId && shapeDragOffset && activeTool === 'select' && !editingShapeId) {
         setRightClickPopoverState(null);
         const draggedShape = drawnShapes.find(s => s.id === currentDraggingShapeId);
-        if (!draggedShape || draggedShape.isLocked) { // Double check lock here too
+        if (!draggedShape || draggedShape.isLocked) { 
             setIsActuallyDraggingShape(false);
             setCurrentDraggingShapeId(null);
             setShapeDragOffset(null);
@@ -1332,12 +1323,12 @@ export default function BattleGrid({
 
   const handleMouseUp = (event: React.MouseEvent<SVGSVGElement>) => {
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
-      if (draggingTokenGridPosition) { // Use the snapped grid position for the move action (if valid)
+      if (draggingTokenGridPosition) { 
         if (onTokenMove) {
             onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
         }
       }
-      // If draggingTokenGridPosition is null, token effectively snaps back to original spot as onTokenMove is not called
+      
       setDraggingToken(null);
       setDragOffset(null);
       setDraggingTokenGridPosition(null);
@@ -1377,7 +1368,7 @@ export default function BattleGrid({
     }
     if (isPainting) {
         if (activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
-            setGridCells(pendingGridCellsDuringPaint); // Commit the entire stroke
+            setGridCells(pendingGridCellsDuringPaint); 
             setPendingGridCellsDuringPaint(null);
         }
         setIsPainting(false);
@@ -1426,7 +1417,7 @@ export default function BattleGrid({
     
     if (isErasing || (isPainting && activeTool === 'paint_cell') || activeTool === 'place_token') {
         if (isPainting && activeTool === 'paint_cell' && pendingGridCellsDuringPaint) {
-            setGridCells(pendingGridCellsDuringPaint); // Commit stroke on mouse leave
+            setGridCells(pendingGridCellsDuringPaint); 
             setPendingGridCellsDuringPaint(null);
         }
         setIsErasing(false);
@@ -1509,12 +1500,11 @@ export default function BattleGrid({
     if (draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
     
     if (activeTool === 'select' && !draggingToken && !isPanning && !rightClickPopoverState && !isActuallyDraggingShape) {
-        // Check for hovered shape's lock status
         const hoveredShape = selectedShapeId ? drawnShapes.find(s => s.id === selectedShapeId) : null;
         if (hoveredShape && hoveredShape.isLocked && (hoveredShape.type === 'circle' || hoveredShape.type === 'rectangle')) {
             return 'cursor-default';
         }
-        return 'cursor-pointer'; // Default to pointer for selectable items
+        return 'cursor-pointer'; 
     }
 
     if (draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) return 'cursor-grabbing';
@@ -1932,7 +1922,6 @@ export default function BattleGrid({
           const isTokenActiveTurn = token.id === activeTurnTokenId;
           const isTokenSelectedByClick = token.id === selectedTokenId;
           const isTokenLabelVisible = showAllLabels || isTokenSelectedByClick;
-          // const isFlourishing = token.id === flourishingTokenId; // REMOVED
 
           const fixedInputWidth = cellSize * 4; 
           const fixedInputHeight = 20;
@@ -1957,9 +1946,6 @@ export default function BattleGrid({
                 activeTool === 'select' && draggingToken?.id === token.id && !isCurrentlyEditingThisToken && 'cursor-grabbing',
                 isCurrentlyEditingThisToken && 'cursor-text',
                 'drop-shadow-md'
-                // Removed animation classes:
-                // isTokenActiveTurn && "animate-pulse-token",
-                // isFlourishing && "animate-focus-flourish"
               )}
             >
               <circle
@@ -1968,12 +1954,12 @@ export default function BattleGrid({
                 r={tokenActualSize * cellSize / 2}
                 fill={backgroundFill}
                 stroke={
-                  isTokenSelectedByClick || isTokenActiveTurn ? 'hsl(var(--ring))' : // Highlight for selected OR active turn
+                  isTokenSelectedByClick || isTokenActiveTurn ? 'hsl(var(--ring))' : 
                   hoveredTokenId === token.id && activeTool === 'select' && !isCurrentlyEditingThisToken && !rightClickPopoverState 
                       ? 'hsl(var(--accent))' 
                       : 'hsl(var(--primary-foreground))' 
                 }
-                strokeWidth={isTokenSelectedByClick || isTokenActiveTurn ? 2 : 1} // Thicker border for selected OR active turn
+                strokeWidth={isTokenSelectedByClick || isTokenActiveTurn ? 2 : 1} 
               />
               {token.customImageUrl ? (
                 <>
@@ -2305,7 +2291,7 @@ export default function BattleGrid({
                 <div className="w-48"> 
                   {onOpenAddCombatantDialogForToken && 
                    !isLinked && 
-                   ['player', 'enemy', 'ally'].includes(currentToken.type) && 
+                   ['player', 'enemy', 'ally', 'generic'].includes(currentToken.type) && 
                    ( 
                     <Button
                       variant="ghost"
@@ -2329,6 +2315,18 @@ export default function BattleGrid({
                   >
                     <Edit3 className="mr-2 h-3.5 w-3.5" /> Rename
                   </Button>
+                  {onOpenEditStatsDialogForToken && isLinked && (
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start h-8 px-2 text-sm flex items-center"
+                      onClick={() => {
+                        onOpenEditStatsDialogForToken(currentToken.id);
+                        setRightClickPopoverState(null);
+                      }}
+                    >
+                      <SlidersVertical className="mr-2 h-3.5 w-3.5" /> Edit Stats
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     className="w-full justify-start h-8 px-2 text-sm flex items-center"
@@ -2625,4 +2623,3 @@ export default function BattleGrid({
     </div>
   );
 }
-

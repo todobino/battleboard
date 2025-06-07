@@ -10,7 +10,7 @@ import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-pan
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-react';
+import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play, SlidersVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon, GenericTokenIcon } from '@/components/icons';
@@ -24,6 +24,7 @@ import {
   DialogHeader as FormDialogHeader, // Aliased to avoid conflict with SidebarHeader
   DialogTitle,
   DialogTrigger,
+  DialogClose, // Added DialogClose
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -156,7 +157,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [currentDrawingShape, setCurrentDrawingShape] = useState<DrawnShape | null>(null);
   const [currentTextFontSize, setCurrentTextFontSize] = useState<number>(DEFAULT_TEXT_FONT_SIZE);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [addParticipantDialogOpen, setAddParticipantDialogOpen] = useState(false);
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantInitiative, setNewParticipantInitiative] = useState('10');
   const [isEditingInitiative, setIsEditingInitiative] = useState(false);
@@ -192,6 +193,24 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [selectedTextObjectId, setSelectedTextObjectId] = useState<string | null>(null);
   const [tokenIdToFocus, setTokenIdToFocus] = useState<string | null>(null);
   const [toolbarPosition, setToolbarPosition] = useState<'top' | 'bottom'>('top');
+
+  // State for Edit Stats Dialog (moved from InitiativeTrackerPanel)
+  const [isEditStatsDialogOpen, setIsEditStatsDialogOpen] = useState(false);
+  const [participantToEditStats, setParticipantToEditStats] = useState<Participant | null>(null);
+  const [dialogInitiative, setDialogInitiative] = useState('');
+  const [dialogHp, setDialogHp] = useState('');
+  const [dialogAc, setDialogAc] = useState('');
+  const [isEditingDialogIni, setIsEditingDialogIni] = useState(false);
+  const [isEditingDialogHpVal, setIsEditingDialogHpVal] = useState(false);
+  const [isEditingDialogAcVal, setIsEditingDialogAcVal] = useState(false);
+
+  useEffect(() => {
+    if (participantToEditStats) {
+      setDialogInitiative(String(participantToEditStats.initiative));
+      setDialogHp(participantToEditStats.hp !== undefined ? String(participantToEditStats.hp) : '');
+      setDialogAc(participantToEditStats.ac !== undefined ? String(participantToEditStats.ac) : '');
+    }
+  }, [participantToEditStats]);
 
 
   const rehydrateToken = useCallback((tokenFromFile: Omit<Token, 'icon'>): Token => {
@@ -608,10 +627,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     setParticipants(updatedParticipants);
 
-    // Unlink token but do not delete or change its appearance
-    // The token's `instanceName` and other visual properties remain as they were.
-    // Only the `tokenId` on the participant is effectively "removed" by the participant being deleted.
-
     if (updatedParticipants.length === 0) {
       setCurrentParticipantIndex(-1);
       if (isCombatActive) setRoundCounter(1);
@@ -941,7 +956,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setNewParticipantType('player');
         setSelectedAssignedTokenId("none");
         setCroppedAvatarDataUrl(null);
-        setDialogOpen(false);
+        setAddParticipantDialogOpen(false);
     }
   }, [
     newParticipantName, newParticipantInitiative, newParticipantHp, newParticipantAc,
@@ -962,14 +977,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setNewParticipantType('player');
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(null);
+    setCroppedAvatarDataUrl(token.customImageUrl || null); // Pre-fill with token's image if available
 
     setNewParticipantInitiative('10');
     setNewParticipantHp('10');
     setNewParticipantAc('10');
     setNewParticipantQuantity('1');
 
-    setDialogOpen(true);
+    setAddParticipantDialogOpen(true);
   }, []);
 
   const handleMoveParticipant = useCallback((participantId: string, direction: 'up' | 'down') => {
@@ -1049,13 +1064,58 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       const nameForToast = updatedParticipantsList.find(p=>p.id === participantId)?.name;
       if (nameForToast) {
-        setTimeout(() => {
+        setTimeout(() => { // Defer toast
           toast({ title: "Stats Updated", description: `Stats for ${nameForToast} updated.`});
         }, 0);
       }
       return updatedParticipantsList;
     });
   }, [isCombatActive, currentParticipantIndex, toast]);
+
+
+  // Functions for Edit Stats Dialog (moved from InitiativeTrackerPanel)
+  const handleOpenEditStatsDialog = (participant: Participant) => {
+    setParticipantToEditStats(participant);
+    setIsEditStatsDialogOpen(true);
+  };
+
+  const handleOpenEditStatsDialogFromToken = (tokenId: string) => {
+    const participant = participants.find(p => p.tokenId === tokenId);
+    if (participant) {
+      handleOpenEditStatsDialog(participant);
+    } else {
+      toast({
+        title: "No Participant Linked",
+        description: "This token is not linked to a combatant in the turn order. Add it to the turn order first to edit stats.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveStats = () => {
+    if (!participantToEditStats) return;
+
+    const initiative = parseInt(dialogInitiative, 10);
+    const hp = dialogHp.trim() === '' ? undefined : parseInt(dialogHp, 10);
+    const ac = dialogAc.trim() === '' ? undefined : parseInt(dialogAc, 10);
+
+    if (isNaN(initiative)) {
+        toast({ title: "Invalid Initiative", description: "Initiative must be a number.", variant: "destructive"});
+        return;
+    }
+    if (dialogHp.trim() !== '' && (hp === undefined || isNaN(hp) || hp < 0)) {
+        toast({ title: "Invalid Health", description: "Health must be a non-negative number or empty.", variant: "destructive"});
+        return;
+    }
+    if (dialogAc.trim() !== '' && (ac === undefined || isNaN(ac) || ac < 0)) {
+        toast({ title: "Invalid Armor", description: "Armor must be a non-negative number or empty.", variant: "destructive"});
+        return;
+    }
+
+    handleUpdateParticipantStats(participantToEditStats.id, { initiative, hp, ac });
+    setIsEditStatsDialogOpen(false);
+    setParticipantToEditStats(null);
+  };
 
 
   const renderNumericInput = (
@@ -1127,6 +1187,59 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       )}
     </div>
   );
+  // Helper for numeric inputs in the Edit Stats dialog (specific to that dialog)
+  const renderEditStatsDialogNumericInput = (
+    value: string,
+    setValue: Dispatch<SetStateAction<string>>,
+    isEditing: boolean,
+    setIsEditing: Dispatch<SetStateAction<boolean>>,
+    label: string,
+    idPrefix: string,
+    optional: boolean = false
+  ) => (
+    <div className="flex-1 min-w-0 space-y-1 border border-border rounded-md p-3">
+      <Label htmlFor={`${idPrefix}-dialog-input`}>{label}</Label>
+      {isEditing ? (
+        <Input
+          id={`${idPrefix}-dialog-input`} type="number" value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => {
+            if (optional && value.trim() === '') { /* Keep empty if optional */ }
+            else {
+              const num = parseInt(value, 10);
+              if (isNaN(num) || num < 0) {
+                setValue(optional ? '' : '0'); // Default to 0 or empty if invalid
+              }
+            }
+            setIsEditing(false);
+          }}
+          autoFocus className="w-full text-center"
+        />
+      ) : (
+        <div className="flex items-center gap-1 mt-1">
+          <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
+            onClick={() => {
+                const currentValue = parseInt(value, 10) || (optional && value === '' ? 0 : 0);
+                setValue(String(Math.max((optional ? -Infinity : 0), currentValue - 1)));
+            }}>
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant="ghost" id={`${idPrefix}-dialog-display`}
+            onClick={() => setIsEditing(true)}
+            className="h-8 px-2 text-base w-full justify-center">
+            {value || (optional ? 'N/A' : '0')}
+          </Button>
+          <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0"
+            onClick={() => {
+                const currentValue = parseInt(value,10) || (optional && value === '' ? -1 : -1);
+                setValue(String(currentValue + 1));
+            }}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   const activeTurnTokenId = participants[currentParticipantIndex]?.tokenId || null;
 
@@ -1164,8 +1277,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     );
   }, [tokens, participants]);
 
-  const handleDialogClose = (isOpen: boolean) => {
-    setDialogOpen(isOpen);
+  const handleAddParticipantDialogClose = (isOpen: boolean) => {
+    setAddParticipantDialogOpen(isOpen);
     if (!isOpen) {
       setNewParticipantName('');
       setNewParticipantInitiative('10');
@@ -1181,6 +1294,17 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setCroppedAvatarDataUrl(null);
       setUncroppedAvatarImageSrc(null);
       setIsAvatarCropDialogOpen(false);
+    }
+  };
+
+  const handleEditStatsDialogClose = (isOpen: boolean) => {
+    setIsEditStatsDialogOpen(isOpen);
+    if (!isOpen) {
+        setParticipantToEditStats(null);
+        // Reset editing flags if needed, or rely on useEffect for participantToEditStats
+        setIsEditingDialogIni(false);
+        setIsEditingDialogHpVal(false);
+        setIsEditingDialogAcVal(false);
     }
   };
 
@@ -1309,6 +1433,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             tokenIdToFocus={tokenIdToFocus}
             onFocusHandled={() => setTokenIdToFocus(null)}
             onOpenAddCombatantDialogForToken={handleOpenAddCombatantDialogForToken}
+            onOpenEditStatsDialogForToken={handleOpenEditStatsDialogFromToken}
             participants={participants}
           />
           <FloatingToolbar
@@ -1364,6 +1489,26 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         />
       )}
 
+      {participantToEditStats && (
+        <Dialog open={isEditStatsDialogOpen} onOpenChange={handleEditStatsDialogClose}>
+          <DialogContent className="sm:max-w-md">
+            <FormDialogHeader>
+              <DialogTitle>Edit Stats for {participantToEditStats.name}</DialogTitle>
+            </FormDialogHeader>
+            <div className="py-4 space-y-4">
+              {renderEditStatsDialogNumericInput(dialogInitiative, setDialogInitiative, isEditingDialogIni, setIsEditingDialogIni, "Initiative", "edit-stats-ini", false)}
+              {renderEditStatsDialogNumericInput(dialogHp, setDialogHp, isEditingDialogHpVal, setIsEditingDialogHpVal, "Health", "edit-stats-hp", true)}
+              {renderEditStatsDialogNumericInput(dialogAc, setDialogAc, isEditingDialogAcVal, setIsEditingDialogAcVal, "Armor", "edit-stats-ac", true)}
+            </div>
+            <FormDialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="button" onClick={handleSaveStats}>Save Stats</Button>
+            </FormDialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
@@ -1387,6 +1532,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 onMoveParticipantUp={handleMoveParticipantUp}
                 onMoveParticipantDown={handleMoveParticipantDown}
                 onUpdateParticipantStats={handleUpdateParticipantStats}
+                onOpenEditStatsDialogForParticipant={handleOpenEditStatsDialog}
                 />
             </div>
           </SidebarContent>
@@ -1395,7 +1541,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             {!isCombatActive ? (
               <div className="flex flex-col gap-2">
                  <div className="flex gap-2">
-                    <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+                    <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
                       <DialogTrigger asChild>
                         <Button className="flex-1"> Add Combatant </Button>
                       </DialogTrigger>
@@ -1469,6 +1615,15 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                                   setSelectedAssignedTokenId(value);
                                   if (value !== "none") {
                                     setNewParticipantQuantity('1');
+                                    const token = tokens.find(t => t.id === value);
+                                    if (token) {
+                                        setCroppedAvatarDataUrl(token.customImageUrl || null);
+                                        if (['player', 'enemy', 'ally'].includes(token.type)) {
+                                            setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
+                                        }
+                                    }
+                                  } else {
+                                    setCroppedAvatarDataUrl(null);
                                   }
                                 }}
                               >
@@ -1532,4 +1687,3 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     </div>
   );
 }
-
