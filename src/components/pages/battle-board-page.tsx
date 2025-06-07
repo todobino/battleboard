@@ -23,8 +23,8 @@ import {
   DialogFooter as FormDialogFooter,
   DialogHeader as FormDialogHeader, // Aliased to avoid conflict with SidebarHeader
   DialogTitle,
-  DialogTrigger,
-  DialogClose, // Added DialogClose
+  // DialogTrigger, // No longer needed for Add Participant Dialog
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -194,7 +194,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [tokenIdToFocus, setTokenIdToFocus] = useState<string | null>(null);
   const [toolbarPosition, setToolbarPosition] = useState<'top' | 'bottom'>('top');
 
-  // State for Edit Stats Dialog (moved from InitiativeTrackerPanel)
+  // State for Edit Stats Dialog
   const [isEditStatsDialogOpen, setIsEditStatsDialogOpen] = useState(false);
   const [participantToEditStats, setParticipantToEditStats] = useState<Participant | null>(null);
   const [dialogInitiative, setDialogInitiative] = useState('');
@@ -484,6 +484,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setSelectedTokenId(null);
         setSelectedShapeId(null);
         setSelectedTextObjectId(null);
+        setAddParticipantDialogOpen(false);
+        setIsEditStatsDialogOpen(false);
         setEscapePressCount(prev => prev + 1);
         return;
       }
@@ -507,7 +509,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleUndo, handleRedo, setActiveTool]);
+  }, [handleUndo, handleRedo, setActiveTool ]);
 
 
  useEffect(() => {
@@ -526,7 +528,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         setSelectedShapeId(null);
         setSelectedTextObjectId(null);
     }
-  }, [activeTool, currentDrawingShape, measurement.type]);
+  }, [activeTool, currentDrawingShape, measurement.type, measurement.startPoint, measurement.endPoint, measurement.result]);
 
   useEffect(() => {
     if (participants.length === 0) {
@@ -636,17 +638,20 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
         if (newActiveIndex !== -1) {
             setCurrentParticipantIndex(newActiveIndex);
         } else {
+            // If the removed participant was before or at the current index, adjust.
             const removedIndexOriginal = participants.findIndex(p => p.id === participantId);
             if (currentParticipantIndex >= removedIndexOriginal && currentParticipantIndex > 0) {
                 setCurrentParticipantIndex(Math.max(0, currentParticipantIndex -1));
-            } else if (currentParticipantIndex >= updatedParticipants.length) {
-                 setCurrentParticipantIndex(0);
+            } else if (currentParticipantIndex >= updatedParticipants.length) { // current index is now out of bounds
+                 setCurrentParticipantIndex(0); // loop to the start
             }
+            // Ensure index is valid after potential adjustments
             if (currentParticipantIndex < 0 || currentParticipantIndex >= updatedParticipants.length) {
                 setCurrentParticipantIndex(updatedParticipants.length > 0 ? 0 : -1);
             }
         }
     } else if (!isCombatActive) {
+        // Non-combat: try to maintain selection or select a valid one
         const oldActiveParticipantId = participants[currentParticipantIndex]?.id;
         if (oldActiveParticipantId){
             const newActiveIndex = updatedParticipants.findIndex(p => p.id === oldActiveParticipantId);
@@ -848,20 +853,47 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
     setParticipants(prev => {
       const newList = [...prev, newParticipant].sort((a, b) => b.initiative - a.initiative);
+      
       if (isCombatActive) {
-        const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-        let newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-        if (newActiveIndex === -1 && newList.length > 0) newActiveIndex = Math.min(currentParticipantIndex, newList.length -1);
-        if (newActiveIndex === -1 && newList.length > 0) newActiveIndex = 0;
-        setCurrentParticipantIndex(newActiveIndex);
-      } else {
-        if (prev.length === 0 && newList.length > 0) setCurrentParticipantIndex(0);
-        else {
-            const oldActiveParticipantId = prev[currentParticipantIndex]?.id;
-            const newActiveIndex = newList.findIndex(p => p.id === oldActiveParticipantId);
-            if (newActiveIndex !== -1) setCurrentParticipantIndex(newActiveIndex);
-            else if (newList.length > 0 && currentParticipantIndex === -1) setCurrentParticipantIndex(0);
+        const activeIdFromPrev = prev[currentParticipantIndex]?.id;
+        let newActiveIndex = -1;
+        if (activeIdFromPrev) {
+            newActiveIndex = newList.findIndex(p => p.id === activeIdFromPrev);
         }
+        
+        if (newActiveIndex === -1) { // If previously active not found, or list was empty
+            if (newList.length > 0) {
+                const newlyAddedIndex = newList.findIndex(p => p.id === newParticipant.id);
+                // If new participant is now earlier than current active, current active shifts by 1
+                if (newlyAddedIndex <= (currentParticipantIndex > -1 ? currentParticipantIndex : Infinity)) {
+                    setCurrentParticipantIndex(idx => (idx > -1 ? idx + 1 : 0) % newList.length);
+                } else {
+                    // New participant added after current active, index doesn't change unless it wrapped
+                    setCurrentParticipantIndex(idx => (idx > -1 ? idx : 0) % newList.length);
+                }
+            } else {
+                 setCurrentParticipantIndex(-1);
+            }
+        } else {
+            setCurrentParticipantIndex(newActiveIndex);
+        }
+
+      } else { // Not in combat
+        const selectedIdFromPrev = prev[currentParticipantIndex]?.id;
+        let newSelectionIndex = -1;
+        if (selectedIdFromPrev) {
+            newSelectionIndex = newList.findIndex(p => p.id === selectedIdFromPrev);
+        }
+        
+        if (newSelectionIndex === -1) {
+            const newlyAddedInNewListIndex = newList.findIndex(p => p.id === newParticipant.id);
+            if (newlyAddedInNewListIndex !== -1) {
+                newSelectionIndex = newlyAddedInNewListIndex; 
+            } else if (newList.length > 0) {
+                newSelectionIndex = 0; 
+            }
+        }
+        setCurrentParticipantIndex(newSelectionIndex);
       }
       return newList;
     });
@@ -977,12 +1009,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setNewParticipantType('player');
     }
     setSelectedAssignedTokenId(token.id);
-    setCroppedAvatarDataUrl(token.customImageUrl || null); // Pre-fill with token's image if available
+    setCroppedAvatarDataUrl(token.customImageUrl || null);
 
     setNewParticipantInitiative('10');
+    setIsEditingInitiative(false);
     setNewParticipantHp('10');
+    setIsEditingHp(false);
     setNewParticipantAc('10');
+    setIsEditingAc(false);
     setNewParticipantQuantity('1');
+    setIsEditingQuantity(false);
 
     setAddParticipantDialogOpen(true);
   }, []);
@@ -1064,7 +1100,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       }
       const nameForToast = updatedParticipantsList.find(p=>p.id === participantId)?.name;
       if (nameForToast) {
-        setTimeout(() => { // Defer toast
+        setTimeout(() => {
           toast({ title: "Stats Updated", description: `Stats for ${nameForToast} updated.`});
         }, 0);
       }
@@ -1073,7 +1109,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   }, [isCombatActive, currentParticipantIndex, toast]);
 
 
-  // Functions for Edit Stats Dialog (moved from InitiativeTrackerPanel)
   const handleOpenEditStatsDialog = (participant: Participant) => {
     setParticipantToEditStats(participant);
     setIsEditStatsDialogOpen(true);
@@ -1187,7 +1222,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       )}
     </div>
   );
-  // Helper for numeric inputs in the Edit Stats dialog (specific to that dialog)
   const renderEditStatsDialogNumericInput = (
     value: string,
     setValue: Dispatch<SetStateAction<string>>,
@@ -1208,7 +1242,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             else {
               const num = parseInt(value, 10);
               if (isNaN(num) || num < 0) {
-                setValue(optional ? '' : '0'); // Default to 0 or empty if invalid
+                setValue(optional ? '' : '0');
               }
             }
             setIsEditing(false);
@@ -1301,7 +1335,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     setIsEditStatsDialogOpen(isOpen);
     if (!isOpen) {
         setParticipantToEditStats(null);
-        // Reset editing flags if needed, or rely on useEffect for participantToEditStats
         setIsEditingDialogIni(false);
         setIsEditingDialogHpVal(false);
         setIsEditingDialogAcVal(false);
@@ -1371,7 +1404,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       const combinedParticipants = [...prevParticipants, ...newParticipantsFromTokens];
       const sortedParticipants = combinedParticipants.sort((a, b) => {
         if (b.initiative === a.initiative) {
-          return a.name.localeCompare(b.name); // Secondary sort by name for ties
+          return a.name.localeCompare(b.name);
         }
         return b.initiative - a.initiative;
       });
@@ -1488,6 +1521,120 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           onCropCancel={handleAvatarCropCancel}
         />
       )}
+      
+      <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
+        {/* DialogTrigger is now replaced by direct state manipulation for opening */}
+        <DialogContent className="sm:max-w-2xl">
+            <FormDialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-16 h-16 rounded-full p-0 relative overflow-hidden border-2 border-dashed hover:border-primary flex items-center justify-center"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    aria-label="Upload combatant avatar"
+                  >
+                    {croppedAvatarDataUrl ? (
+                      <img src={croppedAvatarDataUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-7 h-7 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Input
+                    ref={avatarFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarImageUploadChange}
+                    className="hidden"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <DialogTitle>Add New Combatant</DialogTitle>
+                  <DialogDescription>Enter the details for the new combatant.</DialogDescription>
+                </div>
+              </div>
+            </FormDialogHeader>
+            <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
+
+              <div className="space-y-1">
+                <div className="flex space-x-2">
+                {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
+                    const config = participantTypeButtonConfig[type];
+                    const isSelected = newParticipantType === type;
+                    const IconComponent = config.icon;
+                    return (
+                    <Button
+                        key={type}
+                        type="button"
+                        variant={isSelected ? undefined : 'outline'}
+                        onClick={() => setNewParticipantType(type)}
+                        className={cn(
+                        "flex-1 flex items-center justify-center gap-2",
+                        isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
+                        )}
+                    >
+                        <IconComponent className="h-4 w-4" />
+                        {config.label}
+                    </Button>
+                    );
+                })}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="participant-name-dialog">Name</Label>
+                  <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="assign-token-select">Assign Token</Label>
+                  <Select
+                    value={selectedAssignedTokenId}
+                    onValueChange={(value) => {
+                      setSelectedAssignedTokenId(value);
+                      if (value !== "none") {
+                        setNewParticipantQuantity('1');
+                        const token = tokens.find(t => t.id === value);
+                        if (token) {
+                            setCroppedAvatarDataUrl(token.customImageUrl || null);
+                            if (['player', 'enemy', 'ally'].includes(token.type)) {
+                                setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
+                            }
+                        }
+                      } else {
+                        setCroppedAvatarDataUrl(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="assign-token-select">
+                      <SelectValue placeholder="Select existing token..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (Create new token)</SelectItem>
+                      {unassignedTokensForDialog.map(token => (
+                        <SelectItem key={token.id} value={token.id}>
+                          {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
+                {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
+                {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
+                {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
+              </div>
+
+              <FormDialogFooter>
+                <Button type="submit" className="w-full"> Add to Turn Order </Button>
+              </FormDialogFooter>
+            </form>
+          </DialogContent>
+      </Dialog>
 
       {participantToEditStats && (
         <Dialog open={isEditStatsDialogOpen} onOpenChange={handleEditStatsDialogClose}>
@@ -1509,16 +1656,16 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           </DialogContent>
         </Dialog>
       )}
-
+      
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
+          <SidebarHeader className="p-3 border-b border-sidebar-border">
+              <div className="text-lg flex justify-between items-center text-sidebar-foreground">
+              <span className="font-semibold">Turn Order</span>
+              <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
+              </div>
+          </SidebarHeader>
           <SidebarContent className="flex flex-col flex-grow p-0">
-            <SidebarHeader className="p-3 border-b border-sidebar-border">
-                <div className="text-lg flex justify-between items-center text-sidebar-foreground">
-                <span className="font-semibold">Turn Order</span>
-                <span className="text-sm font-normal text-muted-foreground">Round: {roundCounter}</span>
-                </div>
-            </SidebarHeader>
             <div className="flex-grow overflow-auto p-3">
                 <InitiativeTrackerPanel
                 participantsProp={participants}
@@ -1541,121 +1688,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             {!isCombatActive ? (
               <div className="flex flex-col gap-2">
                  <div className="flex gap-2">
-                    <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
-                      <DialogTrigger asChild>
-                        <Button className="flex-1"> Add Combatant </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-2xl">
-                        <FormDialogHeader>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-16 h-16 rounded-full p-0 relative overflow-hidden border-2 border-dashed hover:border-primary flex items-center justify-center"
-                                onClick={() => avatarFileInputRef.current?.click()}
-                                aria-label="Upload combatant avatar"
-                              >
-                                {croppedAvatarDataUrl ? (
-                                  <img src={croppedAvatarDataUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Camera className="w-7 h-7 text-muted-foreground" />
-                                )}
-                              </Button>
-                              <Input
-                                ref={avatarFileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleAvatarImageUploadChange}
-                                className="hidden"
-                              />
-                            </div>
-                            <div className="flex-grow">
-                              <DialogTitle>Add New Combatant</DialogTitle>
-                              <DialogDescription>Enter the details for the new combatant.</DialogDescription>
-                            </div>
-                          </div>
-                        </FormDialogHeader>
-                        <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
-
-                          <div className="space-y-1">
-                            <div className="flex space-x-2">
-                            {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map((type) => {
-                                const config = participantTypeButtonConfig[type];
-                                const isSelected = newParticipantType === type;
-                                const IconComponent = config.icon;
-                                return (
-                                <Button
-                                    key={type}
-                                    type="button"
-                                    variant={isSelected ? undefined : 'outline'}
-                                    onClick={() => setNewParticipantType(type)}
-                                    className={cn(
-                                    "flex-1 flex items-center justify-center gap-2",
-                                    isSelected ? config.selectedClass : ["border-border", config.unselectedHoverClass]
-                                    )}
-                                >
-                                    <IconComponent className="h-4 w-4" />
-                                    {config.label}
-                                </Button>
-                                );
-                            })}
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1 space-y-1">
-                              <Label htmlFor="participant-name-dialog">Name</Label>
-                              <Input id="participant-name-dialog" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} placeholder="e.g., Gorok the Barbarian" required />
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <Label htmlFor="assign-token-select">Assign Token</Label>
-                              <Select
-                                value={selectedAssignedTokenId}
-                                onValueChange={(value) => {
-                                  setSelectedAssignedTokenId(value);
-                                  if (value !== "none") {
-                                    setNewParticipantQuantity('1');
-                                    const token = tokens.find(t => t.id === value);
-                                    if (token) {
-                                        setCroppedAvatarDataUrl(token.customImageUrl || null);
-                                        if (['player', 'enemy', 'ally'].includes(token.type)) {
-                                            setNewParticipantType(token.type as 'player' | 'enemy' | 'ally');
-                                        }
-                                    }
-                                  } else {
-                                    setCroppedAvatarDataUrl(null);
-                                  }
-                                }}
-                              >
-                                <SelectTrigger id="assign-token-select">
-                                  <SelectValue placeholder="Select existing token..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None (Create new token)</SelectItem>
-                                  {unassignedTokensForDialog.map(token => (
-                                    <SelectItem key={token.id} value={token.id}>
-                                      {token.instanceName || token.label || `Token ID: ${token.id.substring(0,6)}`} ({token.type})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            {renderNumericInput(newParticipantInitiative, setNewParticipantInitiative, isEditingInitiative, setIsEditingInitiative, "Initiative", "participant-initiative-dialog", false, false)}
-                            {renderNumericInput(newParticipantHp, setNewParticipantHp, isEditingHp, setIsEditingHp, "Health", "participant-hp-dialog", true, false)}
-                            {renderNumericInput(newParticipantAc, setNewParticipantAc, isEditingAc, setIsEditingAc, "Armor", "participant-ac-dialog", true, false)}
-                            {renderNumericInput(newParticipantQuantity, setNewParticipantQuantity, isEditingQuantity, setIsEditingQuantity, "Quantity", "participant-quantity-dialog", false, selectedAssignedTokenId !== "none")}
-                          </div>
-
-                          <FormDialogFooter>
-                            <Button type="submit" className="w-full"> Add to Turn Order </Button>
-                          </FormDialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
+                    <Button className="flex-1" onClick={() => setAddParticipantDialogOpen(true)}> Add Combatant </Button>
                     <Button
                       onClick={handleAutoRollInitiative}
                       className="flex-1"
