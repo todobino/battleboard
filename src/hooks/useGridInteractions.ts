@@ -111,11 +111,10 @@ export function useGridInteractions({
   const [marqueeStartPoint, setMarqueeStartPointInternal] = useState<Point | null>(null);
   const [marqueeEndPoint, setMarqueeEndPointInternal] = useState<Point | null>(null);
 
-  // Public setters for marquee state if needed by BattleGrid for escape key, etc.
-  const setIsMarqueeSelecting = useCallback((val: boolean) => setIsMarqueeSelectingInternal(val), []);
-  const setMarqueeStartPoint = useCallback((val: Point | null) => setMarqueeStartPointInternal(val), []);
-  const setMarqueeEndPoint = useCallback((val: Point | null) => setMarqueeEndPointInternal(val), []);
-  const setIsCreatingText = useCallback((val: any) => setIsCreatingTextInternal(val), []);
+  const setIsMarqueeSelecting = useCallback((val: boolean) => setIsMarqueeSelectingInternal(val), [setIsMarqueeSelectingInternal]);
+  const setMarqueeStartPoint = useCallback((val: Point | null) => setMarqueeStartPointInternal(val), [setMarqueeStartPointInternal]);
+  const setMarqueeEndPoint = useCallback((val: Point | null) => setMarqueeEndPointInternal(val), [setMarqueeEndPointInternal]);
+  const setIsCreatingText = useCallback((val: any) => setIsCreatingTextInternal(val), [setIsCreatingTextInternal]);
 
 
   const finalizeTextCreation = useCallback(() => {
@@ -387,17 +386,18 @@ export function useGridInteractions({
     setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
     isCreatingText, finalizeTextCreation, handleFinalizeTextEdit, lastTextClickInfo, currentTextFontSize,
     selectedColor, selectedTokenTemplate, toast, panZoomHandlePanStart, eraseContentAtCell,
-    rightClickPopoverState, setRightClickPopoverState, setIsCreatingTextInternal
+    rightClickPopoverState, setRightClickPopoverState, setIsCreatingTextInternal,
+    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Add setters for marquee state
   ]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
     const pos = getMousePosition(event);
 
-    if (isPanning) { // This isPanning is from usePanZoom, passed as prop
+    if (isPanning) { 
       panZoomHandlePanMove(event);
       return;
     }
-    if (isMarqueeSelectingInternal) {
+    if (isMarqueeSelecting) {
       setMarqueeEndPointInternal(pos);
       return;
     }
@@ -523,23 +523,23 @@ export function useGridInteractions({
     isMeasuring, measurement, setMeasurement,
     isErasing, eraseContentAtCell, isPainting, pendingGridCellsDuringPaint, setPendingGridCellsDuringPaint, selectedColor,
     selectedTokenTemplate, isDrawing, currentDrawingShape, drawingStartPoint, setCurrentDrawingShape,
-    isMarqueeSelectingInternal, setMarqueeEndPointInternal
+    isMarqueeSelecting, setMarqueeEndPointInternal
   ]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    const wasPanning = isPanning; // from usePanZoom via props
+    const wasPanningOnMouseDown = isPanning; 
 
-    if (event.button === 0) { // LEFT MOUSE UP
-      if (isMarqueeSelectingInternal && marqueeStartPointInternal && marqueeEndPointInternal) {
+    if (event.button === 0) { 
+      if (isMarqueeSelecting && marqueeStartPoint && marqueeEndPoint) {
         const newSelectedTokenIds: string[] = [];
         const newSelectedShapeIds: string[] = [];
         const newSelectedTextObjectIds: string[] = [];
 
-        const marqueeRect = {
-            x: Math.min(marqueeStartPointInternal.x, marqueeEndPointInternal.x),
-            y: Math.min(marqueeStartPointInternal.y, marqueeEndPointInternal.y),
-            width: Math.abs(marqueeStartPointInternal.x - marqueeEndPointInternal.x),
-            height: Math.abs(marqueeStartPointInternal.y - marqueeEndPointInternal.y),
+        const marqueeRectSvg = {
+            x: Math.min(marqueeStartPoint.x, marqueeEndPoint.x),
+            y: Math.min(marqueeStartPoint.y, marqueeEndPoint.y),
+            width: Math.abs(marqueeStartPoint.x - marqueeEndPoint.x),
+            height: Math.abs(marqueeStartPoint.y - marqueeEndPoint.y),
         };
 
         tokens.forEach(token => {
@@ -550,29 +550,21 @@ export function useGridInteractions({
                 width: tokenActualSize * cellSize,
                 height: tokenActualSize * cellSize,
             };
-            if (rectsIntersect(marqueeRect, tokenRect)) {
+            if (rectsIntersect(marqueeRectSvg, tokenRect)) {
                 newSelectedTokenIds.push(token.id);
             }
         });
         drawnShapes.forEach(shape => {
-            // Simplified check: if any defining point of the shape is in the marquee.
-            // A more robust solution would check actual intersection of geometries.
             let shapeIntersects = false;
             if (shape.type === 'line') {
-                // Check if line segment intersects marquee rect (complex)
-                // Or, simpler: if either endpoint is in marquee, or if marquee points are close to line
-                if (isPointInRectangle(shape.startPoint, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height) ||
-                    isPointInRectangle(shape.endPoint, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height)) {
+                if (isPointInRectangle(shape.startPoint, marqueeRectSvg.x, marqueeRectSvg.y, marqueeRectSvg.width, marqueeRectSvg.height) ||
+                    isPointInRectangle(shape.endPoint, marqueeRectSvg.x, marqueeRectSvg.y, marqueeRectSvg.width, marqueeRectSvg.height)) {
                     shapeIntersects = true;
                 }
-                // Could add line-rect intersection test here for more accuracy
             } else if (shape.type === 'circle') {
-                // Check if circle intersects marquee rect
                 const circle = { x: shape.startPoint.x, y: shape.startPoint.y, r: Math.sqrt(dist2(shape.startPoint, shape.endPoint)) };
-                // Check if circle center is in rect, or if any rect corner is in circle, or if circle edges cross rect edges
-                // Simplified: check if center is in rect OR if rect center is in circle (approximate)
-                if (isPointInCircle({ x: marqueeRect.x + marqueeRect.width / 2, y: marqueeRect.y + marqueeRect.height / 2 }, circle, circle.r) ||
-                    isPointInRectangle(circle, marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height)) {
+                if (isPointInCircle({ x: marqueeRectSvg.x + marqueeRectSvg.width / 2, y: marqueeRectSvg.y + marqueeRectSvg.height / 2 }, circle, circle.r) ||
+                    isPointInRectangle(circle, marqueeRectSvg.x, marqueeRectSvg.y, marqueeRectSvg.width, marqueeRectSvg.height)) {
                      shapeIntersects = true;   
                 }
             } else if (shape.type === 'rectangle') {
@@ -582,7 +574,7 @@ export function useGridInteractions({
                     width: Math.abs(shape.startPoint.x - shape.endPoint.x),
                     height: Math.abs(shape.startPoint.y - shape.endPoint.y),
                 };
-                if (rectsIntersect(marqueeRect, drawnShapeRect)) {
+                if (rectsIntersect(marqueeRectSvg, drawnShapeRect)) {
                     shapeIntersects = true;
                 }
             }
@@ -590,7 +582,7 @@ export function useGridInteractions({
         });
         textObjects.forEach(obj => {
             const textRect = { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
-            if (rectsIntersect(marqueeRect, textRect)) {
+            if (rectsIntersect(marqueeRectSvg, textRect)) {
                 newSelectedTextObjectIds.push(obj.id);
             }
         });
@@ -638,7 +630,7 @@ export function useGridInteractions({
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
 
-    if (wasPanning) { // This isPanning is from usePanZoom via props
+    if (wasPanningOnMouseDown) { 
       panZoomHandlePanEnd();
     }
     setMouseDownPos(null);
@@ -647,10 +639,10 @@ export function useGridInteractions({
     draggingToken, activeTool, editingTokenId, editingTextObjectId, draggingTokenGridPosition, onTokenMove,
     draggingTextObjectId, isMeasuring, isErasing, isPainting, pendingGridCellsDuringPaint, setGridCells,
     isDrawing, currentDrawingShape, setDrawnShapes, drawnShapes, cellSize, setCurrentDrawingShape,
-    isMarqueeSelectingInternal, marqueeStartPointInternal, marqueeEndPointInternal,
+    isMarqueeSelecting, marqueeStartPoint, marqueeEndPoint,
     tokens, textObjects,
     setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
-    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
+    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Added setters here
   ]);
 
   const handleMouseLeave = useCallback(() => {
@@ -684,7 +676,7 @@ export function useGridInteractions({
       setDrawnShapes(prev => [...prev, shapeToAdd]);
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
-    if (isMarqueeSelectingInternal) {
+    if (isMarqueeSelecting) {
         setIsMarqueeSelectingInternal(false);
         setMarqueeStartPointInternal(null);
         setMarqueeEndPointInternal(null);
@@ -693,7 +685,7 @@ export function useGridInteractions({
     isPanning, panZoomHandlePanEnd, 
     draggingToken, draggingTokenGridPosition, onTokenMove, activeTool, pendingGridCellsDuringPaint, 
     setGridCells, isDrawing, currentDrawingShape, setCurrentDrawingShape, setDrawnShapes, drawnShapes, cellSize,
-    isMarqueeSelectingInternal, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
+    isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Added setters here
   ]);
 
   useEffect(() => {
@@ -703,10 +695,10 @@ export function useGridInteractions({
         if (editingShapeId) setEditingShapeId(null); 
         setSelectedTokenIds([]); setSelectedShapeIds([]); setSelectedTextObjectIds([]);
         if (rightClickPopoverState) setRightClickPopoverState(null);
-        if (isMarqueeSelectingInternal) {
-            setIsMarqueeSelectingInternal(false);
-            setMarqueeStartPointInternal(null);
-            setMarqueeEndPointInternal(null);
+        if (isMarqueeSelecting) { // Check the state variable
+            setIsMarqueeSelectingInternal(false); // Use the internal setter
+            setMarqueeStartPointInternal(null);   // Use the internal setter
+            setMarqueeEndPointInternal(null);     // Use the internal setter
         }
     }
     if (activeTool !== 'type_tool') {
@@ -723,7 +715,7 @@ export function useGridInteractions({
   }, [activeTool, finalizeTextCreation, handleFinalizeTextEdit, isCreatingText, editingTokenId, editingTextObjectId, editingShapeId, 
       setEditingTokenId, setEditingShapeId, setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds, 
       setCurrentDrawingShape, rightClickPopoverState, setRightClickPopoverState,
-      isMarqueeSelectingInternal, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal]);
+      isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal]); // Added setters here
 
   return {
     handleGridMouseDown,
@@ -734,15 +726,16 @@ export function useGridInteractions({
     ghostToken, movementMeasureLine, 
     isPainting, pendingGridCellsDuringPaint, hoveredCellWhilePaintingOrErasing, 
     isDrawing, 
-    isCreatingText, setIsCreatingText, // Expose public setter for BattleGrid (escape key)
+    isCreatingText, setIsCreatingText, 
     finalizeTextCreation, 
     handleFinalizeTextEdit, 
     isActuallyDraggingShape, draggingTextObjectId,
-    isMarqueeSelecting: isMarqueeSelectingInternal, // Expose read-only marquee state
-    setIsMarqueeSelecting, // Expose public setter for BattleGrid (escape key)
-    marqueeStartPoint: marqueeStartPointInternal,   // Expose read-only marquee state
-    setMarqueeStartPoint, // Expose public setter for BattleGrid (escape key)
-    marqueeEndPoint: marqueeEndPointInternal,     // Expose read-only marquee state
-    setMarqueeEndPoint,   // Expose public setter for BattleGrid (escape key)
+    isMarqueeSelecting: isMarqueeSelecting, 
+    setIsMarqueeSelecting, 
+    marqueeStartPoint: marqueeStartPoint,   
+    setMarqueeStartPoint, 
+    marqueeEndPoint: marqueeEndPoint,     
+    setMarqueeEndPoint,   
   };
 }
+
