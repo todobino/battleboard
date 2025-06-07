@@ -1,8 +1,8 @@
 
 'use client';
 
-import type { Point, Token, DrawnShape, GridCellData, TextObjectType, ActiveTool, Measurement, Participant } from '@/types';
-import type { UseToast } from '@/hooks/use-toast'; // Assuming toast type can be imported
+import type { Point, Token, DrawnShape, GridCellData, TextObjectType, ActiveTool, Measurement } from '@/types';
+import type { UseToast } from '@/hooks/use-toast';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { snapToVertex, snapToCellCenter, findAvailableSquare, isSquareOccupied } from '@/lib/grid-utils';
 import { distanceToLineSegment, isPointInCircle, isPointInRectangle, dist2, measureText } from '@/lib/geometry-utils';
@@ -55,11 +55,13 @@ interface UseGridInteractionsProps {
   selectedTextObjectId: string | null;
   setSelectedTextObjectId: React.Dispatch<React.SetStateAction<string | null>>;
   
-  isPanning: boolean; // From usePanZoom
-  handlePanStart: (event: React.MouseEvent<SVGSVGElement>) => void; // From usePanZoom
-  toast: UseToast['toast']; // Pass toast function
+  isPanning: boolean; 
+  panZoomHandlePanStart: (event: React.MouseEvent<SVGSVGElement>) => void;
+  panZoomHandlePanMove: (event: React.MouseEvent<SVGSVGElement>) => void;
+  panZoomHandlePanEnd: () => void;
+  toast: UseToast['toast']; 
 
-  rightClickPopoverState: any; // Simplified for now, or pass a more specific type
+  rightClickPopoverState: any; 
   setRightClickPopoverState: React.Dispatch<React.SetStateAction<any>>;
   shapeRadiusInput: string;
   setShapeRadiusInput: React.Dispatch<React.SetStateAction<string>>;
@@ -72,7 +74,8 @@ export function useGridInteractions({
   onTokenMove, onTokenErasedOnGrid,
   editingTokenId, setEditingTokenId, editingTextObjectId, setEditingTextObjectId, editingShapeId, setEditingShapeId,
   selectedTokenId, setSelectedTokenId, selectedShapeId, setSelectedShapeId, selectedTextObjectId, setSelectedTextObjectId,
-  isPanning, handlePanStart: triggerPanStart, toast,
+  isPanning, panZoomHandlePanStart, panZoomHandlePanMove, panZoomHandlePanEnd, 
+  toast,
   rightClickPopoverState, setRightClickPopoverState, shapeRadiusInput, setShapeRadiusInput
 }: UseGridInteractionsProps) {
 
@@ -190,7 +193,7 @@ export function useGridInteractions({
   }, [setGridCells, tokens, setTokens, setDrawnShapes, setTextObjects, cellSize, onTokenErasedOnGrid]);
 
   const handleGridMouseDown = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    if (event.button === 2) return; // Ignore right-clicks for main interactions
+    if (event.button === 2) return; 
 
     if (editingTokenId || editingTextObjectId || editingShapeId) return;
     const pos = getMousePosition(event);
@@ -255,7 +258,7 @@ export function useGridInteractions({
         }
       }
       setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
-      triggerPanStart(event); // Use pan start from usePanZoom hook
+      panZoomHandlePanStart(event);
       return;
     }
 
@@ -272,7 +275,6 @@ export function useGridInteractions({
             const currentTime = Date.now();
             if (clickedTextObjectForInteraction.id === lastTextClickInfo.id && currentTime - lastTextClickInfo.time < DOUBLE_CLICK_THRESHOLD_MS) {
                 setEditingTextObjectId(clickedTextObjectForInteraction.id);
-                // setEditingTextObjectContent(clickedTextObjectForInteraction.content); // This will be handled by TextObjectsLayer now
                 setLastTextClickInfo({ id: null, time: 0 }); 
             } else {
                 setLastTextClickInfo({ id: clickedTextObjectForInteraction.id, time: currentTime });
@@ -281,7 +283,7 @@ export function useGridInteractions({
         } else {
             setLastTextClickInfo({ id: null, time: 0 }); 
             setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
-            setTimeout(() => { // Delay to allow potential double click to register
+            setTimeout(() => { 
                 if (activeTool === 'type_tool' && !editingTextObjectId && !isCreatingText) {
                     const newPos = getMousePosition(event); 
                     setIsCreatingText({
@@ -296,7 +298,7 @@ export function useGridInteractions({
 
     if (gridX < 0 || gridX >= numCols || gridY < 0 || gridY >= numRows) {
       if (event.button === 1 || (event.button === 0 && (event.ctrlKey || event.metaKey) )) { 
-         triggerPanStart(event);
+         panZoomHandlePanStart(event);
       }
       return;
     }
@@ -359,12 +361,15 @@ export function useGridInteractions({
     setTokens, setTextObjects, setDrawnShapes, setGridCells, setMeasurement, setCurrentDrawingShape,
     setSelectedTokenId, setSelectedShapeId, setSelectedTextObjectId,
     isCreatingText, finalizeTextCreation, handleFinalizeTextEdit, lastTextClickInfo, currentTextFontSize,
-    selectedColor, selectedTokenTemplate, toast, triggerPanStart, eraseContentAtCell,
-    rightClickPopoverState, setRightClickPopoverState // Added dependencies
+    selectedColor, selectedTokenTemplate, toast, panZoomHandlePanStart, eraseContentAtCell,
+    rightClickPopoverState, setRightClickPopoverState 
   ]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
-    if (isPanning) return; // Pan move is handled by usePanZoom
+    if (isPanning) {
+      panZoomHandlePanMove(event);
+      return;
+    }
     const pos = getMousePosition(event);
 
     if (draggingToken && dragOffset && activeTool === 'select' && !editingTokenId) {
@@ -479,9 +484,8 @@ export function useGridInteractions({
     } else {
         setHoveredCellWhilePaintingOrErasing(null);
     }
-    // Handle hover for text objects specifically in TextObjectsLayer if needed
   }, [
-    isPanning, getMousePosition, draggingToken, dragOffset, activeTool, editingTokenId, editingTextObjectId, editingShapeId,
+    isPanning, panZoomHandlePanMove, getMousePosition, draggingToken, dragOffset, activeTool, editingTokenId, editingTextObjectId, editingShapeId,
     cellSize, numCols, numRows, tokens, drawnShapes,
     setTextObjects, textObjectDragOffset,
     potentialDraggingShapeInfo, mouseDownPos, isActuallyDraggingShape, currentDraggingShapeId, shapeDragOffset,
@@ -492,6 +496,8 @@ export function useGridInteractions({
   ]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
+    const wasPanning = isPanning; 
+
     if (draggingToken && activeTool === 'select' && !editingTokenId) {
       if (draggingTokenGridPosition && onTokenMove) {
         onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
@@ -503,8 +509,7 @@ export function useGridInteractions({
       setDraggingTextObjectId(null); setTextObjectDragOffset(null);
     }
     setPotentialDraggingShapeInfo(null); setIsActuallyDraggingShape(false); setCurrentDraggingShapeId(null); setShapeDragOffset(null);
-    setMouseDownPos(null);
-
+    
     if (isMeasuring) setIsMeasuring(false);
     if (isErasing) { setIsErasing(false); setHoveredCellWhilePaintingOrErasing(null); }
     if (isPainting) {
@@ -526,15 +531,22 @@ export function useGridInteractions({
       setDrawnShapes(prev => [...prev, shapeToAdd]);
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
+
+    if (wasPanning) {
+      panZoomHandlePanEnd();
+    }
+    setMouseDownPos(null);
   }, [
+    isPanning, panZoomHandlePanEnd, 
     draggingToken, activeTool, editingTokenId, editingTextObjectId, draggingTokenGridPosition, onTokenMove,
     draggingTextObjectId, isMeasuring, isErasing, isPainting, pendingGridCellsDuringPaint, setGridCells,
     isDrawing, currentDrawingShape, setDrawnShapes, drawnShapes, cellSize, setCurrentDrawingShape
   ]);
 
   const handleMouseLeave = useCallback(() => {
-    // Most states are reset on mouseUp or when tool changes.
-    // If dragging off canvas, finalize the drag.
+    if (isPanning) {
+      panZoomHandlePanEnd();
+    }
     if (draggingToken && draggingTokenGridPosition && onTokenMove) {
       onTokenMove(draggingToken.id, draggingTokenGridPosition.x, draggingTokenGridPosition.y);
     }
@@ -549,7 +561,7 @@ export function useGridInteractions({
     }
     setIsPainting(false); setIsErasing(false); setHoveredCellWhilePaintingOrErasing(null);
 
-    if (isDrawing && currentDrawingShape) { // Finalize drawing if mouse leaves
+    if (isDrawing && currentDrawingShape) { 
       let shapeToAdd = { ...currentDrawingShape };
       const minSizeThreshold = cellSize * 0.5;
       if (shapeToAdd.type === 'circle') {
@@ -563,23 +575,22 @@ export function useGridInteractions({
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
     }
   }, [
+    isPanning, panZoomHandlePanEnd, 
     draggingToken, draggingTokenGridPosition, onTokenMove, activeTool, pendingGridCellsDuringPaint, 
     setGridCells, isDrawing, currentDrawingShape, setCurrentDrawingShape, setDrawnShapes, drawnShapes, cellSize
   ]);
 
-  // This effect can clear states if activeTool changes
   useEffect(() => {
     if (activeTool !== 'select') {
-        if (editingTokenId) setEditingTokenId(null); // Assuming handleSaveTokenName is called by TextObjectsLayer or TokensLayer on blur
+        if (editingTokenId) setEditingTokenId(null); 
         if (editingTextObjectId) handleFinalizeTextEdit();
-        if (editingShapeId) setEditingShapeId(null); // Assuming handleSaveShapeLabel is called by ShapesLayer on blur
+        if (editingShapeId) setEditingShapeId(null); 
         setSelectedTokenId(null); setSelectedShapeId(null); setSelectedTextObjectId(null);
         if (rightClickPopoverState) setRightClickPopoverState(null);
     }
     if (activeTool !== 'type_tool') {
         if (isCreatingText) finalizeTextCreation();
     }
-    // Reset interaction-specific states if tool changes
     setDraggingToken(null); setDragOffset(null); setDraggingTokenGridPosition(null); setDraggedTokenVisualPosition(null);
     setGhostToken(null); setMovementMeasureLine(null);
     setIsMeasuring(false);
@@ -597,16 +608,14 @@ export function useGridInteractions({
     handleMouseMove,
     handleMouseUp,
     handleMouseLeave,
-    draggingToken, draggedTokenVisualPosition, // For TokensLayer
-    ghostToken, movementMeasureLine, // For TokensLayer
-    isPainting, pendingGridCellsDuringPaint, hoveredCellWhilePaintingOrErasing, // For GridCellsLayer
-    isDrawing, // For ShapesLayer
-    isCreatingText, setIsCreatingText, // For TextObjectsLayer
-    finalizeTextCreation, // For TextObjectsLayer and BattleGrid
-    handleFinalizeTextEdit, // For TextObjectsLayer and BattleGrid
-    // Expose states that layers might need to show hover effects or selections
+    draggingToken, draggedTokenVisualPosition, 
+    ghostToken, movementMeasureLine, 
+    isPainting, pendingGridCellsDuringPaint, hoveredCellWhilePaintingOrErasing, 
+    isDrawing, 
+    isCreatingText, setIsCreatingText, 
+    finalizeTextCreation, 
+    handleFinalizeTextEdit, 
     selectedTokenId, selectedShapeId, selectedTextObjectId,
-    // Interaction states for cursor styling
     isActuallyDraggingShape, draggingTextObjectId,
   };
 }

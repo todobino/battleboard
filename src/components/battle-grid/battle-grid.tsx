@@ -14,19 +14,19 @@ import TokensLayer from './tokens-layer';
 import TextObjectsLayer from './text-objects-layer';
 import MeasurementOverlay from './measurement-overlay';
 import RightClickMenu from './right-click-menu';
-import BattleGridDefs from './battle-grid-defs'; // For SVG defs
-import GridToolbar from './grid-toolbar';       // For zoom/grid buttons
+import BattleGridDefs from './battle-grid-defs'; 
+import GridToolbar from './grid-toolbar';       
 import { dist2, isPointInCircle, isPointInRectangle, distanceToLineSegment } from '@/lib/geometry-utils';
 
 
 const DEFAULT_CELL_SIZE = 30;
-const PAN_TO_TOKEN_DURATION = 300; // ms for smooth pan
+const PAN_TO_TOKEN_DURATION = 300; 
 
 export default function BattleGrid({
   gridCells, setGridCells,
   tokens, setTokens,
   drawnShapes, setDrawnShapes,
-  currentDrawingShape, setCurrentDrawingShape, // Managed by useGridInteractions, but passed if needed by parent
+  currentDrawingShape, setCurrentDrawingShape, 
   textObjects, setTextObjects,
   showGridLines, setShowGridLines,
   showAllLabels, setShowAllLabels,
@@ -37,16 +37,15 @@ export default function BattleGrid({
   measurement, setMeasurement,
   activeTurnTokenId, currentTextFontSize,
   onTokenDelete, onTokenErasedOnGrid, onTokenImageChangeRequest,
-  // escapePressCount, // Now handled by useEscapeKey internally if needed or passed from parent
   selectedTokenId, setSelectedTokenId,
   selectedShapeId, setSelectedShapeId,
   selectedTextObjectId, setSelectedTextObjectId,
   tokenIdToFocus, onFocusHandled,
   onOpenAddCombatantDialogForToken,
   onOpenEditStatsDialogForToken,
-  participants, // For right-click menu context
-  toast, // Pass toast from BattleBoardPage
-}: BattleGridProps & { toast: any /* Type from useToast */ }) {
+  participants, 
+  toast, 
+}: BattleGridProps & { toast: any }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const numRows = gridCells.length;
   const numCols = gridCells.length > 0 ? gridCells[0].length : 0;
@@ -60,7 +59,6 @@ export default function BattleGrid({
     calculateInitialViewBox,
   } = usePanZoom({ svgRef, numCols, numRows, cellSize, showGridLines });
 
-  // States for inline editing, managed by layers but triggered/cleared here or by interactions hook
   const [editingTokenId, setEditingTokenId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
   const [editingTextObjectId, setEditingTextObjectId] = useState<string | null>(null);
@@ -68,14 +66,13 @@ export default function BattleGrid({
   const [editingShapeId, setEditingShapeId] = useState<string | null>(null);
   const [editingShapeLabelText, setEditingShapeLabelText] = useState<string>('');
 
-  // Right Click Popover State
   const [rightClickPopoverState, setRightClickPopoverState] = useState<{
     type: 'token' | 'shape' | 'text';
     item: TokenType | DrawnShape | TextObjectType;
     x: number; y: number;
   } | null>(null);
   const rightClickPopoverTriggerRef = useRef<HTMLButtonElement>(null);
-  const [shapeRadiusInput, setShapeRadiusInput] = useState<string>(''); // For shape popover
+  const [shapeRadiusInput, setShapeRadiusInput] = useState<string>(''); 
 
 
   const interactions = useGridInteractions({
@@ -85,14 +82,17 @@ export default function BattleGrid({
     onTokenMove, onTokenErasedOnGrid,
     editingTokenId, setEditingTokenId, editingTextObjectId, setEditingTextObjectId, editingShapeId, setEditingShapeId,
     selectedTokenId, setSelectedTokenId, selectedShapeId, setSelectedShapeId, selectedTextObjectId, setSelectedTextObjectId,
-    isPanning, handlePanStart, toast,
+    isPanning, 
+    panZoomHandlePanStart: handlePanStart, 
+    panZoomHandlePanMove: handlePanMove,
+    panZoomHandlePanEnd: handlePanEnd,
+    toast,
     rightClickPopoverState, setRightClickPopoverState, shapeRadiusInput, setShapeRadiusInput
   });
 
   const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
   const [hoveredTextObjectId, setHoveredTextObjectId] = useState<string | null>(null);
 
-  // Token Label Editing
   const handleSaveTokenName = useCallback(() => {
     if (editingTokenId && onTokenInstanceNameChange) {
       onTokenInstanceNameChange(editingTokenId, editingText);
@@ -114,7 +114,6 @@ export default function BattleGrid({
     }
   };
 
-  // Shape Label Editing
   const handleSaveShapeLabel = useCallback(() => {
     if (editingShapeId) {
       setDrawnShapes(prevShapes =>
@@ -138,7 +137,6 @@ export default function BattleGrid({
     }
   };
   
-  // Text Object Editing (setup for TextObjectsLayer)
   const handleTextEditInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') { event.preventDefault(); interactions.handleFinalizeTextEdit(); }
     else if (event.key === 'Escape') { setEditingTextObjectId(null); setEditingTextObjectContent(''); }
@@ -172,11 +170,9 @@ export default function BattleGrid({
         return;
     }
 
-    // Shape right click logic (simplified from original, full logic in useGridInteractions for mousedown)
     for (let i = drawnShapes.length - 1; i >= 0; i--) {
         const shape = drawnShapes[i];
         let hit = false;
-        // Basic hit detection, more precise in useGridInteractions
         if (shape.type === 'line') hit = distanceToLineSegment(pos.x, pos.y, shape.startPoint.x, shape.startPoint.y, shape.endPoint.x, shape.endPoint.y) <= 8;
         else if (shape.type === 'circle') hit = isPointInCircle(pos, shape.startPoint, Math.sqrt(dist2(shape.startPoint, shape.endPoint)));
         else if (shape.type === 'rectangle') hit = isPointInRectangle(pos, Math.min(shape.startPoint.x, shape.endPoint.x), Math.min(shape.startPoint.y, shape.endPoint.y), Math.abs(shape.endPoint.x - shape.startPoint.x), Math.abs(shape.endPoint.y - shape.startPoint.y));
@@ -186,7 +182,7 @@ export default function BattleGrid({
             setRightClickPopoverState({ type: 'shape', item: shape, x: event.clientX, y: event.clientY });
              if (shape.type === 'circle') { 
                 const pixelRadius = Math.sqrt(dist2(shape.startPoint, shape.endPoint));
-                const radiusInFeet = (pixelRadius / cellSize) * 5; // FEET_PER_SQUARE
+                const radiusInFeet = (pixelRadius / cellSize) * 5; 
                 setShapeRadiusInput(String(Math.round(radiusInFeet))); 
             } else {
                 setShapeRadiusInput(''); 
@@ -216,7 +212,6 @@ export default function BattleGrid({
     setRightClickPopoverState(null);
   };
 
-  // Effect for escape key press
   useEffect(() => {
     if (escapePressCount > 0) {
       setRightClickPopoverState(null);
@@ -228,7 +223,6 @@ export default function BattleGrid({
     }
   }, [escapePressCount, interactions]);
 
-  // Effect for focusing token
   const animationFrameId = useRef<number | null>(null);
   useEffect(() => {
     if (tokenIdToFocus && svgRef.current) {
@@ -301,7 +295,6 @@ export default function BattleGrid({
   const imgScaledY = (gridContentHeight - imgScaledHeight) / 2;
 
 
-  // Right Click Menu action handlers
   const handleEditTokenNameFromMenu = (tokenId: string, currentName: string) => {
     setSelectedTokenId(tokenId);
     setEditingTokenId(tokenId);
@@ -324,7 +317,7 @@ export default function BattleGrid({
   };
   const handleShapeRadiusChange = (shapeId: string, newRadiusInFeetString: string) => {
     const newRadiusInFeet = parseFloat(newRadiusInFeetString);
-    if (isNaN(newRadiusInFeet) || newRadiusInFeet < (5 / 2)) { // FEET_PER_SQUARE / 2
+    if (isNaN(newRadiusInFeet) || newRadiusInFeet < (5 / 2)) { 
       const currentShape = drawnShapes.find(s => s.id === shapeId);
       if (currentShape && currentShape.type === 'circle') {
         const currentPixelRadius = Math.sqrt(dist2(currentShape.startPoint, currentShape.endPoint));
