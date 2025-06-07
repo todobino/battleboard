@@ -1047,7 +1047,12 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
           }
         }
       }
-      toast({ title: "Stats Updated", description: `Stats for ${updatedParticipantsList.find(p=>p.id === participantId)?.name} updated.`});
+      const nameForToast = updatedParticipantsList.find(p=>p.id === participantId)?.name;
+      if (nameForToast) {
+        setTimeout(() => {
+          toast({ title: "Stats Updated", description: `Stats for ${nameForToast} updated.`});
+        }, 0);
+      }
       return updatedParticipantsList;
     });
   }, [isCombatActive, currentParticipantIndex, toast]);
@@ -1509,7 +1514,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                     onClick={handleStartCombat}
                     className="w-full"
                     disabled={participants.length === 0}
-                    variant="default"
                   >
                     <Play className="mr-2 h-4 w-4" /> Start Combat
                   </Button>
