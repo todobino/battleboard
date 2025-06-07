@@ -14,7 +14,7 @@ import { ArrowRight, Camera, Users, Plus, Minus, Shuffle, Play } from 'lucide-re
 import ImageCropDialog from '@/components/image-crop-dialog';
 import { PlayerIcon, EnemyIcon, AllyIcon } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogTrigger, DialogContent, DialogDescription, DialogFooter as FormDialogFooter, DialogHeader as FormDialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter as FormDialogFooter, DialogHeader as FormDialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,8 +28,8 @@ const WELCOME_DIALOG_STORAGE_KEY = 'hasSeenWelcomeDialogV1';
 
 // Helper function (can be moved or defined if not from bbs directly)
 const initialGridCellsLocal = (): GridCellData[][] =>
-  Array.from({ length: 40 /* bbs.GRID_ROWS */ }, (_, y) => 
-    Array.from({ length: 40 /* bbs.GRID_COLS */ }, (_, x) => ({
+  Array.from({ length: 40 }, (_, y) =>
+    Array.from({ length: 40 }, (_, x) => ({
       id: `${y}-${x}`,
       color: undefined,
     }))
@@ -506,31 +506,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (nextIndex >= bbs.participants.length) { nextIndex = 0; bbs.setRoundCounter(r => r + 1); }
     bbs.setCurrentParticipantIndex(nextIndex);
   };
-
-  const unassignedTokensForAutoRoll = useMemo(() => bbs.tokens.filter(token => ['player', 'enemy', 'ally'].includes(token.type) && !bbs.participants.some(p => p.tokenId === token.id)), [bbs.tokens, bbs.participants]);
-
-  const handleAutoRollInitiative = useCallback(() => {
-    const unassigned = unassignedTokensForAutoRoll; // Use the memoized value
-    if (unassigned.length === 0) {
-      setTimeout(() => toast({ title: "No Tokens to Roll For", description: "All suitable tokens are already in the turn order.", variant: "default" }), 0);
-      return;
-    }
-    let participantsAddedCount = 0;
-    unassigned.forEach(token => {
-      const initiativeRoll = Math.floor(Math.random() * 20) + 1;
-      const name = token.instanceName || token.label || `Token ${token.id.substring(0,4)}`;
-      const type = token.type as 'player' | 'enemy' | 'ally'; // Ensure type is one of these
-      const success = handleAddParticipantToList({ name, initiative: initiativeRoll, type, hp: undefined, ac: undefined }, token.id, token.customImageUrl || null);
-      if (success) participantsAddedCount++;
-    });
-
-    if (participantsAddedCount > 0) {
-      setTimeout(() => toast({ title: "Initiative Rolled", description: `Added ${participantsAddedCount} token(s) to the turn order with random initiative.` }), 0);
-    } else {
-      setTimeout(() => toast({ title: "Auto-Roll Failed", description: "Could not add any tokens to the turn order. Check grid space.", variant: "destructive" }), 0);
-    }
-  }, [bbs, toast, handleAddParticipantToList, unassignedTokensForAutoRoll]); // Added unassignedTokensForAutoRoll dependency
-
+  
   const renderNumericInput = (
     value: string, setValue: Dispatch<SetStateAction<string>>, isEditing: boolean, setIsEditing: Dispatch<SetStateAction<boolean>>,
     label: string, idPrefix: string, optional: boolean = false, disabled: boolean = false
@@ -551,14 +527,45 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   );
 
   const unassignedTokensForDialog = useMemo(() => bbs.tokens.filter(token => ['player', 'enemy', 'ally', 'generic'].includes(token.type) && !bbs.participants.some(p => p.tokenId === token.id)), [bbs.tokens, bbs.participants]);
-  const participantTypeButtonConfig = { player: {label:'Player', icon:PlayerIcon, selectedClass:'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]'}, enemy: {label:'Enemy', icon:EnemyIcon, selectedClass:'bg-destructive text-destructive-foreground hover:bg-destructive/90', unselectedHoverClass:'hover:bg-destructive hover:text-destructive-foreground'}, ally: {label:'Ally', icon:AllyIcon, selectedClass:'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]'} };
+
+  const unassignedTokensForAutoRoll = useMemo(() => bbs.tokens.filter(token => ['player', 'enemy', 'ally'].includes(token.type) && !bbs.participants.some(p => p.tokenId === token.id)), [bbs.tokens, bbs.participants]);
+
+  const handleAutoRollInitiative = useCallback(() => {
+    const unassigned = unassignedTokensForAutoRoll; 
+    if (unassigned.length === 0) {
+      setTimeout(() => toast({ title: "No Tokens to Roll For", description: "All suitable tokens are already in the turn order.", variant: "default" }), 0);
+      return;
+    }
+    let participantsAddedCount = 0;
+    unassigned.forEach(token => {
+      const initiativeRoll = Math.floor(Math.random() * 20) + 1;
+      const name = token.instanceName || token.label || `Token ${token.id.substring(0,4)}`;
+      const type = token.type as 'player' | 'enemy' | 'ally'; 
+      const success = handleAddParticipantToList({ name, initiative: initiativeRoll, type, hp: undefined, ac: undefined }, token.id, token.customImageUrl || null);
+      if (success) participantsAddedCount++;
+    });
+
+    if (participantsAddedCount > 0) {
+      setTimeout(() => toast({ title: "Initiative Rolled", description: `Added ${participantsAddedCount} token(s) to the turn order with random initiative.` }), 0);
+    } else {
+      setTimeout(() => toast({ title: "Auto-Roll Failed", description: "Could not add any tokens to the turn order. Check grid space.", variant: "destructive" }), 0);
+    }
+  }, [bbs, toast, handleAddParticipantToList, unassignedTokensForAutoRoll]); 
+
+  // const participantTypeButtonConfig = {
+  //   player: {label:'Player', icon:PlayerIcon, selectedClass:'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]'},
+  //   enemy: {label:'Enemy', icon:EnemyIcon, selectedClass:'bg-destructive text-destructive-foreground hover:bg-destructive/90', unselectedHoverClass:'hover:bg-destructive hover:text-destructive-foreground'},
+  //   ally: {label:'Ally', icon:AllyIcon, selectedClass:'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]'}
+  // };
+  const participantTypeButtonConfig: any = {}; // TEMPORARY PLACEHOLDER
+
 
   return (
     <div className="flex h-screen">
       {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
       
       <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
-        {/* DialogTrigger removed, button in SidebarFooter controls open state directly */}
+        {/* DialogTrigger is now handled by the button's onClick */}
         <DialogContent className="sm:max-w-2xl">
             <FormDialogHeader>
               <div className="flex items-center gap-3">
@@ -575,9 +582,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             <form onSubmit={handleAddCombatantFormSubmit} className="space-y-4 pt-4">
              <div className="space-y-1">
                 <Label>Type</Label>
+                {/* Temporarily commented out due to parsing error investigation 
                 <div className="flex space-x-2">
                     {(Object.keys(participantTypeButtonConfig) as Array<keyof typeof participantTypeButtonConfig>).map(type => (<Button key={type} type="button" variant={newParticipantType === type ? undefined : 'outline'} onClick={() => setNewParticipantType(type)} className={cn("flex-1", newParticipantType === type ? participantTypeButtonConfig[type].selectedClass : participantTypeButtonConfig[type].unselectedHoverClass)}><participantTypeButtonConfig[type].icon className="h-4 w-4 mr-2"/>{participantTypeButtonConfig[type].label}</Button>))}
                 </div>
+                */}
              </div>
              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 space-y-1"><Label htmlFor="p-name">Name</Label><Input id="p-name" value={newParticipantName} onChange={e=>setNewParticipantName(e.target.value)} required/></div>
@@ -713,3 +722,5 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   );
 }
 
+
+    
