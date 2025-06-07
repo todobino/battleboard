@@ -109,12 +109,12 @@ export default function FloatingToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false); 
+      setIsResetAlertOpen(false);
     }
   }, [escapePressCount]);
 
 
-  const handleToolClick = (tool: ActiveTool) => {
+  const handleToolClick = useCallback((tool: ActiveTool) => {
     if (setActiveTool) {
       setActiveTool(tool);
     }
@@ -124,24 +124,24 @@ export default function FloatingToolbar({
     if (tool !== 'place_token') setIsTokenPlacerPopoverOpen(false);
     if (tool !== 'paint_cell') setIsColorPainterPopoverOpen(false);
     if (tool !== 'draw_line' && tool !== 'draw_circle' && tool !== 'draw_rectangle') setIsShapeToolPopoverOpen(false);
-  };
+  }, [setActiveTool, setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen, setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen]);
 
-  const handleTokenTemplateSelected = () => {
+  const handleTokenTemplateSelected = useCallback(() => {
     setIsTokenPlacerPopoverOpen(false);
-  };
+  }, [setIsTokenPlacerPopoverOpen]);
 
-  const handleColorSelected = () => {
+  const handleColorSelected = useCallback(() => {
     setIsColorPainterPopoverOpen(false);
-  };
+  }, [setIsColorPainterPopoverOpen]);
 
-  const handleShapeToolSelected = () => {
+  const handleShapeToolSelected = useCallback(() => {
     setIsShapeToolPopoverOpen(false);
-  };
+  }, [setIsShapeToolPopoverOpen]);
 
-  const handleMeasurementToolSelected = () => {
+  const handleMeasurementToolSelected = useCallback(() => {
     setIsMeasurementPopoverOpen(false);
-  };
-  
+  }, [setIsMeasurementPopoverOpen]);
+
   // Memoized onClick handlers for popover toggles
   const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
   const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
@@ -192,12 +192,12 @@ export default function FloatingToolbar({
             label="Map Tool"
             icon={Map}
             onClick={toggleMapSettingsPopover}
-            isActive={isMapSettingsPopoverOpen}
+            isActive={isMapSettingsPopoverOpen} // Changed
             asChild
           >
             <PopoverTrigger asChild>
                 <Button
-                  variant={(isMapSettingsPopoverOpen) ? 'default' : 'outline'}
+                  variant={isMapSettingsPopoverOpen ? 'default' : 'outline'} // Changed
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Map Tool"
@@ -225,12 +225,12 @@ export default function FloatingToolbar({
             label="Measurement Tool"
             icon={DraftingCompass}
             onClick={toggleMeasurementPopover}
-            isActive={isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius'}
+            isActive={isMeasurementPopoverOpen} // Changed
             asChild
           >
             <PopoverTrigger asChild>
                <Button
-                  variant={(isMeasurementPopoverOpen || activeTool === 'measure_distance' || activeTool === 'measure_radius') ? 'default' : 'outline'}
+                  variant={isMeasurementPopoverOpen ? 'default' : 'outline'} // Changed
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Measurement Tool"
@@ -255,12 +255,12 @@ export default function FloatingToolbar({
             label="Token Tool"
             icon={Users}
             onClick={toggleTokenPlacerPopover}
-            isActive={isTokenPlacerPopoverOpen || activeTool === 'place_token'}
+            isActive={isTokenPlacerPopoverOpen} // Changed
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={(isTokenPlacerPopoverOpen || activeTool === 'place_token') ? 'default' : 'outline'}
+                variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'} // Changed
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Token Tool"
@@ -283,12 +283,12 @@ export default function FloatingToolbar({
             label="Brush Tool"
             icon={Paintbrush}
             onClick={toggleColorPainterPopover}
-            isActive={isColorPainterPopoverOpen || activeTool === 'paint_cell'}
+            isActive={isColorPainterPopoverOpen} // Changed
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={(isColorPainterPopoverOpen || activeTool === 'paint_cell') ? 'default' : 'outline'}
+                variant={isColorPainterPopoverOpen ? 'default' : 'outline'} // Changed
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Brush Tool"
@@ -313,12 +313,12 @@ export default function FloatingToolbar({
             label="Shape Tool"
             icon={Shapes}
             onClick={toggleShapeToolPopover}
-            isActive={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle'}
+            isActive={isShapeToolPopoverOpen} // Changed
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isShapeToolPopoverOpen || activeTool === 'draw_line' || activeTool === 'draw_circle' || activeTool === 'draw_rectangle' ? 'default' : 'outline'}
+                variant={isShapeToolPopoverOpen ? 'default' : 'outline'} // Changed
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Shape Tool"
@@ -372,7 +372,7 @@ export default function FloatingToolbar({
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="default" 
+                  variant="default"
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",
@@ -414,3 +414,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
