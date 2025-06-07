@@ -54,7 +54,8 @@ export default function BattleGrid({
   const escapePressCount = useEscapeKey();
 
   const {
-    viewBox, setViewBox, isPanning, panStart, getMousePosition, applyZoom,
+    viewBox, setViewBox, isPanning, panStart, getMousePosition, 
+    zoomIn, zoomOut, // Use specific zoom functions
     handleWheel, handlePanStart, handlePanMove, handlePanEnd, handleResetView,
     calculateInitialViewBox,
   } = usePanZoom({ svgRef, numCols, numRows, cellSize, showGridLines });
@@ -153,7 +154,7 @@ export default function BattleGrid({
 
 
   const handleContextMenu = (event: React.MouseEvent<SVGSVGElement>) => {
-    if (activeTool === 'select' && isPanning) { // If panning was initiated by right-click, don't show menu
+    if (activeTool === 'select' && isPanning) { 
       event.preventDefault();
       return;
     }
@@ -229,7 +230,6 @@ export default function BattleGrid({
       setEditingTextObjectId(null);
       if(interactions.isCreatingText) interactions.finalizeTextCreation(); 
       setHoveredTextObjectId(null); 
-      // Clear marquee selection on escape
       if (interactions.isMarqueeSelecting) {
         interactions.setIsMarqueeSelecting(false);
         interactions.setMarqueeStartPoint(null);
@@ -285,22 +285,22 @@ export default function BattleGrid({
 
   const getCursorStyle = () => {
     if (editingTokenId || interactions.isCreatingText || editingTextObjectId || editingShapeId) return 'cursor-text';
-    if (isPanning) return 'cursor-grabbing'; // This isPanning is from usePanZoom
+    if (isPanning) return 'cursor-grabbing'; 
     if (interactions.draggingToken && activeTool === 'select' && !editingTokenId) return 'cursor-grabbing';
     
     if (activeTool === 'select' && !interactions.draggingToken && !isPanning && !rightClickPopoverState && !interactions.isActuallyDraggingShape) {
-        const primarySelectedShapeId = selectedShapeIds.length > 0 ? selectedShapeIds[0] : null; // simplified for now
+        const primarySelectedShapeId = selectedShapeIds.length > 0 ? selectedShapeIds[0] : null; 
         const hoveredShape = primarySelectedShapeId ? drawnShapes.find(s => s.id === primarySelectedShapeId) : null;
         if (hoveredShape && hoveredShape.isLocked && (hoveredShape.type === 'circle' || hoveredShape.type === 'rectangle')) {
             return 'cursor-default';
         }
+        if (interactions.isMarqueeSelecting) return 'cursor-crosshair'; // Marquee selection cursor
         return 'cursor-pointer'; 
     }
     if (interactions.draggingTextObjectId && activeTool === 'select' && !editingTextObjectId) return 'cursor-grabbing';
     if (interactions.isActuallyDraggingShape && activeTool === 'select' && !editingShapeId) return 'cursor-grabbing';
     if (activeTool === 'type_tool') return 'cursor-text';
     if (['paint_cell', 'place_token', 'measure_distance', 'measure_radius', 'eraser_tool', 'draw_line', 'draw_circle', 'draw_rectangle'].includes(activeTool)) return 'cursor-crosshair';
-    if (interactions.isMarqueeSelecting) return 'cursor-crosshair';
     return 'cursor-default';
   };
 
@@ -489,11 +489,10 @@ export default function BattleGrid({
       <GridToolbar
         showGridLines={showGridLines} setShowGridLines={setShowGridLines}
         showAllLabels={showAllLabels} setShowAllLabels={setShowAllLabels}
-        onZoomIn={() => applyZoom(true)}
-        onZoomOut={() => applyZoom(false)}
-        onResetView={handleResetView}
+        onZoomIn={zoomIn} // Pass stable zoomIn
+        onZoomOut={zoomOut} // Pass stable zoomOut
+        onResetView={handleResetView} // Pass stable handleResetView
       />
     </div>
   );
 }
-
