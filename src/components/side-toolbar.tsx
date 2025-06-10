@@ -1,10 +1,10 @@
 
 'use client';
 
-import type { ActiveTool, SideToolbarProps as SideToolbarPropsType } from '@/types';
+import type { ActiveTool, SideToolbarProps as SideToolbarPropsType, Measurement, Token, DefaultBattleMap } from '@/types';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
+import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -144,17 +144,9 @@ export default function SideToolbar({
     ];
 
     if (toolPotentiallySelectedFromPopover.includes(activeTool)) {
-      if (isMapSettingsPopoverOpen || isMeasurementPopoverOpen || isTokenPlacerPopoverOpen || isColorPainterPopoverOpen || isShapeToolPopoverOpen) {
-        closeAllPopovers();
-      }
+      closeAllPopovers();
     }
-  }, [
-    activeTool,
-    isMapSettingsPopoverOpen, isMeasurementPopoverOpen,
-    isTokenPlacerPopoverOpen, isColorPainterPopoverOpen,
-    isShapeToolPopoverOpen,
-    closeAllPopovers
-  ]);
+  }, [activeTool, closeAllPopovers]);
 
 
   return (
@@ -174,13 +166,9 @@ export default function SideToolbar({
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={toggleMapSettingsPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
+              variant="outline" // Static variant
               size="icon"
-              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                isMapSettingsPopoverOpen
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-card text-card-foreground hover:bg-muted'
-              )}
+              className='rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted'
               aria-label="Map Tool"
             >
               <Map className="h-5 w-5" />
@@ -203,13 +191,9 @@ export default function SideToolbar({
         <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
+              variant="outline" // Static variant
               size="icon"
-              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                isMeasurementPopoverOpen
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-card text-card-foreground hover:bg-muted'
-              )}
+              className='rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted'
               aria-label="Measurement Tool"
             >
               <DraftingCompass className="h-5 w-5" />
@@ -228,13 +212,9 @@ export default function SideToolbar({
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
+              variant="outline" // Static variant
               size="icon"
-              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                isTokenPlacerPopoverOpen
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-card text-card-foreground hover:bg-muted'
-              )}
+              className='rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted'
               aria-label="Token Tool"
             >
               <Users className="h-5 w-5" />
@@ -251,13 +231,9 @@ export default function SideToolbar({
         <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
+              variant="outline" // Static variant
               size="icon"
-              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                isColorPainterPopoverOpen
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-card text-card-foreground hover:bg-muted'
-              )}
+              className='rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted'
               aria-label="Brush Tool"
             >
               <Paintbrush className="h-5 w-5" />
@@ -276,13 +252,9 @@ export default function SideToolbar({
         <Popover open={isShapeToolPopoverOpen} onOpenChange={toggleShapeToolPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
+              variant="outline" // Static variant
               size="icon"
-              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                isShapeToolPopoverOpen
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'bg-card text-card-foreground hover:bg-muted'
-              )}
+              className='rounded-md shadow-lg h-10 w-10 p-2 bg-card text-card-foreground hover:bg-muted'
               aria-label="Shape Tool"
             >
               <Shapes className="h-5 w-5" />
@@ -330,26 +302,19 @@ export default function SideToolbar({
         <Separator orientation="horizontal" className="w-10/12 my-1 bg-sidebar-border" />
 
         <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="default"
-                  size="icon"
-                  className={cn(
-                    "rounded-md shadow-lg h-10 w-10 p-2",
-                    "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  )}
-                  aria-label="Reset Board"
-                >
-                  <Power className="h-5 w-5" />
-                </Button>
-              </AlertDialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center">
-              <p>Reset Board</p>
-            </TooltipContent>
-          </Tooltip>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="default"
+              size="icon"
+              className={cn(
+                "rounded-md shadow-lg h-10 w-10 p-2",
+                "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              )}
+              aria-label="Reset Board"
+            >
+              <Power className="h-5 w-5" />
+            </Button>
+          </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Reset Entire Board?</AlertDialogTitle>
