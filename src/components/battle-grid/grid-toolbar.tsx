@@ -37,7 +37,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
+      <div className="absolute bottom-4 right-4 flex flex-row space-x-2 z-10">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -55,7 +55,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
               {showGridLines ? <Grid2x2Check className="h-5 w-5" /> : <Grid2x2X className="h-5 w-5" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center">
+          <TooltipContent side="top" align="center">
             <p>{showGridLines ? "Hide Grid Lines" : "Show Grid Lines"}</p>
           </TooltipContent>
         </Tooltip>
@@ -76,7 +76,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
               {showAllLabels ? <ListCheck className="h-5 w-5" /> : <ListX className="h-5 w-5" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center">
+          <TooltipContent side="top" align="center">
             <p>{showAllLabels ? "Hide All Labels" : "Show All Labels"}</p>
           </TooltipContent>
         </Tooltip>
@@ -86,7 +86,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
               <Plus className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center"><p>Zoom In</p></TooltipContent>
+          <TooltipContent side="top" align="center"><p>Zoom In</p></TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -94,7 +94,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
               <Maximize className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center"><p>Reset View</p></TooltipContent>
+          <TooltipContent side="top" align="center"><p>Reset View</p></TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -102,7 +102,7 @@ const GridToolbarComponent: React.FC<GridToolbarProps> = ({
               <Minus className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" align="center"><p>Zoom Out</p></TooltipContent>
+          <TooltipContent side="top" align="center"><p>Zoom Out</p></TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
