@@ -57,14 +57,13 @@ const ToolButtonComponent = React.forwardRef<HTMLButtonElement, ToolButtonCompon
         <TooltipTrigger asChild>
           <Button
             ref={ref}
-            variant={variantOverride || (isButtonActive ? 'default' : 'outline')} // Variant prop still determines base structure
+            variant={variantOverride || (isButtonActive ? 'default' : 'outline')}
             size="icon"
             onClick={onClick}
             className={cn(
               'rounded-md shadow-lg h-10 w-10 p-2',
-              // Specific background and text colors override variant styles
-              isButtonActive 
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+              isButtonActive
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-card text-card-foreground hover:bg-muted',
               className
             )}
@@ -108,11 +107,11 @@ export default function SideToolbar({
   const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
 
-  const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), []);
-  const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), []);
-  const toggleTokenPlacerPopover = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), []);
-  const toggleColorPainterPopover = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), []);
-  const toggleShapeToolPopover = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), []);
+  const toggleMapSettingsPopoverCallback = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
+  const toggleMeasurementPopoverCallback = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
+  const toggleTokenPlacerPopoverCallback = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), [setIsTokenPlacerPopoverOpen]);
+  const toggleColorPainterPopoverCallback = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), [setIsColorPainterPopoverOpen]);
+  const toggleShapeToolPopoverCallback = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), [setIsShapeToolPopoverOpen]);
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
     setActiveTool(tool);
@@ -127,7 +126,6 @@ export default function SideToolbar({
   const handleTypeToolClick = useCallback(() => handleToolClick('type_tool'), [handleToolClick]);
   const handleEraserToolClick = useCallback(() => handleToolClick('eraser_tool'), [handleToolClick]);
 
-
   useEffect(() => {
     if (escapePressCount && escapePressCount > 0) {
       setIsMapSettingsPopoverOpen(false);
@@ -135,10 +133,17 @@ export default function SideToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false); // Add reset for alert dialog as well
+      setIsResetAlertOpen(false);
     }
-  }, [ escapePressCount, setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen, setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen, setIsResetAlertOpen ]);
-
+  }, [
+    escapePressCount,
+    setIsMapSettingsPopoverOpen,
+    setIsMeasurementPopoverOpen,
+    setIsTokenPlacerPopoverOpen,
+    setIsColorPainterPopoverOpen,
+    setIsShapeToolPopoverOpen,
+    setIsResetAlertOpen,
+  ]);
 
   const handleTokenTemplateSelected = useCallback(() => {
     setIsTokenPlacerPopoverOpen(false);
@@ -156,9 +161,6 @@ export default function SideToolbar({
     setIsMeasurementPopoverOpen(false);
   }, [setIsMeasurementPopoverOpen]);
 
-  const popoverSide = "right";
-  const popoverAlign = "start";
-
   return (
     <TooltipProvider delayDuration={0}>
       <div className={cn(
@@ -173,7 +175,7 @@ export default function SideToolbar({
           onClick={handleSelectToolClick}
         />
 
-        <Popover open={isMapSettingsPopoverOpen} onOpenChange={toggleMapSettingsPopover}>
+        <Popover open={isMapSettingsPopoverOpen} onOpenChange={toggleMapSettingsPopoverCallback}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
@@ -191,9 +193,9 @@ export default function SideToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center"><p>Map Tool</p></TooltipContent>
+            <TooltipContent side="right" align="center"><p>Map Tool</p></TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-[640px]" side={popoverSide} align={popoverAlign}>
+          <PopoverContent className="w-[640px]" side="right" align="start">
             <GridSettingsPanel
               showGridLines={showGridLines}
               setShowGridLines={setShowGridLines}
@@ -207,7 +209,7 @@ export default function SideToolbar({
           </PopoverContent>
         </Popover>
 
-        <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopover}>
+        <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopoverCallback}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
@@ -225,9 +227,9 @@ export default function SideToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center"><p>Measurement Tool</p></TooltipContent>
+            <TooltipContent side="right" align="center"><p>Measurement Tool</p></TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-80" side={popoverSide} align={popoverAlign}>
+          <PopoverContent className="w-80" side="right" align="start">
             <MeasurementToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -238,7 +240,7 @@ export default function SideToolbar({
           </PopoverContent>
         </Popover>
 
-        <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopover}>
+        <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopoverCallback}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
@@ -256,9 +258,9 @@ export default function SideToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center"><p>Token Tool</p></TooltipContent>
+            <TooltipContent side="right" align="center"><p>Token Tool</p></TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-80" side={popoverSide} align={popoverAlign}>
+          <PopoverContent className="w-80" side="right" align="start">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}
@@ -267,7 +269,7 @@ export default function SideToolbar({
           </PopoverContent>
         </Popover>
 
-        <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopover}>
+        <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopoverCallback}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
@@ -285,9 +287,9 @@ export default function SideToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center"><p>Brush Tool</p></TooltipContent>
+            <TooltipContent side="right" align="center"><p>Brush Tool</p></TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-80" side={popoverSide} align={popoverAlign}>
+          <PopoverContent className="w-80" side="right" align="start">
             <ColorToolPanel
               activeTool={activeTool}
               setActiveTool={setActiveTool}
@@ -298,7 +300,7 @@ export default function SideToolbar({
           </PopoverContent>
         </Popover>
 
-        <Popover open={isShapeToolPopoverOpen} onOpenChange={toggleShapeToolPopover}>
+        <Popover open={isShapeToolPopoverOpen} onOpenChange={toggleShapeToolPopoverCallback}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
@@ -316,9 +318,9 @@ export default function SideToolbar({
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center"><p>Shape Tool</p></TooltipContent>
+            <TooltipContent side="right" align="center"><p>Shape Tool</p></TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-80" side={popoverSide} align={popoverAlign}>
+          <PopoverContent className="w-80" side="right" align="start">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
               selectedShapeDrawColor={selectedShapeDrawColor}
@@ -365,11 +367,11 @@ export default function SideToolbar({
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="default" // This should stay as destructive variant visually
+                  variant="default" 
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",
-                    "bg-destructive text-destructive-foreground hover:bg-destructive/90" // Explicit destructive styling
+                    "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   )}
                   aria-label="Reset Board"
                 >
@@ -377,7 +379,7 @@ export default function SideToolbar({
                 </Button>
               </AlertDialogTrigger>
             </TooltipTrigger>
-            <TooltipContent side={popoverSide} align="center">
+            <TooltipContent side="right" align="center">
               <p>Reset Board</p>
             </TooltipContent>
           </Tooltip>
