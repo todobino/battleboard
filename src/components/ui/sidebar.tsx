@@ -22,7 +22,7 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "300px"; // This constant remains for setting the CSS variable
+const SIDEBAR_WIDTH = "300px"; 
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -35,7 +35,6 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
-  // Add other properties from context if they are used directly in Sidebar
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
@@ -58,7 +57,6 @@ const SidebarProvider = React.forwardRef<
     defaultOpen?: boolean
     open?: boolean
     onOpenChange?: (open: boolean) => void
-    // Include props that might be passed down from Sidebar
     side?: "left" | "right";
     variant?: "sidebar" | "floating" | "inset";
     collapsible?: "offcanvas" | "icon" | "none";
@@ -72,7 +70,6 @@ const SidebarProvider = React.forwardRef<
       className,
       style,
       children,
-      // Destructure sidebar-specific props to pass them into context if needed
       side = "left",
       variant = "sidebar",
       collapsible = "offcanvas",
@@ -142,7 +139,7 @@ const SidebarProvider = React.forwardRef<
           <div
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH, // Still set the CSS variable
+                "--sidebar-width": SIDEBAR_WIDTH,
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
@@ -173,7 +170,6 @@ const Sidebar = React.forwardRef<
 >(
   (
     {
-      // Default props for Sidebar itself, context will provide defaults if used within provider
       side: sideProp,
       variant: variantProp,
       collapsible: collapsibleProp,
@@ -183,14 +179,12 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    // Use context, but allow props to override if Sidebar is used standalone (though not recommended for complex state)
     const context = useSidebar();
     const isMobile = context.isMobile;
     const openMobile = context.openMobile;
     const setOpenMobile = context.setOpenMobile;
     const state = context.state;
 
-    // Prioritize props passed directly to Sidebar, then context, then defaults
     const side = sideProp ?? context.side ?? "left";
     const variant = variantProp ?? context.variant ?? "sidebar";
     const collapsible = collapsibleProp ?? context.collapsible ?? "offcanvas";
@@ -200,7 +194,8 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[300px] flex-col bg-sidebar text-sidebar-foreground", // Directly set width for non-collapsible
+            "flex h-full w-[300px] flex-col bg-sidebar text-sidebar-foreground", 
+            side === "left" ? "border-r border-sidebar-edge" : "border-l border-sidebar-edge",
             className
           )}
           ref={ref}
@@ -218,7 +213,7 @@ const Sidebar = React.forwardRef<
             <SheetContent
               data-sidebar="sidebar"
               data-mobile="true"
-              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" // Uses SIDEBAR_WIDTH_MOBILE via CSS var
+              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" 
               style={
                 {
                   "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -233,20 +228,19 @@ const Sidebar = React.forwardRef<
       )
     }
 
-    // Desktop view
     const desktopSpacerWidthClass =
       collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset")
       ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
       : collapsible === "icon" && state === "collapsed"
         ? "w-[var(--sidebar-width-icon)]"
-        : "w-[300px]"; // Expanded desktop spacer width directly 300px
+        : "w-[300px]";
 
     const desktopContentWidthClass =
       collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset")
-      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
+      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" 
       : collapsible === "icon" && state === "collapsed"
         ? "w-[var(--sidebar-width-icon)]"
-        : "w-[300px]"; // Expanded desktop content width directly 300px
+        : "w-[300px]";
 
 
     return (
@@ -272,7 +266,7 @@ const Sidebar = React.forwardRef<
               : "right-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-right-[300px]",
             (variant === "floating" || variant === "inset")
               ? "p-2"
-              : (side === "left" ? "border-r" : "border-l"),
+              : (side === "left" ? "border-r border-sidebar-edge" : "border-l border-sidebar-edge"),
             desktopContentWidthClass
           )}
           {...props}
@@ -495,7 +489,6 @@ const SidebarGroupAction = React.forwardRef<
       data-sidebar="group-action"
       className={cn(
         "absolute right-3 top-3.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "group-data-[collapsible=icon]:hidden",
         className
@@ -641,7 +634,6 @@ const SidebarMenuAction = React.forwardRef<
       data-sidebar="menu-action"
       className={cn(
         "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
-        // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1",
         "peer-data-[size=default]/menu-button:top-1.5",
@@ -684,7 +676,6 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Random width between 50 to 90%.
   const width = React.useMemo(() => {
     return `${Math.floor(Math.random() * 40) + 50}%`
   }, [])
@@ -795,5 +786,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
-    

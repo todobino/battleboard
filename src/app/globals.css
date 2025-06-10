@@ -48,8 +48,10 @@
     --sidebar-primary-foreground: 30 15% 88%; /* Cream for text on sidebar primary */
     --sidebar-accent: 30 45% 28%; /* Muted Brown for sidebar accents */
     --sidebar-accent-foreground: 30 20% 82%; /* Light Cream/Brown text for sidebar accent */
-    --sidebar-border: 30 40% 20%; /* Slightly Lighter Brown for sidebar borders */
+    --sidebar-border: 30 40% 20%; /* Slightly Lighter Brown for sidebar borders (internal) */
+    --sidebar-edge-border-color: hsl(30, 50%, 60%); /* Light Brown for outer sidebar edges */
     --sidebar-ring: 30 60% 40%; /* Accent Brown for sidebar focus rings */
+
 
     /* Adjusted Chart Colors for Dark Brown Theme */
     --chart-1: 30 60% 45%; /* Muted Orange-Brown */
@@ -84,7 +86,3 @@
     @apply h-full;
   }
 }
-
-/* Removed .animate-pulse-token and .animate-focus-flourish utility layers */
-/* and their corresponding keyframes pulse-token-animation and focus-flourish-animation */
-

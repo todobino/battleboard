@@ -3,7 +3,7 @@
 
 import type { ActiveTool, SideToolbarProps as SideToolbarPropsType, Measurement, Token, DefaultBattleMap } from '@/types';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button, buttonVariants } from '@/components/ui/button'; // Assuming buttonVariants is not actually used directly here, but Button is.
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power, Paintbrush, MousePointerSquareDashed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -55,13 +55,13 @@ const ToolButtonComponent = React.memo(React.forwardRef<HTMLButtonElement, ToolB
         <TooltipTrigger asChild>
           <Button
             ref={ref}
-            variant="outline" // Static variant
+            variant="outline"
             size="icon"
             onClick={onClick}
             className={cn(
-              'rounded-md shadow-lg h-10 w-10 p-2', // Consistent structural classes
-              'bg-card text-card-foreground hover:bg-muted', // Default appearance
-              isButtonActive && '!bg-primary !text-primary-foreground hover:!bg-primary/90', // Active state override applied conditionally
+              'rounded-md shadow-lg h-10 w-10 p-2', 
+              'bg-card text-card-foreground hover:bg-muted', 
+              isButtonActive && '!bg-primary !text-primary-foreground hover:!bg-primary/90', 
               passedInClassName
             )}
             aria-label={label}
@@ -145,7 +145,7 @@ export default function SideToolbar({
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
     setActiveTool(tool);
-    closeAllPopovers(); // Ensure all popovers close when a direct tool is selected
+    closeAllPopovers(); 
   }, [setActiveTool, closeAllPopovers]);
 
   const handleSelectToolClick = useCallback(() => { handleToolClick('select'); }, [handleToolClick]);
@@ -175,7 +175,7 @@ export default function SideToolbar({
   return (
     <TooltipProvider delayDuration={0}>
       <div className={cn(
-        "flex flex-col h-full w-16 p-2 items-center space-y-2 bg-sidebar text-sidebar-foreground shadow-lg border-r border-accent z-20"
+        "flex flex-col h-full w-16 p-2 items-center space-y-2 bg-sidebar text-sidebar-foreground shadow-lg border-r border-sidebar-edge z-20"
       )}>
 
         <ToolButtonComponent
@@ -195,7 +195,7 @@ export default function SideToolbar({
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
                 'bg-card text-card-foreground hover:bg-muted'
-                // TEST: Removed conditional styling: isMapSettingsPopoverOpen && '!bg-primary !text-primary-foreground hover:!bg-primary/90'
+                // Static class, active state handled by popover open status
               )}
               aria-label="Map Tool"
             >
@@ -219,7 +219,7 @@ export default function SideToolbar({
         <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopoverCallback}>
           <PopoverTrigger asChild>
              <Button
-              variant="outline"
+              variant="outline" 
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -244,7 +244,7 @@ export default function SideToolbar({
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
+              variant="outline" 
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -267,7 +267,7 @@ export default function SideToolbar({
         <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopoverCallback}>
           <PopoverTrigger asChild>
              <Button
-              variant="outline"
+              variant="outline" 
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -350,11 +350,11 @@ export default function SideToolbar({
         <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
           <AlertDialogTrigger asChild>
             <Button
-              variant="outline"
+              variant="outline" 
               size="icon"
               className={cn(
                 "rounded-md shadow-lg h-10 w-10 p-2",
-                "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                "bg-destructive text-destructive-foreground hover:bg-destructive/90" 
               )}
               aria-label="Reset Board"
             >
@@ -386,5 +386,3 @@ export default function SideToolbar({
     </TooltipProvider>
   );
 }
-
-    
