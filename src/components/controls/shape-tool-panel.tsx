@@ -2,7 +2,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool, ShapeToolPanelProps as ShapeToolPanelPropsType } from '@/types'; // Updated import
+import type { ActiveTool, ShapeToolPanelProps as ShapeToolPanelPropsType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { LineChart, Circle, Square } from 'lucide-react';
 import { STANDARD_SHAPE_COLORS } from '@/config/shape-colors';
@@ -10,24 +10,21 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
-// Using the imported ShapeToolPanelPropsType
 interface ShapeToolPanelProps extends ShapeToolPanelPropsType {}
 
 export default function ShapeToolPanel({
   setActiveTool,
   selectedShapeDrawColor,
   setSelectedShapeDrawColor,
-  onToolSelect,
 }: ShapeToolPanelProps) {
 
   const handleShapeTypeSelect = (tool: 'draw_line' | 'draw_circle' | 'draw_rectangle') => {
     setActiveTool(tool);
-    onToolSelect?.(); // Close popover only when a shape TYPE is selected
+    // Popover closing is now handled by SideToolbar's useEffect
   };
 
   const handleColorSelect = (color: string) => {
     setSelectedShapeDrawColor(color);
-    // Do not close popover here, allow user to then select shape type
   };
 
   return (
@@ -44,7 +41,6 @@ export default function ShapeToolPanel({
               className={cn(
                 "h-7 w-7 border-2",
                 selectedShapeDrawColor === color ? 'border-ring ring-2 ring-ring ring-offset-1' : 'border-border hover:border-primary',
-                 // Make contrast better for light colors like yellow
                 (color === STANDARD_SHAPE_COLORS.Yellow || color === STANDARD_SHAPE_COLORS.Orange) && selectedShapeDrawColor === color ? 'ring-offset-background' : ''
               )}
               onClick={() => handleColorSelect(color)}

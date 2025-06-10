@@ -2,7 +2,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool, Token } from '@/types';
+import type { ActiveTool, Token, TokenPlacerPanelProps as TokenPlacerPanelPropsType } from '@/types';
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,16 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface TokenPlacerPanelProps {
-  setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
-  setSelectedTokenTemplate: Dispatch<SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
-  onTokenTemplateSelect?: () => void; // Callback to close popover
-}
+interface TokenPlacerPanelProps extends TokenPlacerPanelPropsType {}
 
 export default function TokenPlacerPanel({
   setActiveTool,
   setSelectedTokenTemplate,
-  onTokenTemplateSelect,
 }: TokenPlacerPanelProps) {
   const { toast } = useToast();
   const [uncroppedImageSrc, setUncroppedImageSrc] = useState<string | null>(null);
@@ -41,7 +36,7 @@ export default function TokenPlacerPanel({
       customImageUrl: undefined,
     });
     setActiveTool('place_token');
-    onTokenTemplateSelect?.();
+    // Popover closing is now handled by SideToolbar's useEffect
   };
 
   const handleCustomTokenImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +73,7 @@ export default function TokenPlacerPanel({
     setIsCropDialogOpen(false);
     setUncroppedImageSrc(null);
     toast({ title: 'Custom Token Ready', description: 'Click on the grid to place your custom token.' });
-    onTokenTemplateSelect?.();
+    // Popover closing is now handled by SideToolbar's useEffect
   };
 
   const handleCropCancelForToken = () => {

@@ -196,7 +196,7 @@ export interface GridSettingsPanelProps {
   setShowGridLines: React.Dispatch<React.SetStateAction<boolean>>;
   backgroundImageUrl: string | null;
   setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
-  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>; // May not be needed if popover closes on tool select
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
   backgroundZoomLevel: number;
   setBackgroundZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   defaultBattlemaps: DefaultBattleMap[];
@@ -214,11 +214,35 @@ export interface InitiativeTrackerPanelProps {
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
   onOpenEditStatsDialogForParticipant?: (participant: Participant) => void;
+  // onUpdateParticipantStats removed as it's handled in BattleBoardPage directly
 }
 
 export interface ShapeToolPanelProps {
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
   selectedShapeDrawColor: string;
   setSelectedShapeDrawColor: React.Dispatch<React.SetStateAction<string>>;
-  onToolSelect?: () => void; // Callback to close popover after shape TYPE selection
+  // onToolSelect removed
+}
+
+
+export interface TokenPlacerPanelProps {
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  setSelectedTokenTemplate: React.Dispatch<React.SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  // onTokenTemplateSelect removed
+}
+
+export interface ColorToolPanelProps {
+  activeTool: ActiveTool;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  selectedColor: string;
+  setSelectedColor: React.Dispatch<React.SetStateAction<string>>;
+  // onColorSelect removed
+}
+
+export interface MeasurementToolPanelProps {
+  activeTool: ActiveTool;
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  measurement: Measurement;
+  setMeasurement: React.Dispatch<React.SetStateAction<Measurement>>;
+  // onToolSelect removed
 }

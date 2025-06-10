@@ -107,59 +107,60 @@ export default function SideToolbar({
   const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
 
-  const toggleMapSettingsPopoverCallback = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
-  const toggleMeasurementPopoverCallback = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
-  const toggleTokenPlacerPopoverCallback = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), [setIsTokenPlacerPopoverOpen]);
-  const toggleColorPainterPopoverCallback = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), [setIsColorPainterPopoverOpen]);
-  const toggleShapeToolPopoverCallback = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), [setIsShapeToolPopoverOpen]);
+  const toggleMapSettingsPopoverCallback = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), []);
+  const toggleMeasurementPopoverCallback = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), []);
+  const toggleTokenPlacerPopoverCallback = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), []);
+  const toggleColorPainterPopoverCallback = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), []);
+  const toggleShapeToolPopoverCallback = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), []);
 
-  const handleToolClick = useCallback((tool: ActiveTool) => {
-    setActiveTool(tool);
+  const closeAllPopovers = useCallback(() => {
     setIsMapSettingsPopoverOpen(false);
     setIsMeasurementPopoverOpen(false);
     setIsTokenPlacerPopoverOpen(false);
     setIsColorPainterPopoverOpen(false);
     setIsShapeToolPopoverOpen(false);
-  }, [setActiveTool, setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen, setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen]);
+  }, []);
+
+  const handleToolClick = useCallback((tool: ActiveTool) => {
+    setActiveTool(tool);
+    closeAllPopovers();
+  }, [setActiveTool, closeAllPopovers]);
 
   const handleSelectToolClick = useCallback(() => handleToolClick('select'), [handleToolClick]);
   const handleTypeToolClick = useCallback(() => handleToolClick('type_tool'), [handleToolClick]);
   const handleEraserToolClick = useCallback(() => handleToolClick('eraser_tool'), [handleToolClick]);
 
+
   useEffect(() => {
-    if (escapePressCount && escapePressCount > 0) {
-      setIsMapSettingsPopoverOpen(false);
-      setIsMeasurementPopoverOpen(false);
-      setIsTokenPlacerPopoverOpen(false);
-      setIsColorPainterPopoverOpen(false);
-      setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false);
+    if (escapePressCount > 0) {
+      closeAllPopovers();
+      setIsResetAlertOpen(false); // Also close alert dialog on escape
+    }
+  }, [ escapePressCount, closeAllPopovers, setIsResetAlertOpen ]);
+
+  useEffect(() => {
+    // This effect handles closing popovers when a tool is selected *from within* a popover.
+    // It checks if the newly activeTool is one that is typically set by a popover panel.
+    const toolPotentiallySelectedFromPopover: ActiveTool[] = [
+      'place_token', 'paint_cell', 'draw_line', 'draw_circle', 'draw_rectangle',
+      'measure_distance', 'measure_radius'
+    ];
+
+    if (toolPotentiallySelectedFromPopover.includes(activeTool)) {
+      // If any popover was open when such a tool became active, close them all.
+      // This ensures that selecting a sub-tool closes its parent popover.
+      if (isMapSettingsPopoverOpen || isMeasurementPopoverOpen || isTokenPlacerPopoverOpen || isColorPainterPopoverOpen || isShapeToolPopoverOpen) {
+        closeAllPopovers();
+      }
     }
   }, [
-    escapePressCount,
-    setIsMapSettingsPopoverOpen,
-    setIsMeasurementPopoverOpen,
-    setIsTokenPlacerPopoverOpen,
-    setIsColorPainterPopoverOpen,
-    setIsShapeToolPopoverOpen,
-    setIsResetAlertOpen,
+    activeTool,
+    isMapSettingsPopoverOpen, isMeasurementPopoverOpen,
+    isTokenPlacerPopoverOpen, isColorPainterPopoverOpen,
+    isShapeToolPopoverOpen,
+    closeAllPopovers
   ]);
 
-  const handleTokenTemplateSelected = useCallback(() => {
-    setIsTokenPlacerPopoverOpen(false);
-  }, [setIsTokenPlacerPopoverOpen]);
-
-  const handleColorSelected = useCallback(() => {
-    setIsColorPainterPopoverOpen(false);
-  }, [setIsColorPainterPopoverOpen]);
-
-  const handleShapeToolSelected = useCallback(() => {
-    setIsShapeToolPopoverOpen(false);
-  }, [setIsShapeToolPopoverOpen]);
-
-  const handleMeasurementToolSelected = useCallback(() => {
-    setIsMeasurementPopoverOpen(false);
-  }, [setIsMeasurementPopoverOpen]);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -182,9 +183,9 @@ export default function SideToolbar({
                 <Button
                   variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
                   size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2', 
-                    isMapSettingsPopoverOpen 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                    isMapSettingsPopoverOpen
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-card text-card-foreground hover:bg-muted'
                   )}
                   aria-label="Map Tool"
@@ -216,9 +217,9 @@ export default function SideToolbar({
                 <Button
                   variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
                   size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2', 
-                    isMeasurementPopoverOpen 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                    isMeasurementPopoverOpen
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-card text-card-foreground hover:bg-muted'
                   )}
                   aria-label="Measurement Tool"
@@ -235,7 +236,6 @@ export default function SideToolbar({
               setActiveTool={setActiveTool}
               measurement={measurement}
               setMeasurement={setMeasurement}
-              onToolSelect={handleMeasurementToolSelected}
             />
           </PopoverContent>
         </Popover>
@@ -247,9 +247,9 @@ export default function SideToolbar({
                 <Button
                   variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
                   size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2', 
-                    isTokenPlacerPopoverOpen 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                    isTokenPlacerPopoverOpen
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-card text-card-foreground hover:bg-muted'
                   )}
                   aria-label="Token Tool"
@@ -264,7 +264,6 @@ export default function SideToolbar({
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
               setSelectedTokenTemplate={setSelectedTokenTemplate}
-              onTokenTemplateSelect={handleTokenTemplateSelected}
             />
           </PopoverContent>
         </Popover>
@@ -276,9 +275,9 @@ export default function SideToolbar({
                 <Button
                   variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
                   size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2', 
-                    isColorPainterPopoverOpen 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                    isColorPainterPopoverOpen
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-card text-card-foreground hover:bg-muted'
                   )}
                   aria-label="Brush Tool"
@@ -295,7 +294,6 @@ export default function SideToolbar({
               setActiveTool={setActiveTool}
               selectedColor={selectedColor}
               setSelectedColor={setSelectedColor}
-              onColorSelect={handleColorSelected}
             />
           </PopoverContent>
         </Popover>
@@ -307,9 +305,9 @@ export default function SideToolbar({
                 <Button
                   variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
                   size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2', 
-                    isShapeToolPopoverOpen 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                    isShapeToolPopoverOpen
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-card text-card-foreground hover:bg-muted'
                   )}
                   aria-label="Shape Tool"
@@ -325,7 +323,6 @@ export default function SideToolbar({
               setActiveTool={setActiveTool}
               selectedShapeDrawColor={selectedShapeDrawColor}
               setSelectedShapeDrawColor={setSelectedShapeDrawColor}
-              onToolSelect={handleShapeToolSelected}
             />
           </PopoverContent>
         </Popover>
@@ -367,7 +364,7 @@ export default function SideToolbar({
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="default" 
+                  variant="default"
                   size="icon"
                   className={cn(
                     "rounded-md shadow-lg h-10 w-10 p-2",

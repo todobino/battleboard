@@ -2,28 +2,22 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import type { ActiveTool, Measurement } from '@/types';
+import type { ActiveTool, Measurement, MeasurementToolPanelProps as MeasurementToolPanelPropsType } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Ruler, Radius } from 'lucide-react'; // Changed RulerDimensionLine back to Ruler
+import { Ruler, Radius } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-interface MeasurementToolPanelProps {
-  activeTool: ActiveTool;
-  setActiveTool: Dispatch<SetStateAction<ActiveTool>>;
-  measurement: Measurement;
-  setMeasurement: Dispatch<SetStateAction<Measurement>>;
-  onToolSelect?: () => void; // Callback to close popover
-}
+interface MeasurementToolPanelProps extends MeasurementToolPanelPropsType {}
 
 export default function MeasurementToolPanel({
-  activeTool, setActiveTool, measurement, setMeasurement, onToolSelect
+  activeTool, setActiveTool, measurement, setMeasurement
 }: MeasurementToolPanelProps) {
 
   const handleToolSelect = (tool: 'measure_distance' | 'measure_radius') => {
     setActiveTool(tool);
     setMeasurement({ type: tool, startPoint: undefined, endPoint: undefined, result: undefined });
-    onToolSelect?.(); // Close the popover
+    // Popover closing is now handled by SideToolbar's useEffect
   };
 
   const clearMeasurement = () => {
@@ -31,20 +25,19 @@ export default function MeasurementToolPanel({
   };
 
   return (
-    <div className="space-y-4"> {/* Removed p-4 */}
-      {/* Removed title section */}
+    <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
         <Button
           variant={activeTool === 'measure_distance' ? "default" : "outline"}
           onClick={() => handleToolSelect('measure_distance')}
         >
-          <Ruler className="mr-2 h-4 w-4" /> Distance {/* Changed icon back to Ruler */}
+          <Ruler className="mr-2 h-4 w-4" /> Distance
         </Button>
         <Button
           variant={activeTool === 'measure_radius' ? "default" : "outline"}
           onClick={() => handleToolSelect('measure_radius')}
         >
-          <Radius className="mr-2 h-4 w-4" /> Radius {/* Icon was already Radius */}
+          <Radius className="mr-2 h-4 w-4" /> Radius
         </Button>
       </div>
       {(activeTool === 'measure_distance' || activeTool === 'measure_radius') && (
