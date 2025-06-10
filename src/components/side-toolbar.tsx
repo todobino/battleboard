@@ -1,11 +1,10 @@
 
 'use client';
 
-import type { ActiveTool, Token, Measurement, DrawnShape, DefaultBattleMap, SideToolbarProps as SideToolbarPropsType } from '@/types';
-import type { Dispatch, SetStateAction } from 'react';
+import type { ActiveTool, SideToolbarProps as SideToolbarPropsType } from '@/types';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LandPlot, Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
+import { Paintbrush, MousePointerSquareDashed, Map, Users, DraftingCompass, Eraser, Shapes, Type, Undo2, Redo2, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
@@ -126,29 +125,25 @@ export default function SideToolbar({
     closeAllPopovers();
   }, [setActiveTool, closeAllPopovers]);
 
-  const handleSelectToolClick = useCallback(() => handleToolClick('select'), [handleToolClick]);
-  const handleTypeToolClick = useCallback(() => handleToolClick('type_tool'), [handleToolClick]);
-  const handleEraserToolClick = useCallback(() => handleToolClick('eraser_tool'), [handleToolClick]);
+  const handleSelectToolClick = useCallback(() => { handleToolClick('select'); }, [handleToolClick]);
+  const handleTypeToolClick = useCallback(() => { handleToolClick('type_tool'); }, [handleToolClick]);
+  const handleEraserToolClick = useCallback(() => { handleToolClick('eraser_tool'); }, [handleToolClick]);
 
 
   useEffect(() => {
     if (escapePressCount > 0) {
       closeAllPopovers();
-      setIsResetAlertOpen(false); // Also close alert dialog on escape
+      setIsResetAlertOpen(false);
     }
   }, [ escapePressCount, closeAllPopovers, setIsResetAlertOpen ]);
 
   useEffect(() => {
-    // This effect handles closing popovers when a tool is selected *from within* a popover.
-    // It checks if the newly activeTool is one that is typically set by a popover panel.
     const toolPotentiallySelectedFromPopover: ActiveTool[] = [
       'place_token', 'paint_cell', 'draw_line', 'draw_circle', 'draw_rectangle',
       'measure_distance', 'measure_radius'
     ];
 
     if (toolPotentiallySelectedFromPopover.includes(activeTool)) {
-      // If any popover was open when such a tool became active, close them all.
-      // This ensures that selecting a sub-tool closes its parent popover.
       if (isMapSettingsPopoverOpen || isMeasurementPopoverOpen || isTokenPlacerPopoverOpen || isColorPainterPopoverOpen || isShapeToolPopoverOpen) {
         closeAllPopovers();
       }
@@ -177,25 +172,20 @@ export default function SideToolbar({
         />
 
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={toggleMapSettingsPopoverCallback}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                    isMapSettingsPopoverOpen
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Map Tool"
-                >
-                  <Map className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center"><p>Map Tool</p></TooltipContent>
-          </Tooltip>
+          <PopoverTrigger asChild>
+            <Button
+              variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
+              size="icon"
+              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                isMapSettingsPopoverOpen
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-card text-card-foreground hover:bg-muted'
+              )}
+              aria-label="Map Tool"
+            >
+              <Map className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-[640px]" side="right" align="start">
             <GridSettingsPanel
               showGridLines={showGridLines}
@@ -211,25 +201,20 @@ export default function SideToolbar({
         </Popover>
 
         <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopoverCallback}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                    isMeasurementPopoverOpen
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Measurement Tool"
-                >
-                  <DraftingCompass className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center"><p>Measurement Tool</p></TooltipContent>
-          </Tooltip>
+          <PopoverTrigger asChild>
+            <Button
+              variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
+              size="icon"
+              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                isMeasurementPopoverOpen
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-card text-card-foreground hover:bg-muted'
+              )}
+              aria-label="Measurement Tool"
+            >
+              <DraftingCompass className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-80" side="right" align="start">
             <MeasurementToolPanel
               activeTool={activeTool}
@@ -241,25 +226,20 @@ export default function SideToolbar({
         </Popover>
 
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopoverCallback}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                    isTokenPlacerPopoverOpen
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Token Tool"
-                >
-                  <Users className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center"><p>Token Tool</p></TooltipContent>
-          </Tooltip>
+          <PopoverTrigger asChild>
+            <Button
+              variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
+              size="icon"
+              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                isTokenPlacerPopoverOpen
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-card text-card-foreground hover:bg-muted'
+              )}
+              aria-label="Token Tool"
+            >
+              <Users className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-80" side="right" align="start">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
@@ -269,25 +249,20 @@ export default function SideToolbar({
         </Popover>
 
         <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopoverCallback}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                    isColorPainterPopoverOpen
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Brush Tool"
-                >
-                  <Paintbrush className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center"><p>Brush Tool</p></TooltipContent>
-          </Tooltip>
+          <PopoverTrigger asChild>
+            <Button
+              variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
+              size="icon"
+              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                isColorPainterPopoverOpen
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-card text-card-foreground hover:bg-muted'
+              )}
+              aria-label="Brush Tool"
+            >
+              <Paintbrush className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-80" side="right" align="start">
             <ColorToolPanel
               activeTool={activeTool}
@@ -299,25 +274,20 @@ export default function SideToolbar({
         </Popover>
 
         <Popover open={isShapeToolPopoverOpen} onOpenChange={toggleShapeToolPopoverCallback}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className={cn('rounded-md shadow-lg h-10 w-10 p-2',
-                    isShapeToolPopoverOpen
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-card text-card-foreground hover:bg-muted'
-                  )}
-                  aria-label="Shape Tool"
-                >
-                  <Shapes className="h-5 w-5" />
-                </Button>
-              </PopoverTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center"><p>Shape Tool</p></TooltipContent>
-          </Tooltip>
+          <PopoverTrigger asChild>
+            <Button
+              variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
+              size="icon"
+              className={cn('rounded-md shadow-lg h-10 w-10 p-2',
+                isShapeToolPopoverOpen
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : 'bg-card text-card-foreground hover:bg-muted'
+              )}
+              aria-label="Shape Tool"
+            >
+              <Shapes className="h-5 w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent className="w-80" side="right" align="start">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
