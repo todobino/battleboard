@@ -17,7 +17,7 @@ interface GridToolbarProps {
   onResetView: () => void;
 }
 
-export default function GridToolbar({
+const GridToolbarComponent: React.FC<GridToolbarProps> = ({
   showGridLines,
   setShowGridLines,
   showAllLabels,
@@ -25,7 +25,7 @@ export default function GridToolbar({
   onZoomIn,
   onZoomOut,
   onResetView,
-}: GridToolbarProps) {
+}) => {
 
   const handleToggleGridLines = useCallback(() => {
     setShowGridLines(!showGridLines);
@@ -108,3 +108,6 @@ export default function GridToolbar({
     </TooltipProvider>
   );
 }
+
+const GridToolbar = React.memo(GridToolbarComponent);
+export default GridToolbar;
