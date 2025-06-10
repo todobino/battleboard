@@ -19,7 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger, // Ensure this is imported
 } from "@/components/ui/alert-dialog";
 import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
@@ -31,7 +31,7 @@ import ShapeToolPanel from '@/components/controls/shape-tool-panel';
 interface FloatingToolbarProps extends FloatingToolbarPropsType {}
 
 
-interface ToolButtonProps {
+interface ToolButtonComponentProps {
   label: string;
   icon?: React.ElementType;
   tool?: ActiveTool | ActiveTool[];
@@ -45,38 +45,40 @@ interface ToolButtonProps {
   className?: string;
 }
 
-const ToolButtonComponent: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled, className }) => {
-  let isButtonActive = isActive;
-  if (isButtonActive === undefined && tool && currentActiveTool) {
-    isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
+const ToolButtonComponent = React.forwardRef<HTMLButtonElement, ToolButtonComponentProps>(
+  ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild = false, variantOverride, isActive: isActiveProp, disabled, className }, ref) => {
+    let isButtonActive = isActiveProp;
+    if (isButtonActive === undefined && tool && currentActiveTool) {
+      isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
+    }
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            variant={variantOverride || (isButtonActive ? 'default' : 'outline')}
+            size="icon"
+            onClick={onClick}
+            className={cn(
+              'rounded-md shadow-lg h-10 w-10 p-2',
+              (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted',
+              className
+            )}
+            aria-label={label}
+            disabled={disabled}
+          >
+            {children || (IconComponent && <IconComponent className="h-5 w-5" />)}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="center">
+          <p>{label}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
   }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant={variantOverride || (isButtonActive ? 'default' : 'outline')}
-          size="icon"
-          onClick={onClick}
-          className={cn(
-            'rounded-md shadow-lg h-10 w-10 p-2',
-            (variantOverride === 'default' || isButtonActive) ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground hover:bg-muted',
-            className
-          )}
-          aria-label={label}
-          asChild={asChild}
-          disabled={disabled}
-        >
-          {children || (IconComponent && <IconComponent className="h-5 w-5 text-accent-foreground" />)}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" align="center">
-        <p>{label}</p>
-      </TooltipContent>
-    </Tooltip>
-  );
-};
-
+);
+ToolButtonComponent.displayName = "ToolButtonComponent";
 const ToolButton = React.memo(ToolButtonComponent);
 
 
@@ -105,6 +107,11 @@ export default function FloatingToolbar({
   const [isShapeToolPopoverOpen, setIsShapeToolPopoverOpen] = useState(false);
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false);
 
+  const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), []);
+  const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), []);
+  const toggleTokenPlacerPopover = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), []);
+  const toggleColorPainterPopover = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), []);
+  const toggleShapeToolPopover = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), []);
 
   useEffect(() => {
     if (escapePressCount && escapePressCount > 0) {
@@ -113,9 +120,14 @@ export default function FloatingToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false);
+      setIsResetAlertOpen(false); // Ensure Alert Dialog also closes
     }
-  }, [escapePressCount]);
+  }, [
+    escapePressCount,
+    // All setters are stable, no need to list them if the functions themselves are stable
+    // setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen,
+    // setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen, setIsResetAlertOpen
+  ]);
 
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
@@ -125,30 +137,23 @@ export default function FloatingToolbar({
     setIsTokenPlacerPopoverOpen(false);
     setIsColorPainterPopoverOpen(false);
     setIsShapeToolPopoverOpen(false);
-  }, [setActiveTool, setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen, setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen]);
+  }, [setActiveTool]); // set...Open setters are stable
 
   const handleTokenTemplateSelected = useCallback(() => {
     setIsTokenPlacerPopoverOpen(false);
-  }, [setIsTokenPlacerPopoverOpen]);
+  }, []);
 
   const handleColorSelected = useCallback(() => {
     setIsColorPainterPopoverOpen(false);
-  }, [setIsColorPainterPopoverOpen]);
+  }, []);
 
   const handleShapeToolSelected = useCallback(() => {
     setIsShapeToolPopoverOpen(false);
-  }, [setIsShapeToolPopoverOpen]);
+  }, []);
 
   const handleMeasurementToolSelected = useCallback(() => {
     setIsMeasurementPopoverOpen(false);
-  }, [setIsMeasurementPopoverOpen]);
-
-  const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
-  const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
-  const toggleTokenPlacerPopover = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), [setIsTokenPlacerPopoverOpen]);
-  const toggleColorPainterPopover = useCallback(() => setIsColorPainterPopoverOpen(prev => !prev), [setIsColorPainterPopoverOpen]);
-  const toggleShapeToolPopover = useCallback(() => setIsShapeToolPopoverOpen(prev => !prev), [setIsShapeToolPopoverOpen]);
-
+  }, []);
 
   const toggleToolbarPosition = () => {
     setToolbarPosition(current => (current === 'top' ? 'bottom' : 'top'));
@@ -188,24 +193,22 @@ export default function FloatingToolbar({
         />
 
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={setIsMapSettingsPopoverOpen}>
-          <ToolButton
-            label="Map Tool"
-            icon={Map}
-            onClick={toggleMapSettingsPopover}
-            isActive={isMapSettingsPopoverOpen}
-            asChild
-          >
-            <PopoverTrigger asChild>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
                 <Button
                   variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
                   size="icon"
+                  onClick={toggleMapSettingsPopover}
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Map Tool"
                 >
-                  <Map className="h-5 w-5 text-accent-foreground" />
+                  <Map className="h-5 w-5" />
                 </Button>
-            </PopoverTrigger>
-          </ToolButton>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={popoverSide} align="center"><p>Map Tool</p></TooltipContent>
+          </Tooltip>
           <PopoverContent className="w-[640px]" side={popoverSide} align="center">
             <GridSettingsPanel
               showGridLines={showGridLines}
@@ -221,24 +224,22 @@ export default function FloatingToolbar({
         </Popover>
 
         <Popover open={isMeasurementPopoverOpen} onOpenChange={setIsMeasurementPopoverOpen}>
-           <ToolButton
-            label="Measurement Tool"
-            icon={DraftingCompass}
-            onClick={toggleMeasurementPopover}
-            isActive={isMeasurementPopoverOpen}
-            asChild
-          >
-            <PopoverTrigger asChild>
-               <Button
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
                   variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
                   size="icon"
+                  onClick={toggleMeasurementPopover}
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Measurement Tool"
                 >
-                  <DraftingCompass className="h-5 w-5 text-accent-foreground" />
+                  <DraftingCompass className="h-5 w-5" />
                 </Button>
-            </PopoverTrigger>
-          </ToolButton>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={popoverSide} align="center"><p>Measurement Tool</p></TooltipContent>
+          </Tooltip>
           <PopoverContent className="w-80" side={popoverSide} align="center">
             <MeasurementToolPanel
               activeTool={activeTool}
@@ -251,24 +252,22 @@ export default function FloatingToolbar({
         </Popover>
 
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={setIsTokenPlacerPopoverOpen}>
-          <ToolButton
-            label="Token Tool"
-            icon={Users}
-            onClick={toggleTokenPlacerPopover}
-            isActive={isTokenPlacerPopoverOpen}
-            asChild
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
-                size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Token Tool"
-              >
-                <Users className="h-5 w-5 text-accent-foreground" />
-              </Button>
-            </PopoverTrigger>
-          </ToolButton>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={toggleTokenPlacerPopover}
+                  className='rounded-md shadow-lg h-10 w-10 p-2'
+                  aria-label="Token Tool"
+                >
+                  <Users className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={popoverSide} align="center"><p>Token Tool</p></TooltipContent>
+          </Tooltip>
           <PopoverContent className="w-80" side={popoverSide} align="center">
             <TokenPlacerPanel
               setActiveTool={setActiveTool}
@@ -279,24 +278,22 @@ export default function FloatingToolbar({
         </Popover>
 
         <Popover open={isColorPainterPopoverOpen} onOpenChange={setIsColorPainterPopoverOpen}>
-          <ToolButton
-            label="Brush Tool"
-            icon={Paintbrush}
-            onClick={toggleColorPainterPopover}
-            isActive={isColorPainterPopoverOpen}
-            asChild
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
-                size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Brush Tool"
-              >
-                <Paintbrush className="h-5 w-5 text-accent-foreground" />
-              </Button>
-            </PopoverTrigger>
-          </ToolButton>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={toggleColorPainterPopover}
+                  className='rounded-md shadow-lg h-10 w-10 p-2'
+                  aria-label="Brush Tool"
+                >
+                  <Paintbrush className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={popoverSide} align="center"><p>Brush Tool</p></TooltipContent>
+          </Tooltip>
           <PopoverContent className="w-80" side={popoverSide} align="center">
             <ColorToolPanel
               activeTool={activeTool}
@@ -309,24 +306,22 @@ export default function FloatingToolbar({
         </Popover>
 
         <Popover open={isShapeToolPopoverOpen} onOpenChange={setIsShapeToolPopoverOpen}>
-          <ToolButton
-            label="Shape Tool"
-            icon={Shapes}
-            onClick={toggleShapeToolPopover}
-            isActive={isShapeToolPopoverOpen}
-            asChild
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
-                size="icon"
-                className='rounded-md shadow-lg h-10 w-10 p-2'
-                aria-label="Shape Tool"
-              >
-                <Shapes className="h-5 w-5 text-accent-foreground" />
-              </Button>
-            </PopoverTrigger>
-          </ToolButton>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
+                  size="icon"
+                  onClick={toggleShapeToolPopover}
+                  className='rounded-md shadow-lg h-10 w-10 p-2'
+                  aria-label="Shape Tool"
+                >
+                  <Shapes className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={popoverSide} align="center"><p>Shape Tool</p></TooltipContent>
+          </Tooltip>
           <PopoverContent className="w-80" side={popoverSide} align="center">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
@@ -417,3 +412,4 @@ export default function FloatingToolbar({
   );
 }
 
+    
