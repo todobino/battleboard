@@ -163,7 +163,7 @@ export interface BattleBoardPageProps {
   defaultBattlemaps: DefaultBattleMap[];
 }
 
-export interface FloatingToolbarProps {
+export interface SideToolbarProps {
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
   selectedColor: string; // For paint_cell
@@ -189,8 +189,6 @@ export interface FloatingToolbarProps {
   onResetBoard: () => void;
   defaultBattlemaps: DefaultBattleMap[];
   escapePressCount: number; // Passed from BattleBoardPage
-  toolbarPosition: 'top' | 'bottom';
-  setToolbarPosition: React.Dispatch<React.SetStateAction<'top' | 'bottom'>>;
 }
 
 export interface GridSettingsPanelProps {

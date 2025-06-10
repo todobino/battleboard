@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, Dispatch, Set
 import type { GridCellData, Token, Participant, ActiveTool, Measurement, DrawnShape, TextObjectType, UndoableState, BattleBoardPageProps } from '@/types';
 
 import BattleGrid from '@/components/battle-grid/battle-grid';
-import FloatingToolbar from '@/components/floating-toolbar';
+import SideToolbar from '@/components/side-toolbar';
 import InitiativeTrackerPanel from '@/components/controls/initiative-tracker-panel';
 import WelcomeDialog from '@/components/welcome-dialog';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
@@ -149,7 +149,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     bbs.setSelectedShapeIds([]); 
     bbs.setSelectedTextObjectIds([]);
     setTokenIdToFocus(null);
-    bbs.setToolbarPosition('top');
+    // bbs.setToolbarPosition('top'); // Removed toolbarPosition
     bbs.setSelectedShapeDrawColor(bbs.DEFAULT_SHAPE_DRAW_COLOR); // Reset shape draw color
 
     resetHistory(createInitialUndoableSnapshot({
@@ -573,7 +573,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   };
   
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-background">
       {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
       
       <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
@@ -650,8 +650,22 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       )}
       {uncroppedAvatarImageSrc && ( <ImageCropDialog isOpen={isAvatarCropDialogOpen} onOpenChange={setIsAvatarCropDialogOpen} imageSrc={uncroppedAvatarImageSrc} onCropConfirm={handleAvatarCropConfirm} onCropCancel={handleAvatarCropCancel}/> )}
 
-
-      <div className="flex-1 relative">
+      <SideToolbar
+        activeTool={bbs.activeTool} setActiveTool={bbs.setActiveTool}
+        selectedColor={bbs.selectedColor} setSelectedColor={bbs.setSelectedColor}
+        selectedTokenTemplate={bbs.selectedTokenTemplate} setSelectedTokenTemplate={bbs.setSelectedTokenTemplate}
+        selectedShapeDrawColor={bbs.selectedShapeDrawColor} setSelectedShapeDrawColor={bbs.setSelectedShapeDrawColor}
+        backgroundImageUrl={bbs.backgroundImageUrl} setBackgroundImageUrl={bbs.setBackgroundImageUrl}
+        showGridLines={bbs.showGridLines} setShowGridLines={bbs.setShowGridLines}
+        showAllLabels={bbs.showAllLabels} setShowAllLabels={bbs.setShowAllLabels}
+        measurement={bbs.measurement} setMeasurement={bbs.setMeasurement}
+        backgroundZoomLevel={bbs.backgroundZoomLevel} setBackgroundZoomLevel={bbs.setBackgroundZoomLevel}
+        onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo}
+        onResetBoard={handleResetBoard}
+        defaultBattlemaps={defaultBattlemaps}
+        escapePressCount={escapePressCount}
+      />
+      <div className="flex-1 relative overflow-hidden"> {/* Grid container taking remaining space */}
           <BattleGrid
             gridCells={bbs.gridCells} setGridCells={bbs.setGridCells}
             tokens={bbs.tokens} setTokens={bbs.setTokens}
@@ -680,22 +694,6 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             onOpenEditStatsDialogForToken={handleOpenEditStatsDialogFromToken}
             participants={bbs.participants}
             toast={toast}
-          />
-          <FloatingToolbar
-            activeTool={bbs.activeTool} setActiveTool={bbs.setActiveTool}
-            selectedColor={bbs.selectedColor} setSelectedColor={bbs.setSelectedColor}
-            selectedTokenTemplate={bbs.selectedTokenTemplate} setSelectedTokenTemplate={bbs.setSelectedTokenTemplate}
-            selectedShapeDrawColor={bbs.selectedShapeDrawColor} setSelectedShapeDrawColor={bbs.setSelectedShapeDrawColor}
-            backgroundImageUrl={bbs.backgroundImageUrl} setBackgroundImageUrl={bbs.setBackgroundImageUrl}
-            showGridLines={bbs.showGridLines} setShowGridLines={bbs.setShowGridLines}
-            showAllLabels={bbs.showAllLabels} setShowAllLabels={bbs.setShowAllLabels}
-            measurement={bbs.measurement} setMeasurement={bbs.setMeasurement}
-            backgroundZoomLevel={bbs.backgroundZoomLevel} setBackgroundZoomLevel={bbs.setBackgroundZoomLevel}
-            onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo}
-            onResetBoard={handleResetBoard}
-            defaultBattlemaps={defaultBattlemaps}
-            escapePressCount={escapePressCount}
-            toolbarPosition={bbs.toolbarPosition} setToolbarPosition={bbs.setToolbarPosition}
           />
       </div>
 

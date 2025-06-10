@@ -60,7 +60,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
   const [currentTextFontSize, setCurrentTextFontSize] = useState<number>(DEFAULT_TEXT_FONT_SIZE);
 
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
-  const [toolbarPosition, setToolbarPosition] = useState<'top' | 'bottom'>('top');
+  // const [toolbarPosition, setToolbarPosition] = useState<'top' | 'bottom'>('top'); // Removed toolbarPosition
 
   const rehydrateToken = useCallback((tokenFromFile: Omit<Token, 'icon'>): Token => {
     const tokenData = tokenFromFile as Token; // Cast to include size
@@ -99,7 +99,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
           setCurrentParticipantIndex(loaded.currentParticipantIndex !== undefined ? loaded.currentParticipantIndex : -1);
           setRoundCounter(loaded.roundCounter || 1);
           setIsCombatActive(loaded.isCombatActive || false);
-          setToolbarPosition(loaded.toolbarPosition || 'top');
+          // setToolbarPosition(loaded.toolbarPosition || 'top'); // Removed toolbarPosition
           setSelectedTokenIds(loaded.selectedTokenIds || []);
           setSelectedShapeIds(loaded.selectedShapeIds || []);
           setSelectedTextObjectIds(loaded.selectedTextObjectIds || []);
@@ -120,7 +120,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     const stateToSave = {
       gridCells, tokens: stripIconsForStorage(tokens), drawnShapes, textObjects, participants,
       showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
-      currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
+      currentParticipantIndex, roundCounter, isCombatActive, // toolbarPosition, // Removed toolbarPosition
       selectedTokenIds, selectedShapeIds, selectedTextObjectIds,
       selectedShapeDrawColor, // Save selected shape draw color
     };
@@ -132,7 +132,7 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
   }, [
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
-    currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
+    currentParticipantIndex, roundCounter, isCombatActive, // toolbarPosition, // Removed toolbarPosition
     selectedTokenIds, selectedShapeIds, selectedTextObjectIds,
     selectedShapeDrawColor, // Include in dependency array
     isInitialLoadComplete
@@ -182,10 +182,11 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     selectedColor, setSelectedColor, // For paint_cell
     selectedTokenTemplate, setSelectedTokenTemplate,
     selectedShapeDrawColor, setSelectedShapeDrawColor, // For new shapes
+    DEFAULT_SHAPE_DRAW_COLOR, // Exporting default for reset
     measurement, setMeasurement,
     currentTextFontSize, setCurrentTextFontSize,
     isInitialLoadComplete, setIsInitialLoadComplete,
-    toolbarPosition, setToolbarPosition,
+    // toolbarPosition, setToolbarPosition, // Removed toolbarPosition
     getCurrentSnapshot, 
     restoreSnapshot,   
     GRID_ROWS, GRID_COLS, 
