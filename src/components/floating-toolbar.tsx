@@ -19,7 +19,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger, // Ensure this is imported
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import ColorToolPanel from '@/components/controls/color-tool-panel';
 import GridSettingsPanel from '@/components/controls/grid-settings-panel';
@@ -120,14 +120,9 @@ export default function FloatingToolbar({
       setIsTokenPlacerPopoverOpen(false);
       setIsColorPainterPopoverOpen(false);
       setIsShapeToolPopoverOpen(false);
-      setIsResetAlertOpen(false); // Ensure Alert Dialog also closes
+      setIsResetAlertOpen(false);
     }
-  }, [
-    escapePressCount,
-    // All setters are stable, no need to list them if the functions themselves are stable
-    // setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen,
-    // setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen, setIsResetAlertOpen
-  ]);
+  }, [ escapePressCount, setIsResetAlertOpen ]);
 
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
@@ -137,7 +132,11 @@ export default function FloatingToolbar({
     setIsTokenPlacerPopoverOpen(false);
     setIsColorPainterPopoverOpen(false);
     setIsShapeToolPopoverOpen(false);
-  }, [setActiveTool]); // set...Open setters are stable
+  }, [setActiveTool]);
+
+  const handleSelectToolClick = useCallback(() => handleToolClick('select'), [handleToolClick]);
+  const handleTypeToolClick = useCallback(() => handleToolClick('type_tool'), [handleToolClick]);
+  const handleEraserToolClick = useCallback(() => handleToolClick('eraser_tool'), [handleToolClick]);
 
   const handleTokenTemplateSelected = useCallback(() => {
     setIsTokenPlacerPopoverOpen(false);
@@ -155,9 +154,9 @@ export default function FloatingToolbar({
     setIsMeasurementPopoverOpen(false);
   }, []);
 
-  const toggleToolbarPosition = () => {
+  const toggleToolbarPosition = useCallback(() => {
     setToolbarPosition(current => (current === 'top' ? 'bottom' : 'top'));
-  };
+  }, [setToolbarPosition]);
 
   const isToolbarAtTop = toolbarPosition === 'top';
   const popoverSide = isToolbarAtTop ? "bottom" : "top";
@@ -189,7 +188,7 @@ export default function FloatingToolbar({
           icon={MousePointerSquareDashed}
           tool="select"
           currentActiveTool={activeTool}
-          onClick={() => handleToolClick('select')}
+          onClick={handleSelectToolClick}
         />
 
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={setIsMapSettingsPopoverOpen}>
@@ -337,7 +336,7 @@ export default function FloatingToolbar({
           icon={Type}
           tool="type_tool"
           currentActiveTool={activeTool}
-          onClick={() => handleToolClick('type_tool')}
+          onClick={handleTypeToolClick}
         />
 
         <ToolButton
@@ -345,7 +344,7 @@ export default function FloatingToolbar({
           icon={Eraser}
           tool="eraser_tool"
           currentActiveTool={activeTool}
-          onClick={() => handleToolClick('eraser_tool')}
+          onClick={handleEraserToolClick}
         />
 
         <Separator orientation="vertical" className="h-8 bg-border mx-1" />
@@ -411,5 +410,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-
-    
