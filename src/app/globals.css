@@ -49,7 +49,7 @@
     --sidebar-accent: 30 45% 28%; /* Muted Brown for sidebar accents */
     --sidebar-accent-foreground: 30 20% 82%; /* Light Cream/Brown text for sidebar accent */
     --sidebar-border: 30 40% 20%; /* Slightly Lighter Brown for sidebar borders (internal) */
-    --sidebar-edge-border-color: hsl(30, 50%, 60%); /* Light Brown for outer sidebar edges */
+    /* --sidebar-edge-border-color: hsl(30, 50%, 60%); */ /* Removed as we unify on --input */
     --sidebar-ring: 30 60% 40%; /* Accent Brown for sidebar focus rings */
 
 

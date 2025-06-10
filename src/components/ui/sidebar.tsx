@@ -22,7 +22,7 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "300px"; 
+const SIDEBAR_WIDTH = "300px";
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -194,8 +194,8 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[300px] flex-col bg-sidebar text-sidebar-foreground", 
-            side === "left" ? "border-r border-sidebar-edge" : "border-l border-sidebar-edge",
+            "flex h-full w-[300px] flex-col bg-sidebar text-sidebar-foreground",
+            side === "left" ? "border-r border-input" : "border-l border-input", // Updated border
             className
           )}
           ref={ref}
@@ -213,7 +213,7 @@ const Sidebar = React.forwardRef<
             <SheetContent
               data-sidebar="sidebar"
               data-mobile="true"
-              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" 
+              className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
               style={
                 {
                   "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -237,7 +237,7 @@ const Sidebar = React.forwardRef<
 
     const desktopContentWidthClass =
       collapsible === "icon" && state === "collapsed" && (variant === "floating" || variant === "inset")
-      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" 
+      ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
       : collapsible === "icon" && state === "collapsed"
         ? "w-[var(--sidebar-width-icon)]"
         : "w-[300px]";
@@ -266,7 +266,7 @@ const Sidebar = React.forwardRef<
               : "right-0 group-data-[collapsible=offcanvas][data-state=collapsed]:-right-[300px]",
             (variant === "floating" || variant === "inset")
               ? "p-2"
-              : (side === "left" ? "border-r border-sidebar-edge" : "border-l border-sidebar-edge"),
+              : (side === "left" ? "border-r border-input" : "border-l border-input"), // Updated border
             desktopContentWidthClass
           )}
           {...props}

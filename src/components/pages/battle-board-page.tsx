@@ -113,7 +113,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const [isEditingDialogIni, setIsEditingDialogIni] = useState(false);
   const [isEditingDialogHpVal, setIsEditingDialogHpVal] = useState(false);
   const [isEditingDialogAcVal, setIsEditingDialogAcVal] = useState(false);
-  
+
   useEffect(() => {
     if (participantToEditStats) {
       setDialogInitiative(String(participantToEditStats.initiative));
@@ -145,11 +145,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     bbs.setCurrentParticipantIndex(-1);
     bbs.setRoundCounter(1);
     bbs.setIsCombatActive(false);
-    bbs.setSelectedTokenIds([]); 
-    bbs.setSelectedShapeIds([]); 
+    bbs.setSelectedTokenIds([]);
+    bbs.setSelectedShapeIds([]);
     bbs.setSelectedTextObjectIds([]);
     setTokenIdToFocus(null);
-    // bbs.setToolbarPosition('top'); // Removed toolbarPosition
     bbs.setSelectedShapeDrawColor(bbs.DEFAULT_SHAPE_DRAW_COLOR); // Reset shape draw color
 
     resetHistory(createInitialUndoableSnapshot({
@@ -186,8 +185,8 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       const updatedParticipants = prevParticipants.map(p =>
         p.id === participantId ? { ...p, ...newStats } : p
-      ).sort((a,b) => b.initiative - a.initiative); 
-      
+      ).sort((a,b) => b.initiative - a.initiative);
+
       if (bbs.isCombatActive) {
         const activeParticipant = prevParticipants[bbs.currentParticipantIndex];
         if (activeParticipant) {
@@ -280,7 +279,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
                 newCurrentIndex--;
             } else if (oldIndex === newCurrentIndex && newCurrentIndex >= newParticipants.length) {
                 newCurrentIndex = newParticipants.length > 0 ? 0 : -1;
-                if (newParticipants.length > 0 && oldIndex === prev.length -1) bbs.setRoundCounter(r => r + 1); 
+                if (newParticipants.length > 0 && oldIndex === prev.length -1) bbs.setRoundCounter(r => r + 1);
             }
              bbs.setCurrentParticipantIndex(Math.max(-1, Math.min(newCurrentIndex, newParticipants.length - 1)));
         }
@@ -313,11 +312,11 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     });
   }, [bbs, toast]);
 
-  const handleFocusToken = useCallback((tokenId: string) => { 
-    bbs.setSelectedTokenIds([tokenId]); 
+  const handleFocusToken = useCallback((tokenId: string) => {
+    bbs.setSelectedTokenIds([tokenId]);
     bbs.setSelectedShapeIds([]);
     bbs.setSelectedTextObjectIds([]);
-    setTokenIdToFocus(tokenId); 
+    setTokenIdToFocus(tokenId);
   }, [bbs]);
 
   const handleMoveParticipant = useCallback((participantId: string, direction: 'up' | 'down') => {
@@ -520,7 +519,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     if (nextIndex >= bbs.participants.length) { nextIndex = 0; bbs.setRoundCounter(r => r + 1); }
     bbs.setCurrentParticipantIndex(nextIndex);
   };
-  
+
   const renderNumericInput = (
     value: string, setValue: Dispatch<SetStateAction<string>>, isEditing: boolean, setIsEditing: Dispatch<SetStateAction<boolean>>,
     label: string, idPrefix: string, optional: boolean = false, disabled: boolean = false
@@ -545,7 +544,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
   const unassignedTokensForAutoRoll = useMemo(() => bbs.tokens.filter(token => ['player', 'enemy', 'ally'].includes(token.type) && !bbs.participants.some(p => p.tokenId === token.id)), [bbs.tokens, bbs.participants]);
 
   const handleAutoRollInitiative = useCallback(() => {
-    const unassigned = unassignedTokensForAutoRoll; 
+    const unassigned = unassignedTokensForAutoRoll;
     if (unassigned.length === 0) {
       setTimeout(() => toast({ title: "No Tokens to Roll For", description: "All suitable tokens are already in the turn order.", variant: "default" }), 0);
       return;
@@ -554,7 +553,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     unassigned.forEach(token => {
       const initiativeRoll = Math.floor(Math.random() * 20) + 1;
       const name = token.instanceName || token.label || `Token ${token.id.substring(0,4)}`;
-      const type = token.type as 'player' | 'enemy' | 'ally'; 
+      const type = token.type as 'player' | 'enemy' | 'ally';
       const success = handleAddParticipantToList({ name, initiative: initiativeRoll, type, hp: undefined, ac: undefined }, token.id, token.customImageUrl || null);
       if (success) participantsAddedCount++;
     });
@@ -564,18 +563,18 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     } else {
       setTimeout(() => toast({ title: "Auto-Roll Failed", description: "Could not add any tokens to the turn order. Check grid space.", variant: "destructive" }), 0);
     }
-  }, [bbs, toast, handleAddParticipantToList, unassignedTokensForAutoRoll]); 
+  }, [bbs, toast, handleAddParticipantToList, unassignedTokensForAutoRoll]);
 
   const participantTypeButtonConfig: Record<'player' | 'enemy' | 'ally', {label: string; icon: React.ElementType; selectedClass: string; unselectedHoverClass: string;}> = {
     player: {label:'Player', icon:PlayerIcon, selectedClass:'bg-[hsl(var(--player-green-bg))] text-[hsl(var(--player-green-foreground))] hover:bg-[hsl(var(--player-green-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--player-green-bg))] hover:text-[hsl(var(--player-green-foreground))]'},
     enemy: {label:'Enemy', icon:EnemyIcon, selectedClass:'bg-destructive text-destructive-foreground hover:bg-destructive/90', unselectedHoverClass:'hover:bg-destructive hover:text-destructive-foreground'},
     ally: {label:'Ally', icon:AllyIcon, selectedClass:'bg-[hsl(var(--app-blue-bg))] text-[hsl(var(--app-blue-foreground))] hover:bg-[hsl(var(--app-blue-hover-bg))]', unselectedHoverClass:'hover:bg-[hsl(var(--app-blue-bg))] hover:text-[hsl(var(--app-blue-foreground))]'}
   };
-  
+
   return (
     <div className="flex h-screen bg-background">
       {typeof window !== 'undefined' && <WelcomeDialog isOpen={showWelcomeDialog} onClose={handleCloseWelcomeDialog} />}
-      
+
       <Dialog open={addParticipantDialogOpen} onOpenChange={handleAddParticipantDialogClose}>
         <DialogContent className="sm:max-w-2xl">
             <FormDialogHeader>
@@ -699,7 +698,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
 
       <SidebarProvider defaultOpen={true}>
         <Sidebar variant="sidebar" collapsible="icon" side="right">
-          <SidebarHeader className="p-3 border-b border-sidebar-border">
+          <SidebarHeader className="p-3 border-b border-input">
             <div className="text-lg flex justify-between items-center text-sidebar-foreground">
               <span className="font-semibold">Turn Order</span>
               <span className="text-sm font-normal text-muted-foreground">Round: {bbs.roundCounter}</span>

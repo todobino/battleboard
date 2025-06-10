@@ -55,13 +55,13 @@ const ToolButtonComponent = React.memo(React.forwardRef<HTMLButtonElement, ToolB
         <TooltipTrigger asChild>
           <Button
             ref={ref}
-            variant="outline"
+            variant="outline" // Static variant
             size="icon"
             onClick={onClick}
             className={cn(
-              'rounded-md shadow-lg h-10 w-10 p-2', 
-              'bg-card text-card-foreground hover:bg-muted', 
-              isButtonActive && '!bg-primary !text-primary-foreground hover:!bg-primary/90', 
+              'rounded-md shadow-lg h-10 w-10 p-2', // Consistent structural classes
+              'bg-card text-card-foreground hover:bg-muted', // Default appearance
+              isButtonActive && '!bg-primary !text-primary-foreground hover:!bg-primary/90', // Active state override
               passedInClassName
             )}
             aria-label={label}
@@ -145,7 +145,7 @@ export default function SideToolbar({
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
     setActiveTool(tool);
-    closeAllPopovers(); 
+    closeAllPopovers();
   }, [setActiveTool, closeAllPopovers]);
 
   const handleSelectToolClick = useCallback(() => { handleToolClick('select'); }, [handleToolClick]);
@@ -175,7 +175,7 @@ export default function SideToolbar({
   return (
     <TooltipProvider delayDuration={0}>
       <div className={cn(
-        "flex flex-col h-full w-16 p-2 items-center space-y-2 bg-sidebar text-sidebar-foreground shadow-lg border-r border-sidebar-edge z-20"
+        "flex flex-col h-full w-16 p-2 items-center space-y-2 bg-sidebar text-sidebar-foreground shadow-lg border-r border-input z-20"
       )}>
 
         <ToolButtonComponent
@@ -190,12 +190,12 @@ export default function SideToolbar({
         <Popover open={isMapSettingsPopoverOpen} onOpenChange={toggleMapSettingsPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
+              variant="outline" // Static variant for popover triggers
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
-                'bg-card text-card-foreground hover:bg-muted'
-                // Static class, active state handled by popover open status
+                'bg-card text-card-foreground hover:bg-muted', // Static class for base appearance
+                 isMapSettingsPopoverOpen && '!bg-primary !text-primary-foreground hover:!bg-primary/90' // Active state for popover open
               )}
               aria-label="Map Tool"
             >
@@ -219,7 +219,7 @@ export default function SideToolbar({
         <Popover open={isMeasurementPopoverOpen} onOpenChange={toggleMeasurementPopoverCallback}>
           <PopoverTrigger asChild>
              <Button
-              variant="outline" 
+              variant="outline"
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -244,7 +244,7 @@ export default function SideToolbar({
         <Popover open={isTokenPlacerPopoverOpen} onOpenChange={toggleTokenPlacerPopoverCallback}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline" 
+              variant="outline"
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -267,7 +267,7 @@ export default function SideToolbar({
         <Popover open={isColorPainterPopoverOpen} onOpenChange={toggleColorPainterPopoverCallback}>
           <PopoverTrigger asChild>
              <Button
-              variant="outline" 
+              variant="outline"
               size="icon"
               className={cn(
                 'rounded-md shadow-lg h-10 w-10 p-2',
@@ -331,7 +331,7 @@ export default function SideToolbar({
           isActive={activeTool === 'eraser_tool'}
         />
 
-        <Separator orientation="horizontal" className="w-10/12 my-1 bg-sidebar-border" />
+        <Separator orientation="horizontal" className="w-10/12 my-1 bg-input" />
 
         <ToolButtonComponent
           label="Undo"
@@ -345,16 +345,16 @@ export default function SideToolbar({
           onClick={onRedo}
           disabled={!canRedo}
         />
-        <Separator orientation="horizontal" className="w-10/12 my-1 bg-sidebar-border" />
+        <Separator orientation="horizontal" className="w-10/12 my-1 bg-input" />
 
         <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
           <AlertDialogTrigger asChild>
             <Button
-              variant="outline" 
+              variant="outline"
               size="icon"
               className={cn(
                 "rounded-md shadow-lg h-10 w-10 p-2",
-                "bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                "bg-destructive text-destructive-foreground hover:bg-destructive/90"
               )}
               aria-label="Reset Board"
             >
