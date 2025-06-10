@@ -33,7 +33,7 @@ interface FloatingToolbarProps extends FloatingToolbarPropsType {}
 
 interface ToolButtonProps {
   label: string;
-  icon?: React.ElementType; // Made icon optional as children can be used
+  icon?: React.ElementType;
   tool?: ActiveTool | ActiveTool[];
   currentActiveTool?: ActiveTool;
   onClick?: () => void;
@@ -45,7 +45,7 @@ interface ToolButtonProps {
   className?: string;
 }
 
-const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled, className }) => {
+const ToolButtonComponent: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, tool, currentActiveTool, onClick, children, asChild, variantOverride, isActive, disabled, className }) => {
   let isButtonActive = isActive;
   if (isButtonActive === undefined && tool && currentActiveTool) {
     isButtonActive = Array.isArray(tool) ? tool.includes(currentActiveTool) : currentActiveTool === tool;
@@ -77,11 +77,14 @@ const ToolButton: React.FC<ToolButtonProps> = ({ label, icon: IconComponent, too
   );
 };
 
+const ToolButton = React.memo(ToolButtonComponent);
+
+
 export default function FloatingToolbar({
   activeTool, setActiveTool,
   selectedColor, setSelectedColor,
   selectedTokenTemplate, setSelectedTokenTemplate,
-  selectedShapeDrawColor, setSelectedShapeDrawColor, // New props
+  selectedShapeDrawColor, setSelectedShapeDrawColor,
   backgroundImageUrl, setBackgroundImageUrl,
   showGridLines, setShowGridLines,
   showAllLabels, setShowAllLabels,
@@ -116,14 +119,12 @@ export default function FloatingToolbar({
 
 
   const handleToolClick = useCallback((tool: ActiveTool) => {
-    if (setActiveTool) {
-      setActiveTool(tool);
-    }
-    if (tool !== 'map_tool') setIsMapSettingsPopoverOpen(false);
-    if (tool !== 'measure_distance' && tool !== 'measure_radius') setIsMeasurementPopoverOpen(false);
-    if (tool !== 'place_token') setIsTokenPlacerPopoverOpen(false);
-    if (tool !== 'paint_cell') setIsColorPainterPopoverOpen(false);
-    if (tool !== 'draw_line' && tool !== 'draw_circle' && tool !== 'draw_rectangle') setIsShapeToolPopoverOpen(false);
+    setActiveTool(tool);
+    setIsMapSettingsPopoverOpen(false);
+    setIsMeasurementPopoverOpen(false);
+    setIsTokenPlacerPopoverOpen(false);
+    setIsColorPainterPopoverOpen(false);
+    setIsShapeToolPopoverOpen(false);
   }, [setActiveTool, setIsMapSettingsPopoverOpen, setIsMeasurementPopoverOpen, setIsTokenPlacerPopoverOpen, setIsColorPainterPopoverOpen, setIsShapeToolPopoverOpen]);
 
   const handleTokenTemplateSelected = useCallback(() => {
@@ -415,3 +416,4 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
+
