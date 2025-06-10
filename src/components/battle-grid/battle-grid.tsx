@@ -32,10 +32,11 @@ export default function BattleGrid({
   showAllLabels, setShowAllLabels,
   backgroundImageUrl, backgroundZoomLevel = 1,
   activeTool, setActiveTool,
-  onTokenMove, onTokenInstanceNameChange, onChangeTokenSize,
-  selectedColor, selectedTokenTemplate,
+  selectedColor, selectedShapeDrawColor, // Added selectedShapeDrawColor
+  selectedTokenTemplate,
   measurement, setMeasurement,
   activeTurnTokenId, currentTextFontSize,
+  onTokenMove, onTokenInstanceNameChange, onChangeTokenSize, onSetShapeColor, // Added onSetShapeColor
   onTokenDelete, onTokenErasedOnGrid, onTokenImageChangeRequest,
   selectedTokenIds, setSelectedTokenIds,
   selectedShapeIds, setSelectedShapeIds,
@@ -77,7 +78,7 @@ export default function BattleGrid({
 
 
   const interactions = useGridInteractions({
-    svgRef, getMousePosition, cellSize, numRows, numCols, activeTool, selectedColor, selectedTokenTemplate, currentTextFontSize,
+    svgRef, getMousePosition, cellSize, numRows, numCols, activeTool, selectedColor, selectedShapeDrawColor, selectedTokenTemplate, currentTextFontSize,
     tokens, setTokens, gridCells, setGridCells, drawnShapes, setDrawnShapes, textObjects, setTextObjects,
     measurement, setMeasurement, currentDrawingShape, setCurrentDrawingShape,
     onTokenMove, onTokenErasedOnGrid,
@@ -490,6 +491,7 @@ export default function BattleGrid({
         onDeleteTextObject={handleDeleteTextObject}
         onToggleShapeLock={handleToggleShapeLock}
         onSetShapeOpacity={handleSetShapeOpacity}
+        onSetShapeColor={onSetShapeColor} // Pass down
         onShapeRadiusChange={handleShapeRadiusChange}
         onEditShapeLabel={handleEditShapeLabelFromMenu}
         onDeleteShape={handleDeleteShape}
@@ -505,5 +507,3 @@ export default function BattleGrid({
     </div>
   );
 }
-
-        

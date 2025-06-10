@@ -75,7 +75,7 @@ export interface DrawnShape {
   startPoint: Point; // For line: start; for circle: center; for rectangle: top-left
   endPoint: Point;   // For line: end; for circle: point on circumference; for rectangle: bottom-right
   color: string; // Stroke color for line, border color for circle/rectangle
-  fillColor?: string; // Fill color for circle/rectangle
+  fillColor?: string; // Fill color for circle/rectangle - will typically be same as 'color' but with different opacity rule
   strokeWidth: number;
   label?: string;
   opacity?: number; // For fill opacity of circles/rectangles, stroke opacity for lines
@@ -118,8 +118,9 @@ export interface BattleGridProps {
   backgroundZoomLevel?: number;
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
-  selectedColor: string;
+  selectedColor: string; // For paint_cell tool
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
+  selectedShapeDrawColor: string; // For new shapes
   onTokenMove: (tokenId: string, newX: number, newY: number) => void;
   onTokenInstanceNameChange: (tokenId: string, newName: string) => void;
   measurement: Measurement;
@@ -130,6 +131,7 @@ export interface BattleGridProps {
   onTokenErasedOnGrid?: (tokenId: string) => void;
   onTokenImageChangeRequest: (tokenId: string) => void;
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
+  onSetShapeColor: (shapeId: string, newColor: string) => void; // For RightClickMenu
 
   selectedTokenIds: string[];
   setSelectedTokenIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -164,10 +166,12 @@ export interface BattleBoardPageProps {
 export interface FloatingToolbarProps {
   activeTool: ActiveTool;
   setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
-  selectedColor: string;
-  setSelectedColor: React.Dispatch<React.SetStateAction<string>>;
+  selectedColor: string; // For paint_cell
+  setSelectedColor: React.Dispatch<React.SetStateAction<string>>; // For paint_cell
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   setSelectedTokenTemplate: React.Dispatch<React.SetStateAction<Omit<Token, 'id' | 'x' | 'y'> | null>>;
+  selectedShapeDrawColor: string; // For new shapes
+  setSelectedShapeDrawColor: React.Dispatch<React.SetStateAction<string>>; // For new shapes
   backgroundImageUrl: string | null;
   setBackgroundImageUrl: React.Dispatch<React.SetStateAction<string | null>>;
   showGridLines: boolean;
@@ -212,4 +216,11 @@ export interface InitiativeTrackerPanelProps {
   onMoveParticipantUp?: (participantId: string) => void;
   onMoveParticipantDown?: (participantId: string) => void;
   onOpenEditStatsDialogForParticipant?: (participant: Participant) => void;
+}
+
+export interface ShapeToolPanelProps {
+  setActiveTool: React.Dispatch<React.SetStateAction<ActiveTool>>;
+  selectedShapeDrawColor: string;
+  setSelectedShapeDrawColor: React.Dispatch<React.SetStateAction<string>>;
+  onToolSelect?: () => void; // Callback to close popover after shape TYPE selection
 }

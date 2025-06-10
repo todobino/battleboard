@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
-import { Edit3, Trash2, ImageIcon, Users, SlidersVertical, Plus, Minus, Lock, Unlock } from 'lucide-react';
+import { Edit3, Trash2, ImageIcon, Users, SlidersVertical, Plus, Minus, Lock, Unlock, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dist2 } from '@/lib/geometry-utils';
+import { STANDARD_SHAPE_COLORS } from '@/config/shape-colors';
 
-const FEET_PER_SQUARE = 5; // Define if not available globally
+const FEET_PER_SQUARE = 5;
 
 interface RightClickMenuProps {
   isOpen: boolean;
@@ -20,16 +21,15 @@ interface RightClickMenuProps {
   popoverState: {
     type: 'token' | 'shape' | 'text';
     item: TokenType | DrawnShape | TextObjectType;
-    x: number; // clientX for positioning
-    y: number; // clientY for positioning
+    x: number;
+    y: number;
   } | null;
   triggerRef: React.RefObject<HTMLButtonElement>;
-  tokens: TokenType[]; // Needed for current token size
-  drawnShapes: DrawnShape[]; // Needed for current shape opacity/lock
-  participants: Participant[]; // To check if token is linked
-  cellSize: number; // For shape radius calculation
+  tokens: TokenType[];
+  drawnShapes: DrawnShape[];
+  participants: Participant[];
+  cellSize: number;
 
-  // Token Actions
   onOpenAddCombatantDialogForToken?: (token: TokenType) => void;
   onEditTokenName: (tokenId: string, currentName: string) => void;
   onOpenEditStatsDialogForToken?: (tokenId: string) => void;
@@ -37,13 +37,12 @@ interface RightClickMenuProps {
   onChangeTokenSize?: (tokenId: string, newSize: number) => void;
   onTokenDelete?: (tokenId: string) => void;
 
-  // Text Object Actions
   onEditTextObject: (textObj: TextObjectType) => void;
   onDeleteTextObject: (textObjId: string) => void;
 
-  // Shape Actions
   onToggleShapeLock?: (shapeId: string) => void;
   onSetShapeOpacity?: (shapeId: string, opacity: number) => void;
+  onSetShapeColor?: (shapeId: string, newColor: string) => void; // New prop
   onShapeRadiusChange?: (shapeId: string, newRadiusInFeet: string) => void;
   onEditShapeLabel?: (shape: DrawnShape) => void;
   onDeleteShape?: (shapeId: string) => void;
@@ -68,6 +67,7 @@ export default function RightClickMenu({
   onDeleteTextObject,
   onToggleShapeLock,
   onSetShapeOpacity,
+  onSetShapeColor, // New prop
   onShapeRadiusChange,
   onEditShapeLabel,
   onDeleteShape,
@@ -92,7 +92,7 @@ export default function RightClickMenu({
   const { type, item } = popoverState;
 
   const handleLocalShapeRadiusChange = (newRadiusString: string) => {
-    setShapeRadiusInput(newRadiusString); // Update local state immediately for responsiveness
+    setShapeRadiusInput(newRadiusString);
     if (onShapeRadiusChange && type === 'shape') {
         onShapeRadiusChange((item as DrawnShape).id, newRadiusString);
     }
@@ -107,7 +107,6 @@ export default function RightClickMenu({
                 const currentPixelRadius = Math.sqrt(dist2(currentShape.startPoint, currentShape.endPoint));
                 const currentRadiusInFeet = (currentPixelRadius / cellSize) * FEET_PER_SQUARE;
                 setShapeRadiusInput(String(Math.max(FEET_PER_SQUARE / 2, Math.round(currentRadiusInFeet) )));
-                // Optionally call onShapeRadiusChange here again to ensure parent state matches
                 if (onShapeRadiusChange) {
                     onShapeRadiusChange(currentShape.id, String(Math.max(FEET_PER_SQUARE / 2, Math.round(currentRadiusInFeet) )));
                 }
@@ -116,6 +115,12 @@ export default function RightClickMenu({
     }
   };
 
+  const handleShapeColorChange = (shapeId: string, color: string) => {
+    if (onSetShapeColor) {
+      onSetShapeColor(shapeId, color);
+    }
+    // onOpenChange(false); // Keep popover open after color change for now
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange}>
@@ -130,7 +135,7 @@ export default function RightClickMenu({
         side="bottom"
         align="center"
         className="w-auto p-1"
-        key={`popover-${item.id}-${type === 'token' ? (tokens.find(t => t.id === (item as TokenType).id)?.size) : type === 'shape' ? `${(item as DrawnShape).opacity}-${(item as DrawnShape).isLocked}` : ''}`}
+        key={`popover-${item.id}-${type === 'token' ? (tokens.find(t => t.id === (item as TokenType).id)?.size) : type === 'shape' ? `${(item as DrawnShape).opacity}-${(item as DrawnShape).isLocked}-${(item as DrawnShape).color}` : ''}`}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {type === 'token' && (() => {
@@ -213,23 +218,71 @@ export default function RightClickMenu({
         {type === 'shape' && (() => {
           const currentShape = drawnShapes.find(s => s.id === (item as DrawnShape).id) || (item as DrawnShape);
           return (
-            <div className="w-60 p-2 space-y-2" key={`shape-popover-${currentShape.id}-${currentShape.opacity}-${currentShape.isLocked}`}>
+            <div className="w-60 p-2 space-y-2" key={`shape-popover-${currentShape.id}-${currentShape.opacity}-${currentShape.isLocked}-${currentShape.color}`}>
               {currentShape.type === 'line' ? (
-                <Button variant="ghost" className={cn("w-full justify-start h-8 px-2 text-sm flex items-center", "text-destructive hover:bg-destructive hover:text-destructive-foreground")}
-                  onClick={() => { if(onDeleteShape) onDeleteShape(currentShape.id); onOpenChange(false); }}>
-                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Shape
-                </Button>
-              ) : (
+                <div className="space-y-1">
+                    {onSetShapeColor && (
+                        <div className="space-y-1 pt-1">
+                            <Label className="text-xs px-1">Line Color</Label>
+                            <div className="grid grid-cols-6 gap-1 px-1">
+                                {Object.entries(STANDARD_SHAPE_COLORS).map(([name, colorValue]) => (
+                                    <Button
+                                        key={name}
+                                        variant="outline"
+                                        size="icon"
+                                        style={{ backgroundColor: colorValue }}
+                                        className={cn(
+                                            "h-6 w-6 border-2",
+                                            currentShape.color === colorValue ? 'border-ring ring-2 ring-ring ring-offset-1' : 'border-border hover:border-primary',
+                                            (colorValue === STANDARD_SHAPE_COLORS.Yellow || colorValue === STANDARD_SHAPE_COLORS.Orange) && currentShape.color === colorValue ? 'ring-offset-background' : ''
+                                        )}
+                                        onClick={() => handleShapeColorChange(currentShape.id, colorValue)}
+                                        title={name}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {onDeleteShape && (
+                        <Button variant="ghost" className={cn("w-full justify-start h-8 px-2 text-sm flex items-center mt-2", "text-destructive hover:bg-destructive hover:text-destructive-foreground")}
+                          onClick={() => { onDeleteShape(currentShape.id); onOpenChange(false); }}>
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Line
+                        </Button>
+                    )}
+                </div>
+              ) : ( // Circle or Rectangle
                 <>
+                  {onSetShapeColor && (
+                    <div className="space-y-1 pt-1">
+                      <Label className="text-xs px-1">Shape Color</Label>
+                       <div className="grid grid-cols-6 gap-1 px-1">
+                        {Object.entries(STANDARD_SHAPE_COLORS).map(([name, colorValue]) => (
+                          <Button
+                            key={name}
+                            variant="outline"
+                            size="icon"
+                            style={{ backgroundColor: colorValue }}
+                            className={cn(
+                              "h-6 w-6 border-2",
+                              currentShape.color === colorValue ? 'border-ring ring-2 ring-ring ring-offset-1' : 'border-border hover:border-primary',
+                               (colorValue === STANDARD_SHAPE_COLORS.Yellow || colorValue === STANDARD_SHAPE_COLORS.Orange) && currentShape.color === colorValue ? 'ring-offset-background' : ''
+                            )}
+                            onClick={() => handleShapeColorChange(currentShape.id, colorValue)}
+                            title={name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {onToggleShapeLock && (
-                    <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center" onClick={() => onToggleShapeLock(currentShape.id)}>
+                    <Button variant="ghost" className="w-full justify-start h-8 px-2 text-sm flex items-center !mt-2" onClick={() => onToggleShapeLock(currentShape.id)}>
                       {currentShape.isLocked ? <Unlock className="mr-2 h-3.5 w-3.5" /> : <Lock className="mr-2 h-3.5 w-3.5" />}
                       {currentShape.isLocked ? 'Unlock Shape' : 'Lock Shape'}
                     </Button>
                   )}
                   {onSetShapeOpacity && (
                     <div className="space-y-1 pt-1">
-                      <Label className="text-xs">Shape Opacity</Label>
+                      <Label className="text-xs">Fill Opacity</Label>
                       <div className="flex space-x-1">
                         {[1.0, 0.5, 0.1].map(opacityValue => (
                           <Button key={`opacity-${opacityValue}`} variant={((currentShape.opacity ?? 0.5) === opacityValue) ? 'default' : 'outline'} className="flex-1 h-8 text-xs"

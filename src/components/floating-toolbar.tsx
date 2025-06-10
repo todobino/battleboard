@@ -81,6 +81,7 @@ export default function FloatingToolbar({
   activeTool, setActiveTool,
   selectedColor, setSelectedColor,
   selectedTokenTemplate, setSelectedTokenTemplate,
+  selectedShapeDrawColor, setSelectedShapeDrawColor, // New props
   backgroundImageUrl, setBackgroundImageUrl,
   showGridLines, setShowGridLines,
   showAllLabels, setShowAllLabels,
@@ -118,7 +119,6 @@ export default function FloatingToolbar({
     if (setActiveTool) {
       setActiveTool(tool);
     }
-    // Close other popovers when a direct tool is selected or a new popover tool is implicitly chosen
     if (tool !== 'map_tool') setIsMapSettingsPopoverOpen(false);
     if (tool !== 'measure_distance' && tool !== 'measure_radius') setIsMeasurementPopoverOpen(false);
     if (tool !== 'place_token') setIsTokenPlacerPopoverOpen(false);
@@ -142,7 +142,6 @@ export default function FloatingToolbar({
     setIsMeasurementPopoverOpen(false);
   }, [setIsMeasurementPopoverOpen]);
 
-  // Memoized onClick handlers for popover toggles
   const toggleMapSettingsPopover = useCallback(() => setIsMapSettingsPopoverOpen(prev => !prev), [setIsMapSettingsPopoverOpen]);
   const toggleMeasurementPopover = useCallback(() => setIsMeasurementPopoverOpen(prev => !prev), [setIsMeasurementPopoverOpen]);
   const toggleTokenPlacerPopover = useCallback(() => setIsTokenPlacerPopoverOpen(prev => !prev), [setIsTokenPlacerPopoverOpen]);
@@ -192,12 +191,12 @@ export default function FloatingToolbar({
             label="Map Tool"
             icon={Map}
             onClick={toggleMapSettingsPopover}
-            isActive={isMapSettingsPopoverOpen} // Changed
+            isActive={isMapSettingsPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
                 <Button
-                  variant={isMapSettingsPopoverOpen ? 'default' : 'outline'} // Changed
+                  variant={isMapSettingsPopoverOpen ? 'default' : 'outline'}
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Map Tool"
@@ -225,12 +224,12 @@ export default function FloatingToolbar({
             label="Measurement Tool"
             icon={DraftingCompass}
             onClick={toggleMeasurementPopover}
-            isActive={isMeasurementPopoverOpen} // Changed
+            isActive={isMeasurementPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
                <Button
-                  variant={isMeasurementPopoverOpen ? 'default' : 'outline'} // Changed
+                  variant={isMeasurementPopoverOpen ? 'default' : 'outline'}
                   size="icon"
                   className='rounded-md shadow-lg h-10 w-10 p-2'
                   aria-label="Measurement Tool"
@@ -255,12 +254,12 @@ export default function FloatingToolbar({
             label="Token Tool"
             icon={Users}
             onClick={toggleTokenPlacerPopover}
-            isActive={isTokenPlacerPopoverOpen} // Changed
+            isActive={isTokenPlacerPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'} // Changed
+                variant={isTokenPlacerPopoverOpen ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Token Tool"
@@ -283,12 +282,12 @@ export default function FloatingToolbar({
             label="Brush Tool"
             icon={Paintbrush}
             onClick={toggleColorPainterPopover}
-            isActive={isColorPainterPopoverOpen} // Changed
+            isActive={isColorPainterPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isColorPainterPopoverOpen ? 'default' : 'outline'} // Changed
+                variant={isColorPainterPopoverOpen ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Brush Tool"
@@ -313,12 +312,12 @@ export default function FloatingToolbar({
             label="Shape Tool"
             icon={Shapes}
             onClick={toggleShapeToolPopover}
-            isActive={isShapeToolPopoverOpen} // Changed
+            isActive={isShapeToolPopoverOpen}
             asChild
           >
             <PopoverTrigger asChild>
               <Button
-                variant={isShapeToolPopoverOpen ? 'default' : 'outline'} // Changed
+                variant={isShapeToolPopoverOpen ? 'default' : 'outline'}
                 size="icon"
                 className='rounded-md shadow-lg h-10 w-10 p-2'
                 aria-label="Shape Tool"
@@ -330,6 +329,8 @@ export default function FloatingToolbar({
           <PopoverContent className="w-80" side={popoverSide} align="center">
             <ShapeToolPanel
               setActiveTool={setActiveTool}
+              selectedShapeDrawColor={selectedShapeDrawColor}
+              setSelectedShapeDrawColor={setSelectedShapeDrawColor}
               onToolSelect={handleShapeToolSelected}
             />
           </PopoverContent>
@@ -414,4 +415,3 @@ export default function FloatingToolbar({
     </TooltipProvider>
   );
 }
-

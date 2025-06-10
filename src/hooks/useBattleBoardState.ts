@@ -7,6 +7,7 @@ import { GenericTokenIcon } from '@/components/icons'; // Ensure this is correct
 import { tokenTemplates } from '@/config/token-templates';
 import { findAvailableSquare as findAvailableSquareGridUtils } from '@/lib/grid-utils'; // Renamed to avoid conflict
 import { useToast } from '@/hooks/use-toast';
+import { DEFAULT_SHAPE_DRAW_COLOR } from '@/config/shape-colors';
 
 const GRID_ROWS = 40; // Default grid dimensions
 const GRID_COLS = 40;
@@ -51,8 +52,9 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
   const [isCombatActive, setIsCombatActive] = useState<boolean>(false);
 
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
-  const [selectedColor, setSelectedColor] = useState<string>('#FF0000');
+  const [selectedColor, setSelectedColor] = useState<string>('#FF0000'); // For paint_cell
   const [selectedTokenTemplate, setSelectedTokenTemplate] = useState<Omit<Token, 'id' | 'x' | 'y'> | null>(null);
+  const [selectedShapeDrawColor, setSelectedShapeDrawColor] = useState<string>(DEFAULT_SHAPE_DRAW_COLOR); // For new shapes
   
   const [measurement, setMeasurement] = useState<Measurement>({type: null});
   const [currentTextFontSize, setCurrentTextFontSize] = useState<number>(DEFAULT_TEXT_FONT_SIZE);
@@ -98,11 +100,10 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
           setRoundCounter(loaded.roundCounter || 1);
           setIsCombatActive(loaded.isCombatActive || false);
           setToolbarPosition(loaded.toolbarPosition || 'top');
-          // Multi-select states - default to empty arrays if not found
           setSelectedTokenIds(loaded.selectedTokenIds || []);
           setSelectedShapeIds(loaded.selectedShapeIds || []);
           setSelectedTextObjectIds(loaded.selectedTextObjectIds || []);
-
+          setSelectedShapeDrawColor(loaded.selectedShapeDrawColor || DEFAULT_SHAPE_DRAW_COLOR);
         } catch (error) {
           console.error("Failed to load state from localStorage:", error);
           localStorage.removeItem(LOCAL_STORAGE_KEY_BBS); // Clear corrupted state
@@ -120,7 +121,8 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
       gridCells, tokens: stripIconsForStorage(tokens), drawnShapes, textObjects, participants,
       showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
       currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
-      selectedTokenIds, selectedShapeIds, selectedTextObjectIds, // Save multi-select states
+      selectedTokenIds, selectedShapeIds, selectedTextObjectIds,
+      selectedShapeDrawColor, // Save selected shape draw color
     };
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY_BBS, JSON.stringify(stateToSave));
@@ -131,7 +133,8 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     gridCells, tokens, drawnShapes, textObjects, participants,
     showGridLines, showAllLabels, backgroundImageUrl, backgroundZoomLevel,
     currentParticipantIndex, roundCounter, isCombatActive, toolbarPosition,
-    selectedTokenIds, selectedShapeIds, selectedTextObjectIds, // Include in dependency array
+    selectedTokenIds, selectedShapeIds, selectedTextObjectIds,
+    selectedShapeDrawColor, // Include in dependency array
     isInitialLoadComplete
   ]);
   
@@ -142,7 +145,6 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
       drawnShapes: JSON.parse(JSON.stringify(drawnShapes)),
       textObjects: JSON.parse(JSON.stringify(textObjects)),
       participants: JSON.parse(JSON.stringify(participants)),
-      // Note: selectedIds are not part of undoable state, they are transient UI state.
     };
   }, [gridCells, tokens, drawnShapes, textObjects, participants]);
 
@@ -152,7 +154,6 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     setDrawnShapes(snapshot.drawnShapes);
     setTextObjects(snapshot.textObjects);
     setParticipants(snapshot.participants);
-    // Clear selections after undo/redo
     setSelectedTokenIds([]);
     setSelectedShapeIds([]);
     setSelectedTextObjectIds([]);
@@ -178,8 +179,9 @@ export function useBattleBoardState(defaultBattlemaps: DefaultBattleMap[]) {
     roundCounter, setRoundCounter,
     isCombatActive, setIsCombatActive,
     activeTool, setActiveTool,
-    selectedColor, setSelectedColor,
+    selectedColor, setSelectedColor, // For paint_cell
     selectedTokenTemplate, setSelectedTokenTemplate,
+    selectedShapeDrawColor, setSelectedShapeDrawColor, // For new shapes
     measurement, setMeasurement,
     currentTextFontSize, setCurrentTextFontSize,
     isInitialLoadComplete, setIsInitialLoadComplete,

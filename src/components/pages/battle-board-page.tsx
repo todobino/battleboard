@@ -150,6 +150,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
     bbs.setSelectedTextObjectIds([]);
     setTokenIdToFocus(null);
     bbs.setToolbarPosition('top');
+    bbs.setSelectedShapeDrawColor(bbs.DEFAULT_SHAPE_DRAW_COLOR); // Reset shape draw color
 
     resetHistory(createInitialUndoableSnapshot({
         gridCells: initialGridCellsLocal(), tokens: [], drawnShapes: [], textObjects: [], participants: []
@@ -236,6 +237,14 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
       setTimeout(() => toast({ title: "Token Deleted", description: `Token "${tokenBeingDeleted?.instanceName || tokenBeingDeleted?.label || 'Unnamed'}" removed.` }),0);
     }
   }, [bbs, toast]);
+
+  const handleSetShapeColor = useCallback((shapeId: string, newColor: string) => {
+    bbs.setDrawnShapes(prevShapes =>
+      prevShapes.map(s =>
+        s.id === shapeId ? { ...s, color: newColor, fillColor: newColor } : s
+      )
+    );
+  }, [bbs]);
 
   const handleRequestTokenImageChange = useCallback((tokenId: string) => {
     setTokenToChangeImage(tokenId);
@@ -654,8 +663,10 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             backgroundImageUrl={bbs.backgroundImageUrl} backgroundZoomLevel={bbs.backgroundZoomLevel}
             activeTool={bbs.activeTool} setActiveTool={bbs.setActiveTool}
             selectedColor={bbs.selectedColor} selectedTokenTemplate={bbs.selectedTokenTemplate}
+            selectedShapeDrawColor={bbs.selectedShapeDrawColor} // Pass down selected shape draw color
             onTokenMove={handleTokenMove} onTokenInstanceNameChange={handleTokenInstanceNameChange}
             onChangeTokenSize={handleTokenSizeChange}
+            onSetShapeColor={handleSetShapeColor} // Pass down shape color setter
             measurement={bbs.measurement} setMeasurement={bbs.setMeasurement}
             activeTurnTokenId={bbs.participants[bbs.currentParticipantIndex]?.tokenId || null}
             currentTextFontSize={bbs.currentTextFontSize}
@@ -674,6 +685,7 @@ export default function BattleBoardPage({ defaultBattlemaps }: BattleBoardPagePr
             activeTool={bbs.activeTool} setActiveTool={bbs.setActiveTool}
             selectedColor={bbs.selectedColor} setSelectedColor={bbs.setSelectedColor}
             selectedTokenTemplate={bbs.selectedTokenTemplate} setSelectedTokenTemplate={bbs.setSelectedTokenTemplate}
+            selectedShapeDrawColor={bbs.selectedShapeDrawColor} setSelectedShapeDrawColor={bbs.setSelectedShapeDrawColor}
             backgroundImageUrl={bbs.backgroundImageUrl} setBackgroundImageUrl={bbs.setBackgroundImageUrl}
             showGridLines={bbs.showGridLines} setShowGridLines={bbs.setShowGridLines}
             showAllLabels={bbs.showAllLabels} setShowAllLabels={bbs.setShowAllLabels}

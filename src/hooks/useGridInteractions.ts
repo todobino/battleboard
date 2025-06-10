@@ -21,7 +21,8 @@ interface UseGridInteractionsProps {
   numRows: number;
   numCols: number;
   activeTool: ActiveTool;
-  selectedColor: string;
+  selectedColor: string; // For paint_cell tool
+  selectedShapeDrawColor: string; // For new shapes
   selectedTokenTemplate: Omit<Token, 'id' | 'x' | 'y'> | null;
   currentTextFontSize: number;
   
@@ -68,7 +69,7 @@ interface UseGridInteractionsProps {
 }
 
 export function useGridInteractions({
-  svgRef, getMousePosition, cellSize, numRows, numCols, activeTool, selectedColor, selectedTokenTemplate, currentTextFontSize,
+  svgRef, getMousePosition, cellSize, numRows, numCols, activeTool, selectedColor, selectedShapeDrawColor, selectedTokenTemplate, currentTextFontSize,
   tokens, setTokens, gridCells, setGridCells, drawnShapes, setDrawnShapes, textObjects, setTextObjects,
   measurement, setMeasurement, currentDrawingShape, setCurrentDrawingShape,
   onTokenMove, onTokenErasedOnGrid,
@@ -372,9 +373,11 @@ export function useGridInteractions({
           setDrawingStartPoint(startP);
           setCurrentDrawingShape({
             id: `shape-${Date.now()}`, type: isCircle ? 'circle' : (activeTool === 'draw_rectangle' ? 'rectangle' : 'line'),
-            startPoint: startP, endPoint: startP, color: 'hsl(var(--accent))',
-            fillColor: isCircle || activeTool === 'draw_rectangle' ? 'hsl(var(--accent))' : undefined,
-            strokeWidth: activeTool === 'draw_line' ? 2 : 1, opacity: activeTool === 'draw_line' ? 1 : 0.5,
+            startPoint: startP, endPoint: startP, 
+            color: selectedShapeDrawColor, // Use selected draw color
+            fillColor: (isCircle || activeTool === 'draw_rectangle') ? selectedShapeDrawColor : undefined, // Use selected draw color
+            strokeWidth: activeTool === 'draw_line' ? 2 : 1, 
+            opacity: activeTool === 'draw_line' ? 1 : 0.5,
           });
         }
         break;
@@ -385,9 +388,9 @@ export function useGridInteractions({
     setTokens, setTextObjects, setDrawnShapes, setGridCells, setMeasurement, setCurrentDrawingShape,
     setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
     isCreatingText, finalizeTextCreation, handleFinalizeTextEdit, lastTextClickInfo, currentTextFontSize,
-    selectedColor, selectedTokenTemplate, toast, panZoomHandlePanStart, eraseContentAtCell,
+    selectedColor, selectedShapeDrawColor, selectedTokenTemplate, toast, panZoomHandlePanStart, eraseContentAtCell,
     rightClickPopoverState, setRightClickPopoverState, setIsCreatingTextInternal,
-    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Add setters for marquee state
+    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
   ]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGSVGElement>) => {
@@ -625,6 +628,9 @@ export function useGridInteractions({
       } else if (shapeToAdd.type === 'rectangle') {
         if (Math.abs(shapeToAdd.startPoint.x - shapeToAdd.endPoint.x) < minSizeThreshold || Math.abs(shapeToAdd.startPoint.y - shapeToAdd.endPoint.y) < minSizeThreshold) { setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return; }
         shapeToAdd.label = `Rectangle ${drawnShapes.filter(s => s.type === 'rectangle').length + 1}`;
+      } else if (shapeToAdd.type === 'line') {
+        if (dist2(shapeToAdd.startPoint, shapeToAdd.endPoint) < minSizeThreshold * minSizeThreshold) { setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return;}
+        // No default label for line
       }
       setDrawnShapes(prev => [...prev, shapeToAdd]);
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
@@ -642,7 +648,7 @@ export function useGridInteractions({
     isMarqueeSelecting, marqueeStartPoint, marqueeEndPoint,
     tokens, textObjects,
     setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds,
-    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Added setters here
+    setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
   ]);
 
   const handleMouseLeave = useCallback(() => {
@@ -672,6 +678,8 @@ export function useGridInteractions({
       } else if (shapeToAdd.type === 'rectangle') {
         if (Math.abs(shapeToAdd.startPoint.x - shapeToAdd.endPoint.x) < minSizeThreshold || Math.abs(shapeToAdd.startPoint.y - shapeToAdd.endPoint.y) < minSizeThreshold) { setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return; }
         shapeToAdd.label = `Rectangle ${drawnShapes.filter(s => s.type === 'rectangle').length + 1}`;
+      } else if (shapeToAdd.type === 'line') {
+        if (dist2(shapeToAdd.startPoint, shapeToAdd.endPoint) < minSizeThreshold * minSizeThreshold) { setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null); return;}
       }
       setDrawnShapes(prev => [...prev, shapeToAdd]);
       setCurrentDrawingShape(null); setIsDrawing(false); setDrawingStartPoint(null);
@@ -685,7 +693,7 @@ export function useGridInteractions({
     isPanning, panZoomHandlePanEnd, 
     draggingToken, draggingTokenGridPosition, onTokenMove, activeTool, pendingGridCellsDuringPaint, 
     setGridCells, isDrawing, currentDrawingShape, setCurrentDrawingShape, setDrawnShapes, drawnShapes, cellSize,
-    isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal // Added setters here
+    isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal
   ]);
 
   useEffect(() => {
@@ -695,10 +703,10 @@ export function useGridInteractions({
         if (editingShapeId) setEditingShapeId(null); 
         setSelectedTokenIds([]); setSelectedShapeIds([]); setSelectedTextObjectIds([]);
         if (rightClickPopoverState) setRightClickPopoverState(null);
-        if (isMarqueeSelecting) { // Check the state variable
-            setIsMarqueeSelectingInternal(false); // Use the internal setter
-            setMarqueeStartPointInternal(null);   // Use the internal setter
-            setMarqueeEndPointInternal(null);     // Use the internal setter
+        if (isMarqueeSelecting) {
+            setIsMarqueeSelectingInternal(false);
+            setMarqueeStartPointInternal(null);
+            setMarqueeEndPointInternal(null);
         }
     }
     if (activeTool !== 'type_tool') {
@@ -715,7 +723,7 @@ export function useGridInteractions({
   }, [activeTool, finalizeTextCreation, handleFinalizeTextEdit, isCreatingText, editingTokenId, editingTextObjectId, editingShapeId, 
       setEditingTokenId, setEditingShapeId, setSelectedTokenIds, setSelectedShapeIds, setSelectedTextObjectIds, 
       setCurrentDrawingShape, rightClickPopoverState, setRightClickPopoverState,
-      isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal]); // Added setters here
+      isMarqueeSelecting, setIsMarqueeSelectingInternal, setMarqueeStartPointInternal, setMarqueeEndPointInternal]);
 
   return {
     handleGridMouseDown,
@@ -736,6 +744,6 @@ export function useGridInteractions({
     setMarqueeStartPoint, 
     marqueeEndPoint: marqueeEndPoint,     
     setMarqueeEndPoint,   
+    currentDraggingShapeId, // Expose currentDraggingShapeId
   };
 }
-
